@@ -33,8 +33,8 @@ class TaxonomyBuilder implements Builder {
   Future<void> build(BuildStep buildStep) async {
     final inputId = buildStep.inputId;
     final catalogJson = await buildStep.readAsString(inputId);
-    // The shipped builder runs with the default plugin set; domains needing
-    // custom plugins wrap generateFromCatalog in their own builder.
+    // The shipped builder runs with the default extension set; domains needing
+    // custom extensions wrap generateFromCatalog in their own builder.
     final outputs = generateFromCatalog(catalogJson);
 
     final basePath = inputId.path.substring(

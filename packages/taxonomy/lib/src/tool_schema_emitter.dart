@@ -5,11 +5,11 @@
 /// via per-variant `component` const discriminators, prop types /
 /// descriptions / defaults / required flags flowing through, `children`
 /// present for containers only (and forbidden for leaves via
-/// `additionalProperties: false`), and plugin projections (e.g. `x-actions`)
+/// `additionalProperties: false`), and extension projections (e.g. `x-actions`)
 /// applied per variant.
 ///
 /// Deterministic: types sorted by name, props in catalog order, actions
-/// sorted by name (plugin-side), no timestamps.
+/// sorted by name (extension-side), no timestamps.
 library;
 
 import 'dart:convert';
@@ -21,7 +21,7 @@ import 'registry_emitter.dart';
 ///
 /// Provenance (`$comment`, title, description) is parameterized from the
 /// catalog's name block (ADR-0002 Decision 4 seam 2). Each registered
-/// plugin's `augmentToolSchemaVariant` runs over every type variant — this
+/// extension's `augmentToolSchemaVariant` runs over every type variant — this
 /// is how affordance declarations reach the LLM (ADR-0005).
 String emitToolSchema(Catalog catalog) {
   final schema = <String, Object?>{
@@ -100,8 +100,8 @@ Map<String, Object?> _componentVariant(Catalog catalog, CatalogType type) {
     ],
     'additionalProperties': false,
   };
-  for (final plugin in catalog.plugins) {
-    plugin.augmentToolSchemaVariant(type, variant);
+  for (final extension in catalog.extensions) {
+    extension.augmentToolSchemaVariant(type, variant);
   }
   return variant;
 }

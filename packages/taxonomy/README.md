@@ -51,7 +51,7 @@ A catalog is a JSON document (`*.catalog.json`):
         "namedProps": ["value", "scale", "enabled", "align"],
         "childrenParam": "children"          // containers only
       },
-      "actions": {                           // plugin vocabulary (see below)
+      "actions": {                           // extension vocabulary (see below)
         "set": { "description": "Overwrite ... with context.value." }
       }
     }
@@ -72,16 +72,16 @@ the document path):
 - `dart.positionalProps` + `dart.namedProps` must cover exactly the declared
   props; `dart.childrenParam` exactly when `container` is true.
 
-## The plugin seam (loud unknown keys)
+## The extension seam (loud unknown keys)
 
 The core format owns only `description` / `container` / `props` / `dart` at
 the type level. **Any other type-level key must be claimed by a registered
-`CatalogPlugin`, or parsing fails with `UnhandledCatalogKeysException`
+`CatalogExtension`, or parsing fails with `UnhandledCatalogKeysException`
 listing every unhandled key** — unknown vocabulary is never silently dropped
 (the spike-5 failure mode this seam exists to kill).
 
 The `actions` block itself rides this seam as the proof:
-`ActionsCatalogPlugin` (in `defaultCatalogPlugins`) parses it into
+`ActionsCatalogExtension` (in `defaultCatalogExtensions`) parses it into
 `ActionDeclaration` data on `CatalogType.actions` and projects it into the
 tool schema (`x-actions` + description prose). Affordances are carried as
 data here; `genesis_consent` consumes them for hit-test routing (ADR-0005).
@@ -110,8 +110,8 @@ final registryDart = emitRegistry(catalog);
 final toolSchemaJson = emitToolSchema(catalog);
 ```
 
-The shipped builder runs with `defaultCatalogPlugins`; a domain needing
-custom plugins wraps `generateFromCatalog(json, plugins: [...])` in its own
+The shipped builder runs with `defaultCatalogExtensions`; a domain needing
+custom extensions wraps `generateFromCatalog(json, extensions: [...])` in its own
 builder.
 
 ## Building trees through the registry
@@ -136,9 +136,9 @@ this builder.
   component's `action` property; the catalog declares type-level affordances
   only ("what CAN this afford"). Instance wiring is `genesis_dialogue` /
   `genesis_consent` territory (spike-5 fidelity ledger).
-- **Extra plugin projections** — spike 5 emitted a third artifact
+- **Extra extension projections** — spike 5 emitted a third artifact
   (`actions.g.dart`, the Perception-class -> wire-type map for the action
-  router's hit-test). The plugin seam currently projects into the tool
+  router's hit-test). The extension seam currently projects into the tool
   schema only; an emit-side artifact hook lands with `genesis_consent`,
   which owns that file's consumer.
 - **Dart-enum bindings** — catalog `enum` props bind as validated `String`s;

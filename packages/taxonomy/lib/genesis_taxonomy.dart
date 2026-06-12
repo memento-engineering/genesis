@@ -10,7 +10,7 @@ library;
 export 'src/catalog.dart';
 export 'src/errors.dart';
 export 'src/generate.dart';
-export 'src/plugin.dart';
+export 'src/extension.dart';
 export 'src/registry_emitter.dart' show emitRegistry;
 export 'src/registry_runtime.dart';
 export 'src/tool_schema_emitter.dart' show emitToolSchema;

@@ -1,14 +1,14 @@
-/// The catalog plugin seam (ADR-0002 Decision 4 seam 1).
+/// The catalog extension seam (ADR-0002 Decision 4 seam 1).
 ///
 /// The core catalog format owns only `description` / `container` / `props` /
 /// `dart` at the type level. Any other type-level key must be claimed by a
-/// registered [CatalogPlugin] — otherwise parsing fails loudly with
+/// registered [CatalogExtension] — otherwise parsing fails loudly with
 /// `UnhandledCatalogKeysException`. Silent dropping (the spike-5 failure
 /// mode, where `actions` would have vanished from the tool schema) is
 /// impossible by construction.
 ///
-/// [ActionsCatalogPlugin] — the affordance channel (ADR-0005) — ships as the
-/// proof of the seam: the `actions` block is itself plugin vocabulary, not a
+/// [ActionsCatalogExtension] — the affordance channel (ADR-0005) — ships as the
+/// proof of the seam: the `actions` block is itself extension vocabulary, not a
 /// core key.
 library;
 
@@ -17,20 +17,20 @@ import 'errors.dart';
 
 /// Handles catalog vocabulary the core format does not know.
 ///
-/// A plugin claims type-level keys via [typeKeys]; the parser routes each
+/// A extension claims type-level keys via [typeKeys]; the parser routes each
 /// claimed key's raw value through [parseTypeValue] and stores the result in
 /// `CatalogType.extensions` under that key. At emit time,
-/// [augmentToolSchemaVariant] lets the plugin project its data into the
+/// [augmentToolSchemaVariant] lets the extension project its data into the
 /// LLM-facing tool schema variant for each type.
-abstract class CatalogPlugin {
-  /// Const-constructible so plugin lists can be const.
-  const CatalogPlugin();
+abstract class CatalogExtension {
+  /// Const-constructible so extension lists can be const.
+  const CatalogExtension();
 
   /// Diagnostic name, surfaced in loud-key error messages.
   String get name;
 
-  /// The type-level catalog keys this plugin claims. Must not overlap the
-  /// core keys or another registered plugin's keys.
+  /// The type-level catalog keys this extension claims. Must not overlap the
+  /// core keys or another registered extension's keys.
   Set<String> get typeKeys;
 
   /// Validates and parses the raw [value] of a claimed [key] on type
@@ -42,7 +42,7 @@ abstract class CatalogPlugin {
     required Object? value,
   });
 
-  /// Projects this plugin's data into the tool-schema variant for [type].
+  /// Projects this extension's data into the tool-schema variant for [type].
   /// [variantSchema] is the mutable JSON-Schema object for the type's
   /// `oneOf` entry; the default implementation adds nothing.
   void augmentToolSchemaVariant(
@@ -68,11 +68,11 @@ class ActionDeclaration {
 /// Parses the `actions` type-level block and projects it into the tool
 /// schema — structurally as `x-actions` and as prose in the variant
 /// description (the spike-5 shape, ADR-0002 Decision 1).
-final class ActionsCatalogPlugin extends CatalogPlugin {
-  /// Creates the plugin.
-  const ActionsCatalogPlugin();
+final class ActionsCatalogExtension extends CatalogExtension {
+  /// Creates the extension.
+  const ActionsCatalogExtension();
 
-  /// The type-level key this plugin claims.
+  /// The type-level key this extension claims.
   static const String catalogKey = 'actions';
 
   @override
@@ -155,5 +155,7 @@ final class ActionsCatalogPlugin extends CatalogPlugin {
   }
 }
 
-/// The plugins registered when a caller does not supply its own list.
-const List<CatalogPlugin> defaultCatalogPlugins = [ActionsCatalogPlugin()];
+/// The extensions registered when a caller does not supply its own list.
+const List<CatalogExtension> defaultCatalogExtensions = [
+  ActionsCatalogExtension(),
+];

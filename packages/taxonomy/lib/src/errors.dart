@@ -63,25 +63,25 @@ final class CatalogFormatException extends CatalogException {
       '${actual == null ? 'nothing' : '$actual (${actual.runtimeType})'}';
 }
 
-/// One or more type-level catalog keys were claimed by no registered plugin.
+/// One or more type-level catalog keys were claimed by no registered extension.
 ///
-/// This is the loud-plugin-key seam (ADR-0002 Decision 4 seam 1): unknown
+/// This is the loud-extension-key seam (ADR-0002 Decision 4 seam 1): unknown
 /// type-level keys are never silently dropped — either a registered
-/// [CatalogPlugin] handles the key or parsing fails with this error listing
+/// [CatalogExtension] handles the key or parsing fails with this error listing
 /// every unhandled key.
 final class UnhandledCatalogKeysException extends CatalogException {
   /// Creates the error from the collected unhandled keys.
   const UnhandledCatalogKeysException({
     required this.unhandledKeysByType,
-    required this.registeredPlugins,
+    required this.registeredExtensions,
   });
 
   /// Catalog type name -> the type-level keys nothing handled, in catalog
   /// order.
   final Map<String, List<String>> unhandledKeysByType;
 
-  /// Names of the plugins that were registered for this parse.
-  final List<String> registeredPlugins;
+  /// Names of the extensions that were registered for this parse.
+  final List<String> registeredExtensions;
 
   @override
   String get message {
@@ -89,12 +89,12 @@ final class UnhandledCatalogKeysException extends CatalogException {
       for (final e in unhandledKeysByType.entries)
         'type "${e.key}": ${e.value.map((k) => '"$k"').join(', ')}',
     ];
-    final plugins = registeredPlugins.isEmpty
+    final extensions = registeredExtensions.isEmpty
         ? 'none'
-        : registeredPlugins.join(', ');
-    return 'catalog declares type-level keys no registered plugin handles — '
-        '${lines.join('; ')}. Registered plugins: $plugins. Register a '
-        'CatalogPlugin claiming the key(s) or remove them from the catalog.';
+        : registeredExtensions.join(', ');
+    return 'catalog declares type-level keys no registered extension handles — '
+        '${lines.join('; ')}. Registered extensions: $extensions. Register a '
+        'CatalogExtension claiming the key(s) or remove them from the catalog.';
   }
 }
 

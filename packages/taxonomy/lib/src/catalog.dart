@@ -2,7 +2,7 @@
 ///
 /// A catalog classifies the node species of one domain: each [CatalogType]
 /// declares its wire name, typed props, container/leaf shape, Dart binding,
-/// and (via the plugin seam) extension data such as action declarations.
+/// and (via the extension seam) extension data such as action declarations.
 /// `Catalog.parse` validates the whole document loudly — malformed catalogs
 /// throw structured [CatalogException]s instead of generating silently-wrong
 /// code.
@@ -11,7 +11,7 @@ library;
 import 'dart:convert';
 
 import 'errors.dart';
-import 'plugin.dart';
+import 'extension.dart';
 
 /// Wire-level prop types a catalog may declare (JSON Schema vocabulary).
 enum PropType {
@@ -139,14 +139,14 @@ class CatalogType {
   /// The Dart constructor binding.
   final DartBinding dart;
 
-  /// Plugin-parsed extension data, keyed by the catalog key the plugin
+  /// Extension-parsed extension data, keyed by the catalog key the extension
   /// claimed (ADR-0002 Decision 4 seam 1).
   final Map<String, Object> extensions;
 
   /// Type-level action declarations (the affordance channel, ADR-0005),
-  /// parsed by [ActionsCatalogPlugin]; empty when the type declares none.
+  /// parsed by [ActionsCatalogExtension]; empty when the type declares none.
   Map<String, ActionDeclaration> get actions {
-    final raw = extensions[ActionsCatalogPlugin.catalogKey];
+    final raw = extensions[ActionsCatalogExtension.catalogKey];
     if (raw == null) return const {};
     return raw as Map<String, ActionDeclaration>;
   }
@@ -161,14 +161,14 @@ class CatalogType {
 }
 
 /// A parsed, validated catalog document: provenance block + node types +
-/// the plugins it was parsed with.
+/// the extensions it was parsed with.
 class Catalog {
   /// Creates a parsed catalog. Prefer [Catalog.parse].
   const Catalog({
     required this.name,
     required this.version,
     required this.types,
-    required this.plugins,
+    required this.extensions,
     this.description,
   });
 
@@ -185,9 +185,9 @@ class Catalog {
   /// Node types, sorted by name (the deterministic emit order).
   final List<CatalogType> types;
 
-  /// The plugins this catalog was parsed with; emitters replay their
+  /// The extensions this catalog was parsed with; emitters replay their
   /// projection hooks.
-  final List<CatalogPlugin> plugins;
+  final List<CatalogExtension> extensions;
 
   /// The type named [name], or null.
   CatalogType? typeNamed(String name) {
@@ -199,15 +199,15 @@ class Catalog {
 
   /// Parses and validates a raw catalog JSON document.
   ///
-  /// Unknown type-level keys must be claimed by a plugin in [plugins] or the
+  /// Unknown type-level keys must be claimed by a extension in [extensions] or the
   /// parse throws [UnhandledCatalogKeysException] listing every unhandled
-  /// key (the loud-plugin-key seam). Structural problems throw
+  /// key (the loud-extension-key seam). Structural problems throw
   /// [CatalogFormatException] with the document path.
   static Catalog parse(
     String catalogJson, {
-    List<CatalogPlugin> plugins = defaultCatalogPlugins,
+    List<CatalogExtension> extensions = defaultCatalogExtensions,
   }) {
-    final pluginByKey = _indexPlugins(plugins);
+    final extensionByKey = _indexExtensions(extensions);
 
     final Object? decoded;
     try {
@@ -260,7 +260,7 @@ class Catalog {
         _parseType(
           typeName,
           _requireMap(typesRaw[typeName], 'types/$typeName', 'a type object'),
-          pluginByKey,
+          extensionByKey,
           unhandledByType,
         ),
     ];
@@ -268,7 +268,7 @@ class Catalog {
     if (unhandledByType.isNotEmpty) {
       throw UnhandledCatalogKeysException(
         unhandledKeysByType: unhandledByType,
-        registeredPlugins: [for (final p in plugins) p.name],
+        registeredExtensions: [for (final p in extensions) p.name],
       );
     }
 
@@ -277,12 +277,12 @@ class Catalog {
       version: version,
       description: description,
       types: types,
-      plugins: plugins,
+      extensions: extensions,
     );
   }
 }
 
-/// Type-level keys the core parser owns; everything else rides the plugin
+/// Type-level keys the core parser owns; everything else rides the extension
 /// seam.
 const Set<String> _coreTypeKeys = {
   r'$comment',
@@ -292,30 +292,32 @@ const Set<String> _coreTypeKeys = {
   'props',
 };
 
-Map<String, CatalogPlugin> _indexPlugins(List<CatalogPlugin> plugins) {
-  final byKey = <String, CatalogPlugin>{};
-  for (final plugin in plugins) {
-    for (final key in plugin.typeKeys) {
+Map<String, CatalogExtension> _indexExtensions(
+  List<CatalogExtension> extensions,
+) {
+  final byKey = <String, CatalogExtension>{};
+  for (final extension in extensions) {
+    for (final key in extension.typeKeys) {
       if (_coreTypeKeys.contains(key)) {
         throw CatalogFormatException(
-          path: 'plugins',
+          path: 'extensions',
           expected:
-              'plugin keys outside the core set '
+              'extension keys outside the core set '
               '(${_coreTypeKeys.join(', ')})',
-          actual: 'plugin "${plugin.name}" claims core key "$key"',
+          actual: 'extension "${extension.name}" claims core key "$key"',
         );
       }
       final existing = byKey[key];
       if (existing != null) {
         throw CatalogFormatException(
-          path: 'plugins',
-          expected: 'each type-level key claimed by at most one plugin',
+          path: 'extensions',
+          expected: 'each type-level key claimed by at most one extension',
           actual:
               'key "$key" claimed by both "${existing.name}" and '
-              '"${plugin.name}"',
+              '"${extension.name}"',
         );
       }
-      byKey[key] = plugin;
+      byKey[key] = extension;
     }
   }
   return byKey;
@@ -324,7 +326,7 @@ Map<String, CatalogPlugin> _indexPlugins(List<CatalogPlugin> plugins) {
 CatalogType _parseType(
   String typeName,
   Map<String, Object?> json,
-  Map<String, CatalogPlugin> pluginByKey,
+  Map<String, CatalogExtension> extensionByKey,
   Map<String, List<String>> unhandledByType,
 ) {
   final path = 'types/$typeName';
@@ -356,18 +358,18 @@ CatalogType _parseType(
     propNames: {for (final p in props) p.name},
   );
 
-  // The plugin seam (ADR-0002 Decision 4 seam 1): every non-core key is
-  // routed to the plugin that claims it; unclaimed keys are collected and
+  // The extension seam (ADR-0002 Decision 4 seam 1): every non-core key is
+  // routed to the extension that claims it; unclaimed keys are collected and
   // reported loudly, never dropped.
   final extensions = <String, Object>{};
   for (final key in json.keys) {
     if (_coreTypeKeys.contains(key)) continue;
-    final plugin = pluginByKey[key];
-    if (plugin == null) {
+    final extension = extensionByKey[key];
+    if (extension == null) {
       unhandledByType.putIfAbsent(typeName, () => []).add(key);
       continue;
     }
-    extensions[key] = plugin.parseTypeValue(
+    extensions[key] = extension.parseTypeValue(
       typeName: typeName,
       key: key,
       value: json[key],

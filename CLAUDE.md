@@ -88,6 +88,14 @@ workspace is pure Dart.
   offline unit tests.
 - **Reactive helpers:** Riverpod stays a *consumer* choice — the `tree` core
   is its own owner/sink (ADR-0001 Decision 7 caveat).
+- **Terminology (register A21):** never "plugin" in memento.engineering code,
+  docs, or names — the seam word is **extension** (e.g. `CatalogExtension`).
+  "Plugin" is reserved for third-party artifacts named that way by their own
+  ecosystems (e.g. Flutter platform-channel plugins).
+- **Fixtures (register A22):** do not invent fixture node vocabularies —
+  expression-row tests/demos dev-depend on `genesis_perception` and use
+  `Node`/`Field`. A11 is one-directional: perception never imports the
+  expression row; the reverse is fine in test code.
 
 ## Where things live
 

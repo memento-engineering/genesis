@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:genesis_taxonomy/genesis_taxonomy.dart';
 import 'package:test/test.dart';
 
-/// Fake plugin (Fakes-not-mocks) claiming an arbitrary key set.
-final class FakePlugin extends CatalogPlugin {
-  const FakePlugin(this.name, this.typeKeys);
+/// Fake extension (Fakes-not-mocks) claiming an arbitrary key set.
+final class FakeExtension extends CatalogExtension {
+  const FakeExtension(this.name, this.typeKeys);
 
   @override
   final String name;
@@ -124,9 +124,9 @@ void main() {
       expect(gauge.namedProps, ['value', 'scale', 'enabled', 'align']);
     });
 
-    test('action declarations ride the plugin seam into typed data', () {
+    test('action declarations ride the extension seam into typed data', () {
       final actions = catalog.typeNamed('gauge')!.actions;
-      expect(actions.keys, ['reset', 'set']); // sorted by the plugin
+      expect(actions.keys, ['reset', 'set']); // sorted by the extension
       expect(actions['set']!.description, contains('context.value'));
       expect(catalog.typeNamed('label')!.actions, isEmpty);
       expect(catalog.typeNamed('panel')!.actions, isEmpty);
@@ -505,7 +505,7 @@ void main() {
     });
   });
 
-  group('loud plugin keys (seam 1)', () {
+  group('loud extension keys (seam 1)', () {
     test('unhandled type-level key fails loudly, listing every key', () {
       expect(
         () => Catalog.parse(
@@ -522,7 +522,7 @@ void main() {
                 'a': ['affordances', 'zeta'],
                 'b': ['affordances'],
               })
-              .having((e) => e.registeredPlugins, 'registeredPlugins', [
+              .having((e) => e.registeredExtensions, 'registeredExtensions', [
                 'actions',
               ])
               .having(
@@ -534,7 +534,7 @@ void main() {
       );
     });
 
-    test('even the shipped actions block is plugin vocabulary', () {
+    test('even the shipped actions block is extension vocabulary', () {
       final json = catalogJson(
         types: {
           'leaf': leafType(
@@ -546,9 +546,9 @@ void main() {
           ),
         },
       );
-      // With no plugins registered, the actions key itself is unhandled.
+      // With no extensions registered, the actions key itself is unhandled.
       expect(
-        () => Catalog.parse(json, plugins: const []),
+        () => Catalog.parse(json, extensions: const []),
         throwsA(
           isA<UnhandledCatalogKeysException>().having(
             (e) => e.unhandledKeysByType,
@@ -559,7 +559,7 @@ void main() {
           ),
         ),
       );
-      // With the default plugin set it parses into typed declarations.
+      // With the default extension set it parses into typed declarations.
       final catalog = Catalog.parse(json);
       expect(
         catalog.typeNamed('leaf')!.actions['poke']!.description,
@@ -567,57 +567,57 @@ void main() {
       );
     });
 
-    test('a registered fake plugin claims a custom key', () {
+    test('a registered fake extension claims a custom key', () {
       final catalog = Catalog.parse(
         catalogJson(
           types: {
             'leaf': leafType(extra: {'aura': 'blue'}),
           },
         ),
-        plugins: const [
-          FakePlugin('aura', {'aura'}),
+        extensions: const [
+          FakeExtension('aura', {'aura'}),
         ],
       );
       expect(catalog.typeNamed('leaf')!.extensions['aura'], 'blue');
     });
 
-    test('two plugins claiming one key is a configuration error', () {
+    test('two extensions claiming one key is a configuration error', () {
       expect(
         () => Catalog.parse(
           catalogJson(),
-          plugins: const [
-            FakePlugin('one', {'aura'}),
-            FakePlugin('two', {'aura'}),
+          extensions: const [
+            FakeExtension('one', {'aura'}),
+            FakeExtension('two', {'aura'}),
           ],
         ),
         throwsA(
           isA<CatalogFormatException>()
-              .having((e) => e.path, 'path', 'plugins')
+              .having((e) => e.path, 'path', 'extensions')
               .having((e) => e.actual.toString(), 'actual', contains('"aura"')),
         ),
       );
     });
 
-    test('a plugin claiming a core key is a configuration error', () {
+    test('a extension claiming a core key is a configuration error', () {
       expect(
         () => Catalog.parse(
           catalogJson(),
-          plugins: const [
-            FakePlugin('bad', {'props'}),
+          extensions: const [
+            FakeExtension('bad', {'props'}),
           ],
         ),
         throwsA(
           isA<CatalogFormatException>().having(
             (e) => e.path,
             'path',
-            'plugins',
+            'extensions',
           ),
         ),
       );
     });
   });
 
-  group('ActionsCatalogPlugin input validation', () {
+  group('ActionsCatalogExtension input validation', () {
     test('actions must be a non-empty map', () {
       expect(
         () => Catalog.parse(

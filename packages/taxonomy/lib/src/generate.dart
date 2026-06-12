@@ -9,7 +9,7 @@
 library;
 
 import 'catalog.dart';
-import 'plugin.dart';
+import 'extension.dart';
 import 'registry_emitter.dart';
 import 'tool_schema_emitter.dart';
 
@@ -31,14 +31,14 @@ class GeneratedOutputs {
 /// Parses [catalogJson] and emits both projections.
 ///
 /// Throws structured `CatalogException`s on malformed catalogs — including
-/// the loud-plugin-key failure when a type-level key is claimed by no plugin
-/// in [plugins]. Byte-deterministic: two runs over the same input are
+/// the loud-extension-key failure when a type-level key is claimed by no extension
+/// in [extensions]. Byte-deterministic: two runs over the same input are
 /// identical.
 GeneratedOutputs generateFromCatalog(
   String catalogJson, {
-  List<CatalogPlugin> plugins = defaultCatalogPlugins,
+  List<CatalogExtension> extensions = defaultCatalogExtensions,
 }) {
-  final catalog = Catalog.parse(catalogJson, plugins: plugins);
+  final catalog = Catalog.parse(catalogJson, extensions: extensions);
   return GeneratedOutputs(
     registryDart: emitRegistry(catalog),
     toolSchemaJson: emitToolSchema(catalog),
