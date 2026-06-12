@@ -3,7 +3,7 @@
 import 'dart:async';
 
 import 'package:test/test.dart';
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 class _Leaf extends Seed {
   const _Leaf(this.tag);

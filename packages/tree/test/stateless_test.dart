@@ -1,6 +1,6 @@
 // Port of perception's stateless_perception_test.dart to tree vocabulary.
 import 'package:test/test.dart';
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 class _Leaf extends Seed {
   const _Leaf({super.key});

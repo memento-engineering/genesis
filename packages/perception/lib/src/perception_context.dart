@@ -1,5 +1,5 @@
 import 'package:meta/meta.dart';
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 /// Capability extension of [TreeContext] for the perception domain
 /// (genesis ADR-0001 Decision 6 / A12).

@@ -1,7 +1,7 @@
 // Field(name, value) — the named value leaf (NEW in the rebuild; fills the
 // vocabulary gap the spike ledger identified: Node gave a measurement its
 // structure, but no leaf carried the values).
-import 'package:perception/perception.dart';
+import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 
 void main() {

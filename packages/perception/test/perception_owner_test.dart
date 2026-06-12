@@ -2,7 +2,7 @@
 // (A10 gate). Behavior expectations unchanged; flushHarvest now also returns
 // the rebuilt elements (ADR-0001 Decision 5), asserted where it strengthens
 // the original.
-import 'package:perception/perception.dart';
+import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 
 class _FakeP extends Perception {

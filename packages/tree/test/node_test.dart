@@ -4,7 +4,7 @@
 // artifact-agnostic (ADR-0001 Decision 3), so the keyed multichild container
 // primitive belongs to domains; tests use the fixture analog.
 import 'package:test/test.dart';
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 import 'src/fixtures.dart';
 

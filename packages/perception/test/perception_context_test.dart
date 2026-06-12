@@ -1,7 +1,7 @@
 // PerceptionContext — the capability extension of TreeContext (A8 × A12):
 // the domain layers harvest vocabulary onto the separate handle, inheriting
 // the executable async-gap protection.
-import 'package:perception/perception.dart';
+import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 
 class _P extends Perception {

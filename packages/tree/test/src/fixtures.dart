@@ -6,7 +6,7 @@
 // domain meaning live with their domains. Tests use this analog to exercise
 // keyed reconciliation and to prove non-component branches keep their own
 // artifact response (ADR-0001 Decision 4).
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 /// Bare leaf seed: its branch has no children and no build contract.
 class Leaf extends Seed {

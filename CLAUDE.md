@@ -18,10 +18,16 @@ switching to git refs/tags at stabilization (ADR-0001 Decision 8). Design
 lineage: lenny ADR 0001 (declarative perception framework), which migrates
 here with the code.
 
-| Package | Contents |
+| Package (dir · pub name) | Contents |
 |---|---|
-| `packages/tree` | the engine: `Seed` → `Branch`, `TreeContext` (separate handle), `TreeOwner`, keyed reconcile |
-| `packages/perception` | the measurement domain, rebuilt on `tree` by subclassing the spine |
+| `packages/tree` · `genesis_tree` | the engine: `Seed` → `Branch`, `TreeContext` (separate handle), `TreeOwner`, keyed reconcile |
+| `packages/perception` · `genesis_perception` | the measurement domain, rebuilt on the tree spine by subclassing |
+
+Naming scheme (register A16): pubspec names carry a `genesis_` prefix so we
+never squat generic pub names; directories stay short; **no `Genesis*` type
+prefixes** — `Seed`/`Branch`/`Perception` stay unprefixed. Package names are
+human faculties/crafts/achievements, never agent-nouns (`typesetting`, not
+`etcher`).
 
 ## THE REGISTER RULE
 

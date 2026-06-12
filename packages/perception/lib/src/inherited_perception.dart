@@ -1,4 +1,4 @@
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 /// Provides an ambient value of type [T] to all descendants in the
 /// perception tree — the perception-domain face of the tree composition

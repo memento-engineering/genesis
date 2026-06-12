@@ -4,7 +4,7 @@
 // semantics. This deliberately diverges from perception, where update() only
 // swapped the config.
 import 'package:test/test.dart';
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 import 'src/fixtures.dart';
 

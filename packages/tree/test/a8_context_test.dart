@@ -6,7 +6,7 @@
 import 'dart:async';
 
 import 'package:test/test.dart';
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 import 'src/fixtures.dart';
 

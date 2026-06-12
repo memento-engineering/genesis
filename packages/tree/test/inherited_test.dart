@@ -1,6 +1,6 @@
 // Port of perception's inherited_perception_test.dart to tree vocabulary.
 import 'package:test/test.dart';
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 class _S extends Seed {
   const _S({this.tag = ''});

@@ -1,4 +1,4 @@
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 /// Owns the root element, holds the dirty set, and drives synchronous
 /// depth-ordered harvest flushes — `PerceptionOwner` builds on [TreeOwner]

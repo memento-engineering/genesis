@@ -1,6 +1,6 @@
 // Conformance port of lenny perception's element_lifecycle_test.dart
 // (A10 gate). Behavior expectations unchanged.
-import 'package:perception/perception.dart';
+import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 
 class _P extends Perception {

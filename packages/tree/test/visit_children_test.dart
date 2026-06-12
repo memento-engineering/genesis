@@ -2,7 +2,7 @@
 // visitChildren over direct children — replacing the spike-era practice of
 // dispatching on concrete element shapes via test-only getters.
 import 'package:test/test.dart';
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 import 'src/fixtures.dart';
 

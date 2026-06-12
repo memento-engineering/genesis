@@ -1,4 +1,4 @@
-name: tree
+name: genesis_tree
 description: >-
   Domain-free Seed/Branch tree engine extracted from Flutter (genesis
   ADR-0001).

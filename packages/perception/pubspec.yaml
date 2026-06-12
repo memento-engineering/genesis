@@ -1,4 +1,4 @@
-name: perception
+name: genesis_perception
 description: >-
   Measurement domain on the tree spine (perception; lenny ADR 0001 lineage).
 publish_to: none
@@ -8,8 +8,8 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  genesis_tree: any
   meta: ^1.15.0
-  tree: any
 
 dev_dependencies:
   lints: ^5.1.0

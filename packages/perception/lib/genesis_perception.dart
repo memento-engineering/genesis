@@ -11,7 +11,7 @@
 /// perception consumes it via this re-export) — from this one import.
 library;
 
-export 'package:tree/tree.dart';
+export 'package:genesis_tree/genesis_tree.dart';
 
 export 'src/field.dart';
 export 'src/inherited_perception.dart';

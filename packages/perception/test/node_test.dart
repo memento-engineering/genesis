@@ -2,7 +2,7 @@
 // Behavior expectations unchanged; under A9 the NodeElement reconciles its
 // children through the rebuild hook on update (ADR-0001 Decision 4) instead
 // of an explicit update() override — same observable behavior.
-import 'package:perception/perception.dart';
+import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 
 class _Tagged extends Perception {

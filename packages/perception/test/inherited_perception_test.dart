@@ -1,7 +1,7 @@
 // Conformance port of lenny perception's inherited_perception_test.dart
 // (A10 gate). Behavior expectations unchanged: the markNeedsHarvest funnel
 // on PerceptionElement keeps the original invalidation observations valid.
-import 'package:perception/perception.dart';
+import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 
 class _P extends Perception {

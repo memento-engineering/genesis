@@ -3,7 +3,7 @@
 // tree's composition layer); structural assertions use tree types.
 import 'dart:async';
 
-import 'package:perception/perception.dart';
+import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 
 class _Leaf extends Perception {

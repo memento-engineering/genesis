@@ -1,4 +1,4 @@
-import 'package:tree/tree.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 
 import 'perception_element.dart';
 

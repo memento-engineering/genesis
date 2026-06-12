@@ -1,7 +1,7 @@
 // Conformance port of lenny perception's stateless_perception_test.dart
 // (A10 gate). Two tests carry A9 deltas (ADR-0001 Decision 4) — see
 // docs/CONFORMANCE-DELTA.md.
-import 'package:perception/perception.dart';
+import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 
 class _Leaf extends Perception {
