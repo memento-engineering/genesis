@@ -1,0 +1,38 @@
+name: genesis_workspace
+publish_to: none
+environment:
+  sdk: ^3.11.0
+workspace:
+  - packages/tree
+  - packages/perception
+
+dev_dependencies:
+  melos: ^7.7.0
+
+melos:
+  scripts:
+    # ---------- primary scripts ----------
+    test:
+      description: >-
+        Run all tests. Pure-Dart only today; a test:flutter step slots in
+        beside test:dart when Flutter packages join the workspace.
+      steps:
+        - test:dart
+
+    analyze:
+      description: >-
+        Run dart analyze on the entire workspace.
+      run: dart analyze
+
+    format:
+      description: >-
+        Check formatting for all Dart files. Fails if any file needs changes.
+      run: dart format --output=none --set-exit-if-changed .
+
+    # ---------- private sub-scripts (not listed by melos run) ----------
+    test:dart:
+      private: true
+      description: dart test on pure-Dart packages (tree, perception)
+      exec: dart test
+      packageFilters:
+        flutter: false
