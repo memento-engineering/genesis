@@ -98,3 +98,29 @@ Entry format: `A<n> (date) — title` · Decision · Why · Affects · **Status:
 **Decision (defaults presented in the 2026-06-11 discussion, unobjected):** `Watch<T>` (stream → rebuild) moves to `tree`'s composition layer — it is pure composition + dart:async with zero measurement semantics, and it is A5's Attention primitive (substrate). `perception` re-exports/subclasses it. The expression-row packages (wire/actions/terminal, future) stay **in the genesis repo** as sibling packages, consistent with ratified A1 (genesis = shared substrate; the_grid consumes) — not in the_grid.
 **Why:** Flutter ships StreamBuilder in the core framework; moving the expression row to the_grid would contradict ratified A1.
 **Affects:** `tree` composition-layer contents; ADR-0003/0005 repo placement. **Status:** pending.
+
+## A14 (2026-06-11) — `tree` API surface decisions from the extraction build  ·  AI
+
+**Decision (as built, commit `d035c60`; adversarially verified incl. tamper probe):**
+- **`TreeOwner.flush()` → `List<Branch>`** — drains depth-ordered, returns the branches *this call* rebuilt; inclusion rule: drained ∧ mounted ∧ still-dirty at drain time (A9-cascade force-rebuilds and unmounted stragglers excluded). `onNeedsFlush` fires on the empty→non-empty edge.
+- **`State.setState(fn)`** keeps the Flutter name (perception aliases `perceived()`); State's config getter is **`seed`**.
+- **`visitChildren(visitor)`** — shallow, direct children, tree order; base visits nothing; callers recurse; no mutation during visit.
+- **`TreeContext`** = `mounted` (never throws — the staleness probe) + `key`/`branchId`/`dependOnInheritedSeedOfExactType<T>()`/`markNeedsRebuild()`, all throwing `StateError` after unmount (A8, executable). Canonical handle lazily created once per branch via `Branch.context`; `Branch` does NOT implement it.
+- **A9 mechanics:** `update(newSeed)` = assert canUpdate → swap seed → `rebuild(force: true)`; dirty flag cleared *before* the hook so a force-rebuilt branch isn't double-built in the same flush. `InheritedBranch.update` notifies dependents BEFORE reconciling its child (Flutter ProxyElement order — keeps builds==1 per provider update).
+- **`branchId`**: owner-scoped monotonic decimal string, assigned once at mount (ported verbatim).
+- **Node/NodeBranch are NOT lib code** — test fixture only (A11: core is artifact-agnostic); the container artifact lives in `perception`.
+- **Flagged, not added:** Flutter's identical-config fast path (`identical(seed, newSeed) → skip`) was deliberately not ported; under A9 every in-place update cascades a subtree rebuild — the const-Seed/short-circuit pruning is the natural next optimization decision.
+**Affects:** every `tree` consumer; the fast-path question is a future entry. **Status:** pending.
+
+## A15 (2026-06-11) — perception↔tree domain mapping decisions from the rebuild  ·  AI
+
+**Decision (as built, commit `4da3378`; conformance gate 104/104 with deltas ledgered in `docs/CONFORMANCE-DELTA.md`):**
+- `Perception extends Seed` keeps **`createElement()`** as the domain factory; `createBranch()` is a one-line bridge.
+- **`markNeedsHarvest` is the domain override point**: `markNeedsRebuild()` funnels into it; it super-calls the tree path (no recursion) — provider invalidation flows through the domain name, which is what kept lenny's invalidation tests valid verbatim.
+- **`PerceptionContext implements TreeContext`** via a private wrapper over the canonical tree handle (handle layering; inherits throw-after-unmount for free); adds `perceptionId` + `markNeedsHarvest`; documented as the seam where token budget lands.
+- **`PerceptionOwner extends TreeOwner`**; `flushHarvest()` now *returns* the rebuilt list (was void in lenny); `scheduleHarvestFor` dropped (nothing called it).
+- **The load-bearing call: composition elements are NOT `PerceptionElement`s.** Stateless/Stateful/Inherited perception elements are thin subclasses of the *tree* branches that only upgrade the handle to `PerceptionContext`; `PerceptionElement extends Branch` is reserved for artifact elements (NodeElement, FieldElement, custom measurement leaves) — mirroring Flutter's ComponentElement vs RenderObjectElement split.
+- `Node` ported as a Perception with children widened to `List<Seed>` (mixes artifact leaves with composition configs); **`Field(String name, Object? value)`** added — non-generic on purpose (a `Field<T>` would break canUpdate across value-type changes; null is a legal measurement).
+- `Watch` **re-exported from tree, not subclassed** (A13); the perception barrel re-exports tree in full — one import surfaces the spine + domain (the practical form of A12's consequence).
+- `build(covariant PerceptionContext)` returns `Seed` (widened so builders can return composition seeds).
+**Affects:** lenny's future perception consumers; the budget capability lands on `PerceptionContext`. **Status:** pending.
