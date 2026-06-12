@@ -4,20 +4,17 @@
 //   dart run tool/print_snapshots.dart
 import 'dart:io';
 
-import '../test/src/fixtures.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 import 'package:genesis_typesetting/genesis_typesetting.dart';
 
+import '../test/src/fixtures.dart';
+
 Future<void> main() async {
-  final fx = LocalityFixture();
-  final typesetter = Typesetter(
-    delegate: BoxDelegate(width: 40),
-    width: 40,
-    height: 12,
-    sink: RecordingSink(),
-  );
-  typesetter.mount(fx.root);
+  final fx = LocalityFixture(sink: RecordingSink());
+  final owner = TreeOwner();
+  final stage = owner.mountRoot(fx.stageSeed) as StageBranch;
   stdout.writeln('--- initialSnapshot ---');
-  stdout.writeln(typesetter.grid.frontToString());
+  stdout.writeln(stage.grid.frontToString().trimRight());
 
   Future<void> pump() => Future<void>.delayed(Duration.zero);
   for (final v in [1, 2, 3, 42, 137]) {
@@ -28,7 +25,7 @@ Future<void> main() async {
   await pump();
 
   stdout.writeln('--- finalSnapshot ---');
-  stdout.writeln(typesetter.grid.frontToString());
-  typesetter.dispose();
+  stdout.writeln(stage.grid.frontToString().trimRight());
+  owner.dispose();
   await fx.dispose();
 }
