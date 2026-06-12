@@ -5,6 +5,8 @@ environment:
 workspace:
   - packages/tree
   - packages/perception
+  - packages/taxonomy
+  - packages/typesetting
 
 dev_dependencies:
   melos: ^7.7.0
