@@ -1,0 +1,16 @@
+name: perception
+description: >-
+  Measurement domain on the tree spine (perception; lenny ADR 0001 lineage).
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  meta: ^1.15.0
+  tree: any
+
+dev_dependencies:
+  lints: ^5.1.0
+  test: ^1.25.0
