@@ -1,0 +1,99 @@
+{
+  "$comment": "Proof-fixture catalog (ADR-0002). dart run build_runner build projects this into fixture.g.dart (typed factory registry) and fixture.g.json (LLM tool schema). Edit THIS file, then re-run the builder; the generator-in-sync test guards the committed artifacts.",
+  "catalog": {
+    "name": "fixture",
+    "version": "0.1.0",
+    "description": "Proof fixture binding real genesis_tree Seeds for the genesis_taxonomy test suite."
+  },
+  "types": {
+    "panel": {
+      "description": "A named container component. Holds an ordered list of child components referenced by id.",
+      "container": true,
+      "props": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "description": "Human-readable name of this container."
+        }
+      },
+      "dart": {
+        "class": "Panel",
+        "import": "fixture_seeds.dart",
+        "positionalProps": ["name"],
+        "namedProps": [],
+        "childrenParam": "children"
+      }
+    },
+    "label": {
+      "description": "A leaf component holding a single named string value. Cannot have children.",
+      "container": false,
+      "props": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "description": "Label identifying this value."
+        },
+        "value": {
+          "type": "string",
+          "required": true,
+          "description": "Current string value."
+        }
+      },
+      "dart": {
+        "class": "Label",
+        "import": "fixture_seeds.dart",
+        "positionalProps": [],
+        "namedProps": ["name", "value"]
+      }
+    },
+    "gauge": {
+      "description": "A leaf gauge readout exercising every prop kind. Cannot have children.",
+      "container": false,
+      "props": {
+        "label": {
+          "type": "string",
+          "required": true,
+          "description": "Text shown beside the gauge."
+        },
+        "value": {
+          "type": "number",
+          "required": true,
+          "description": "Current reading."
+        },
+        "scale": {
+          "type": "integer",
+          "required": false,
+          "default": 10,
+          "description": "Full-scale reading the gauge tops out at."
+        },
+        "enabled": {
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "description": "Whether the gauge responds to actions."
+        },
+        "align": {
+          "type": "enum",
+          "values": ["start", "center", "end"],
+          "required": false,
+          "default": "start",
+          "description": "Needle alignment within the gauge face."
+        }
+      },
+      "dart": {
+        "class": "Gauge",
+        "import": "fixture_seeds.dart",
+        "positionalProps": ["label"],
+        "namedProps": ["value", "scale", "enabled", "align"]
+      },
+      "actions": {
+        "set": {
+          "description": "Overwrite this gauge's reading with context.value (number, required). Last write wins."
+        },
+        "reset": {
+          "description": "Return this gauge's reading to zero. Takes no context."
+        }
+      }
+    }
+  }
+}

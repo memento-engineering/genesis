@@ -1,0 +1,21 @@
+builders:
+  taxonomy:
+    import: 'package:genesis_taxonomy/builder.dart'
+    builder_factories: ['taxonomyBuilder']
+    build_extensions:
+      .catalog.json:
+        - .g.dart
+        - .g.json
+    build_to: source
+    auto_apply: dependents
+
+targets:
+  $default:
+    builders:
+      # Apply the builder to this package's own test fixtures — the
+      # end-to-end proof that `dart run build_runner build` produces both
+      # artifacts (consumers get the builder via auto_apply: dependents).
+      genesis_taxonomy|taxonomy:
+        enabled: true
+        generate_for:
+          - test/src/*.catalog.json
