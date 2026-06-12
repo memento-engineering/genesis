@@ -3,38 +3,39 @@
 /// no raw mode) with per-frame stats lines on stderr.
 ///
 /// Run on a real terminal to watch the boxes update in place:
-///   dart run bin/demo.dart --demo
+///   dart run tool/demo.dart --demo
 ///
-/// This file is also the consumer documentation for the paint seam: it
-/// defines its own domain (Panel/Readout artifacts + a fixed-rect
-/// PaintDelegate), because typesetting itself knows no node types.
+/// This file is also the consumer documentation for the paint seam — and it
+/// is ADR-0004's sleeper win made literal: a live genesis_perception tree
+/// (`Node`/`Field`, register A22) typeset in the terminal. Typesetting's lib
+/// knows none of these types; the delegate below carries all the meaning.
 library;
 
 import 'dart:async';
 import 'dart:io';
 
-import 'package:genesis_tree/genesis_tree.dart';
+import 'package:genesis_perception/genesis_perception.dart';
 import 'package:genesis_typesetting/genesis_typesetting.dart';
 
 Future<void> main(List<String> args) async {
   if (!args.contains('--demo')) {
-    stderr.writeln('usage: dart run bin/demo.dart --demo');
+    stderr.writeln('usage: dart run tool/demo.dart --demo');
     exitCode = 2;
     return;
   }
 
   final ticker = StreamController<int>();
   final feed = StreamController<String>();
-  final root = Panel(
+  final root = Node(
     'root',
     children: [
       Watch<int>(
         ticker.stream,
-        (v) => Panel(
+        (v) => Node(
           'ticker',
           children: [
-            Readout('count', '$v', key: 'count'),
-            Readout('square', '${v * v}', key: 'square'),
+            Field('count', '$v', key: 'count'),
+            Field('square', '${v * v}', key: 'square'),
           ],
         ),
         initialValue: 0,
@@ -43,7 +44,7 @@ Future<void> main(List<String> args) async {
       const StaticAboutBox(key: 'about'),
       Watch<String>(
         feed.stream,
-        (msg) => Panel('feed', children: [Readout('last', msg, key: 'last')]),
+        (msg) => Node('feed', children: [Field('last', msg, key: 'last')]),
         initialValue: '(none)',
         key: 'feed',
       ),
@@ -110,76 +111,16 @@ Future<void> main(List<String> args) async {
   await feed.close();
 }
 
-// ---------------------------------------------------------------------------
-// The demo's domain — typesetting knows none of these types.
-// ---------------------------------------------------------------------------
-
-/// Keyed multichild container with a display name.
-class Panel extends Seed {
-  const Panel(this.name, {this.children = const [], super.key});
-  final String name;
-  final List<Seed> children;
-  @override
-  PanelBranch createBranch() => PanelBranch(this);
-}
-
-/// Branch for [Panel]: keyed reconciliation of its children.
-class PanelBranch extends Branch {
-  PanelBranch(Panel super.seed);
-
-  List<Branch> _children = const [];
-
-  Panel get panel => seed as Panel;
-
-  @override
-  void mount(Branch? parent, Object? slot) {
-    super.mount(parent, slot);
-    performRebuild();
-  }
-
-  @override
-  void performRebuild() {
-    _children = updateChildren(_children, panel.children);
-  }
-
-  @override
-  void visitChildren(void Function(Branch child) visitor) {
-    for (final child in _children) {
-      visitor(child);
-    }
-  }
-
-  @override
-  void unmount() {
-    _children = updateChildren(_children, const []);
-    super.unmount();
-  }
-}
-
-/// Leaf `name: value` line.
-class Readout extends Seed {
-  const Readout(this.name, this.value, {super.key});
-  final String name;
-  final String value;
-  @override
-  ReadoutBranch createBranch() => ReadoutBranch(this);
-}
-
-/// Branch for [Readout]; the empty default rebuild hook.
-class ReadoutBranch extends Branch {
-  ReadoutBranch(Readout super.seed);
-}
-
 /// Static middle box — never rebuilt by any stream event.
 class StaticAboutBox extends StatelessSeed {
   const StaticAboutBox({super.key});
 
   @override
-  Seed build(TreeContext context) => const Panel(
+  Seed build(TreeContext context) => const Node(
     'about',
     children: [
-      Readout('package', 'genesis_typesetting', key: 'package'),
-      Readout('backend', 'cells -> minimal ANSI', key: 'backend'),
+      Field('package', 'genesis_typesetting', key: 'package'),
+      Field('backend', 'cells -> minimal ANSI', key: 'backend'),
     ],
   );
 }
@@ -222,21 +163,15 @@ class DemoDelegate extends PaintDelegate {
         grid.set(x, y, Cell.blank);
       }
     }
-    final panelBranch = _resolvePanel(_topChildren[index]);
-    if (panelBranch == null) {
+    final nodeElement = _resolveNode(_topChildren[index]);
+    if (nodeElement == null) {
       grid.putText(rect.x, rect.y, '<unrenderable>');
       return;
     }
+    final node = nodeElement.seed as Node;
     final color = 2 + index * 2; // green / cyan / yellow-ish accents
-    grid.drawBox(
-      rect.x,
-      rect.y,
-      rect.w,
-      rect.h,
-      title: panelBranch.panel.name,
-      fg: color,
-    );
-    final lines = _contentLines(panelBranch);
+    grid.drawBox(rect.x, rect.y, rect.w, rect.h, title: node.name, fg: color);
+    final lines = _contentLines(nodeElement);
     final maxLen = rect.w - 4;
     for (var j = 0; j < lines.length && j < rect.h - 2; j++) {
       var line = lines[j];
@@ -245,10 +180,10 @@ class DemoDelegate extends PaintDelegate {
     }
   }
 
-  PanelBranch? _resolvePanel(Branch branch) {
+  NodeElement? _resolveNode(Branch branch) {
     var current = branch;
     for (;;) {
-      if (current is PanelBranch) return current;
+      if (current is NodeElement) return current;
       Branch? sole;
       var count = 0;
       current.visitChildren((child) {
@@ -260,18 +195,18 @@ class DemoDelegate extends PaintDelegate {
     }
   }
 
-  List<String> _contentLines(PanelBranch panelBranch) {
+  List<String> _contentLines(NodeElement nodeElement) {
     final lines = <String>[];
     void visit(Branch branch) {
       final config = branch.seed;
-      if (config is Readout) {
+      if (config is Field) {
         lines.add('${config.name}: ${config.value}');
         return;
       }
       branch.visitChildren(visit);
     }
 
-    panelBranch.visitChildren(visit);
+    nodeElement.visitChildren(visit);
     return lines;
   }
 }

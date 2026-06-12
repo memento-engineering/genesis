@@ -98,8 +98,8 @@ against a raw `TreeOwner` with no `Typesetter` in the loop.
 
 ```bash
 dart test                                       # property + locality suites
-dart run bin/demo.dart --demo                   # real ANSI, live terminal
-dart run bin/demo.dart --demo > /tmp/demo.ansi  # pipe-safe, exits 0
+dart run tool/demo.dart --demo                   # real ANSI, live terminal
+dart run tool/demo.dart --demo > /tmp/demo.ansi  # pipe-safe, exits 0
 dart run tool/print_snapshots.dart              # regenerate test snapshots
 ```
 
