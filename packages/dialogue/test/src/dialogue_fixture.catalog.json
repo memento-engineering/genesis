@@ -1,0 +1,50 @@
+{
+  "$comment": "Dialogue test-catalog (ADR-0003, A22). dart run build_runner build projects this into dialogue_fixture.g.dart (typed factory registry binding the genesis_perception Node/Field species) and dialogue_fixture.g.json (LLM tool schema). Edit THIS file, then re-run the builder; the generator-in-sync test guards the committed artifacts. Envelopes deserialize into REAL perception Node/Field trees through this registry.",
+  "catalog": {
+    "name": "dialogue_fixture",
+    "version": "0.1.0",
+    "description": "Dialogue wire-layer test catalog binding the genesis_perception Node (container) and Field (leaf) species, so A2UI v0.9 envelopes deserialize into real measurement trees."
+  },
+  "types": {
+    "node": {
+      "description": "A named container component. Holds an ordered list of child components referenced by id.",
+      "container": true,
+      "props": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "description": "Structural name of this node in the measurement."
+        }
+      },
+      "dart": {
+        "class": "Node",
+        "import": "package:genesis_perception/genesis_perception.dart",
+        "positionalProps": ["name"],
+        "namedProps": [],
+        "childrenParam": "children"
+      }
+    },
+    "field": {
+      "description": "A named value leaf holding a single string datum. Cannot have children.",
+      "container": false,
+      "props": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "description": "Name of this datum within the measurement."
+        },
+        "value": {
+          "type": "string",
+          "required": true,
+          "description": "Measured string value at configuration time."
+        }
+      },
+      "dart": {
+        "class": "Field",
+        "import": "package:genesis_perception/genesis_perception.dart",
+        "positionalProps": ["name", "value"],
+        "namedProps": []
+      }
+    }
+  }
+}

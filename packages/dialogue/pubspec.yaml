@@ -1,0 +1,21 @@
+name: genesis_dialogue
+description: >-
+  The A2UI v0.9 wire format: structured two-way exchange between agent and
+  surface. Parses/serializes the updateComponents envelope and reconciles
+  re-emissions by key onto the tree (ADR-0003).
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  genesis_taxonomy: any
+  genesis_tree: any
+  meta: ^1.15.0
+
+dev_dependencies:
+  build_runner: ^2.15.0
+  genesis_perception: any
+  lints: ^5.1.0
+  test: ^1.25.0
