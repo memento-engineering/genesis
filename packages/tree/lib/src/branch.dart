@@ -189,12 +189,38 @@ abstract class Branch {
   // --- Single-child reconciliation ---
 
   /// Reconciles [child] against [newSeed] at [slot].
+  ///
+  /// When an existing [child] is reconciled against an *identical* [newSeed]
+  /// (`identical(child.seed, newSeed)` — the A18 fast path, ported from
+  /// Flutter's `Element.updateChild`), the child is returned untouched: no
+  /// [update], no [rebuild], no subtree cascade. A `const`-canonicalized seed
+  /// or a deliberately reused instance therefore prunes its whole subtree at
+  /// reconcile time. The skip is identity-only by construction — it never
+  /// consults [Seed.operator==], so seeds remain free to define value
+  /// equality (e.g. for wire diffing) without changing reconcile semantics.
+  ///
+  /// The skip is reconciliation's concern only: [update] keeps its A9
+  /// force-rebuild semantics, so a direct `branch.update(sameInstance)` still
+  /// rebuilds. A provider whose value changed but whose child instance is
+  /// reused invalidates its dependents through [dependencyChanged]
+  /// independently of this skip; they land in the owner dirty set and rebuild
+  /// when [TreeOwner.flush] drains them (the A14 inclusion path).
+  ///
+  /// Deferred obligation: Flutter still updates a skipped child's *slot* on
+  /// the fast path (`updateSlotForChild`). [Branch] stores no slot — position
+  /// lives only in the parent's child list — so there is no slot-update branch
+  /// here yet. The day render branches grow slots, the skip must update the
+  /// slot before returning (per A18 refinement 3).
   Branch? updateChild(Branch? child, Seed? newSeed, Object? slot) {
     if (newSeed == null) {
       child?.unmount();
       return null;
     }
     if (child != null) {
+      // A18 fast path: an identical config skips the rebuild entirely.
+      if (identical(child._seed, newSeed)) {
+        return child;
+      }
       if (Seed.canUpdate(child._seed, newSeed)) {
         child.update(newSeed);
         return child;
@@ -209,6 +235,15 @@ abstract class Branch {
   // --- Multi-child keyed reconciliation ---
 
   /// Reconciles [oldChildren] against [newSeeds] by key identity.
+  ///
+  /// Each new seed is matched to an old branch — keyed seeds by key, unkeyed
+  /// seeds positionally by cursor — and the matched pair is reconciled through
+  /// [updateChild] (Flutter's shape: `updateChildren` delegates per position),
+  /// so the A18 identical-config fast path applies uniformly to the multichild
+  /// path from a single skip site. A matched-but-incompatible branch
+  /// (`canUpdate` false) is unmounted and replaced by [updateChild]; matched
+  /// old branches left unconsumed (a keyed branch whose key vanished, or
+  /// unkeyed branches past the new length) are unmounted after the pass.
   List<Branch> updateChildren(List<Branch> oldChildren, List<Seed> newSeeds) {
     final Map<Object, Branch> keyedOld = {};
     final List<Branch> unkeyedOld = [];
@@ -232,15 +267,10 @@ abstract class Branch {
         match = unkeyedOld[unkeyedCursor++];
       }
 
-      if (match != null && Seed.canUpdate(match._seed, newSeed)) {
-        match.update(newSeed);
-        result.add(match);
-      } else {
-        match?.unmount();
-        final branch = newSeed.createBranch();
-        branch.mount(this, i);
-        result.add(branch);
-      }
+      // Route through updateChild so the identical-skip and the
+      // canUpdate-or-replace decision live in exactly one place; updateChild
+      // never returns null for a non-null seed, so the result is non-null.
+      result.add(updateChild(match, newSeed, i)!);
     }
 
     for (final branch in keyedOld.values) {
