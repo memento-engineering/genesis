@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Resolve workspace
+        run: dart pub get
+
+      - name: Analyze
+        run: dart analyze
+
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Test (all packages via melos)
+        run: |
+          dart pub global activate melos
+          dart pub global run melos run test
