@@ -96,6 +96,13 @@ workspace is pure Dart.
   expression-row tests/demos dev-depend on `genesis_perception` and use
   `Node`/`Field`. A11 is one-directional: perception never imports the
   expression row; the reverse is fine in test code.
+- **Branch purity (ADR-0001 D3, register A31):** `Branch` stays identity +
+  keyed reconcile + dirtiness + one abstract rebuild hook. Never add
+  render/gesture/`addPostFrameCallback`/timer/listener machinery to `Branch` —
+  build, state, effects, and scheduling live in composition subclasses
+  (`ComponentBranch`/`State`/`Sprout`) or domains. Inherited-value propagation
+  is the one sanctioned base exception (a structural query, lazily allocated).
+  The seam word from spike 5 holds: actions live on the element, not in `tree`.
 
 ## Where things live
 

@@ -44,9 +44,12 @@ abstract class Branch {
   /// [TreeContext.mounted], which stays queryable as the staleness probe.
   TreeContext get context => _context ??= createTreeContext(this);
 
-  // Providers (InheritedBranchBase ancestors) this branch currently
-  // depends on.
-  final Set<InheritedBranchBase> _dependencies = {};
+  // Providers (InheritedBranchBase ancestors) this branch currently depends
+  // on. Lazily allocated — the common branch depends on nothing, so it never
+  // pays for the set (a Branch-purity footprint tightening; the inherited-
+  // propagation machinery is the one Element-bloat category the base carries,
+  // so keep its cost off branches that don't use it).
+  Set<InheritedBranchBase>? _dependencies;
 
   /// Returns the nearest ancestor value provided via `InheritedSeed<T>` of
   /// exact type [T], registering this branch as a dependent; null when no
@@ -58,7 +61,7 @@ abstract class Branch {
         final value = ancestor.getValueAs<T>();
         if (value != null) {
           ancestor.addDependent(this);
-          _dependencies.add(ancestor);
+          (_dependencies ??= {}).add(ancestor);
           return value;
         }
       }
@@ -119,7 +122,7 @@ abstract class Branch {
 
   /// Providers this branch depends on. Exposed for testing.
   /// Do not use in production code.
-  Set<Branch> get dependencies => _dependencies;
+  Set<Branch> get dependencies => _dependencies ?? const <Branch>{};
 
   // --- Traversal ---
 
@@ -174,8 +177,11 @@ abstract class Branch {
   @mustCallSuper
   void unmount() {
     assert(_mounted, 'unmount() called on already-unmounted branch.');
-    for (final dep in List.of(_dependencies)) {
-      dep.removeDependent(this);
+    final deps = _dependencies;
+    if (deps != null) {
+      for (final dep in List.of(deps)) {
+        dep.removeDependent(this);
+      }
     }
     _mounted = false;
     _parent = null;
@@ -183,7 +189,7 @@ abstract class Branch {
 
   /// Package-internal: called only by `InheritedBranch.removeDependent`.
   void removeDependency(Branch dep) {
-    _dependencies.remove(dep);
+    _dependencies?.remove(dep);
   }
 
   // --- Single-child reconciliation ---
