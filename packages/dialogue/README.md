@@ -132,6 +132,7 @@ practice), updated for the as-built dialogue layer.
 | **Diverged** | **`version` is now parsed STRICTLY** (must be present and `== "v0.9"`), where spike 3 parsed it leniently. The default that keeps pure-v0.9 parsing unchanged: a real v0.9 message always carries `version: "v0.9"`, so it still parses; only a missing/wrong version is now rejected loudly rather than ignored. |
 | **Diverged** | Component vocabulary is the consumer's genesis catalog (the test catalog here binds `node`/`field` → perception `Node`/`Field`), not the A2UI standard catalog (`Text`, `Column`, `Button`, …). |
 | **Diverged** | The action transport **envelope nesting is unverified** against the spec (spike 5): the parser accepts both `{"action": {…}}` and a bare action object. |
+| **Diverged** | The action message's `timestamp` and `context` are parsed as **optional** (lenient-in: `timestamp` may be absent, `context` defaults to `{}`), where a2ui_core marks both required on `A2uiClientAction`. Well-formed v0.9 actions still parse; this only tolerates a thinner client. |
 | **Unknown** | Exact JSON-Schema text of the official v0.9 catalog definitions (the google/A2UI raw schema path 404'd at spike time); field names are as quoted by a2ui.org reference pages. |
 
 ## Deferred (NOT in v1)
