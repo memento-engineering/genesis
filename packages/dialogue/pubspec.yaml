@@ -4,6 +4,8 @@ description: >-
   surface. Parses/serializes the updateComponents envelope and reconciles
   re-emissions by key onto the tree (ADR-0003).
 publish_to: none
+version: 0.1.0
+repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 
 environment:

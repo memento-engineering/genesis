@@ -5,6 +5,8 @@ description: >-
   enforcing valid intents through the target state and rejecting invalid ones
   with a structured, side-effect-free taxonomy.
 publish_to: none
+version: 0.1.0
+repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 
 environment:

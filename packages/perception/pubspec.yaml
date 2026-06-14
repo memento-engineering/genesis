@@ -2,6 +2,8 @@ name: genesis_perception
 description: >-
   Measurement domain on the tree spine (perception; lenny ADR 0001 lineage).
 publish_to: none
+version: 0.1.0
+repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 
 environment:
