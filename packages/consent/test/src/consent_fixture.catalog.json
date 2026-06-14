@@ -1,0 +1,81 @@
+{
+  "$comment": "Consent test-catalog (ADR-0005, A22). dart run build_runner build projects this into consent_fixture.g.dart (typed factory registry) + consent_fixture.g.json (LLM tool schema with x-actions). Edit THIS file, then re-run the builder; the generator-in-sync test guards the committed artifacts. node/field bind the genesis_perception species (A22); counter is a stateful, actionable component whose State implements genesis_consent's Actionable seam.",
+  "catalog": {
+    "name": "consent_fixture",
+    "version": "0.1.0",
+    "description": "Consent action-router test catalog: perception Node/Field plus a stateful Counter that affords press/set, so the enforce/reject hit-test runs against a real mounted tree."
+  },
+  "types": {
+    "node": {
+      "description": "A named container component. Holds an ordered list of child components referenced by id.",
+      "container": true,
+      "props": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "description": "Structural name of this node in the measurement."
+        }
+      },
+      "dart": {
+        "class": "Node",
+        "import": "package:genesis_perception/genesis_perception.dart",
+        "positionalProps": ["name"],
+        "namedProps": [],
+        "childrenParam": "children"
+      }
+    },
+    "field": {
+      "description": "A named value leaf holding a single string datum. Cannot have children.",
+      "container": false,
+      "props": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "description": "Name of this datum within the measurement."
+        },
+        "value": {
+          "type": "string",
+          "required": true,
+          "description": "Measured string value at configuration time."
+        }
+      },
+      "dart": {
+        "class": "Field",
+        "import": "package:genesis_perception/genesis_perception.dart",
+        "positionalProps": ["name", "value"],
+        "namedProps": []
+      }
+    },
+    "counter": {
+      "description": "A stateful integer counter leaf. Holds a live count and re-renders it; affords client actions.",
+      "container": false,
+      "props": {
+        "label": {
+          "type": "string",
+          "required": true,
+          "description": "Display label identifying this counter."
+        },
+        "start": {
+          "type": "integer",
+          "required": false,
+          "default": 0,
+          "description": "Initial count at mount time."
+        }
+      },
+      "dart": {
+        "class": "Counter",
+        "import": "consent_fixtures.dart",
+        "positionalProps": ["label"],
+        "namedProps": ["start"]
+      },
+      "actions": {
+        "press": {
+          "description": "Increment the count by context.amount (integer, optional, default 1)."
+        },
+        "set": {
+          "description": "Overwrite the count with context.value (integer, required). Last write wins."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+targets:
+  $default:
+    builders:
+      # Apply the genesis_taxonomy builder (auto_apply: dependents) to this
+      # package's own test catalog, generating consent_fixture.g.dart (the
+      # registry) + consent_fixture.g.json (the tool schema). The
+      # generator-in-sync test guards the committed artifacts.
+      genesis_taxonomy|taxonomy:
+        enabled: true
+        generate_for:
+          - test/src/*.catalog.json
