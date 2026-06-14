@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 // Port of perception's stateful_perception_test.dart to tree vocabulary.
 import 'package:test/test.dart';
 import 'package:genesis_tree/genesis_tree.dart';

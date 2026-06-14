@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 // A9 (ADR-0001 Decision 4): a same-type+key config update invokes the rebuild
 // hook. The composition layer defines the hook as re-running build(); a
 // non-component branch keeps its own artifact response and gains no build

@@ -225,26 +225,22 @@ final class ConsentRouter {
   /// Resolves the [Actionable] dispatch seam for a resolved target branch
   /// (ADR-0005 Decision 4 — "applied via the target state").
   ///
-  /// The target must be a [StatefulBranch] whose state implements [Actionable].
-  /// This is the one place consent reaches a live `State`; it does so through
-  /// `StatefulBranch.state` — the action-dispatch seam spike 5 flagged as a
-  /// production need (register pending). Reaching the target state is exactly
-  /// what Decision 4 mandates, so this use is the ADR-sanctioned exception to
-  /// the getter's general "test-only" guidance.
+  /// The target **branch** must implement [Actionable] — the spike-5 "seam on
+  /// elements": an actionable component declares it on its element, which
+  /// forwards to its own `State`. consent never reaches a branch's `State`
+  /// directly (`StatefulBranch.state` is `@protected`); the element exposes only
+  /// the narrow action seam.
   ///
   /// Throws [StateError] when a component whose catalog type declares the
-  /// action cannot honor it — the catalog and the component disagree, a
-  /// developer wiring error rather than actor feedback.
+  /// action does not implement [Actionable] — the catalog and the component
+  /// disagree, a developer wiring error rather than actor feedback.
   Actionable _actionableOf(Branch target) {
-    if (target is StatefulBranch) {
-      final state = target.state;
-      if (state is Actionable) return state as Actionable;
-    }
+    if (target case final Actionable handler) return handler;
     throw StateError(
       'component "${target.key}" (${target.seed.runtimeType}) has a '
-      'catalog-declared action but its live branch/state does not implement '
+      'catalog-declared action but its live branch does not implement '
       'Actionable: the catalog affords an action the component cannot honor. '
-      'Implement Actionable on the component\'s State (ADR-0005 Decision 4).',
+      'Implement Actionable on the component\'s element (ADR-0005 Decision 4).',
     );
   }
 }

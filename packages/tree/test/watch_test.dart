@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 // Port of perception's watch_test.dart to tree vocabulary (A13: Watch lives
 // in tree's composition layer).
 import 'dart:async';

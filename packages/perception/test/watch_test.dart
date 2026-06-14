@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 // Conformance port of lenny perception's watch_test.dart (A10 gate).
 // Watch<T> is consumed via the tree re-export (register A13: Watch lives in
 // tree's composition layer); structural assertions use tree types.

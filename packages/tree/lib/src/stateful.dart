@@ -74,7 +74,14 @@ class StatefulBranch extends ComponentBranch {
   bool _firstBuild = true;
   bool _needsDidChangeDependencies = false;
 
-  /// The state object. Exposed for testing. Do not use in production code.
+  /// The mutable state owned by this branch.
+  ///
+  /// `@protected`: only this branch and its subclasses reach it (a domain
+  /// element upgrades the return type; an actionable element forwards to it).
+  /// It is **not** public API — external layers must not reach into a branch's
+  /// `State`. Tests that need it access it with an
+  /// `invalid_use_of_protected_member` ignore.
+  @protected
   State<StatefulSeed> get state => _state;
 
   @override

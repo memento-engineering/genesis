@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 // Conformance port of lenny perception's stateful_perception_test.dart
 // (A10 gate). One test carries an A8 delta (the separate-handle fork,
 // ADR-0001 Decision 2) — see docs/CONFORMANCE-DELTA.md.

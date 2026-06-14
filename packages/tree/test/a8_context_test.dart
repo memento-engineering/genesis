@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 // A8 (ADR-0001 Decision 2): Branch does NOT implement TreeContext — the
 // context is a separate, invalidatable capability handle. These tests make
 // the fork executable: no concrete branch kind is a TreeContext, and a handle

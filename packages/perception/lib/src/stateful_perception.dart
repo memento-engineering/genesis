@@ -1,4 +1,5 @@
 import 'package:genesis_tree/genesis_tree.dart';
+import 'package:meta/meta.dart';
 
 import 'perception_context.dart';
 
@@ -59,8 +60,9 @@ class StatefulPerceptionElement extends StatefulBranch {
   PerceptionContext get context =>
       _handle ??= createPerceptionContext(super.context);
 
-  /// The state object, typed as [PerceptionState]. Exposed for testing.
-  /// Do not use in production code.
+  /// The state, typed as [PerceptionState]. `@protected` (mirrors
+  /// [StatefulBranch.state]): subclass/test access only, never external.
+  @protected
   @override
   PerceptionState<StatefulPerception> get state =>
       super.state as PerceptionState<StatefulPerception>;
