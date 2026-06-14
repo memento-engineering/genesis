@@ -13,6 +13,7 @@ export 'src/branch.dart' hide InheritedBranchBase;
 export 'src/component_branch.dart';
 export 'src/inherited.dart';
 export 'src/seed.dart';
+export 'src/sprout.dart';
 export 'src/stateful.dart';
 export 'src/stateless.dart';
 export 'src/tree_context.dart' show TreeContext;
