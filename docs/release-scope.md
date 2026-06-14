@@ -41,8 +41,18 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
 
 ## Before publishing to pub.dev
 
-1. **Promote** the pending register entries (A25–A29) into their ADRs.
-2. **Flip dependencies** from sibling-path / `any` to git refs or hosted version
-   constraints, and drop `publish_to: none` (ADR-0001 D8) — this is the
-   launch-time switch, deliberately not done during development.
-3. Confirm per-package `LICENSE`, `version`, `repository`, and READMEs.
+1. ~~**Promote** the pending register entries into their ADRs.~~ **Done
+   (2026-06-14)** — A25–A31 promoted; A7 closed; register is clean.
+2. ~~**Flip dependencies** + drop `publish_to: none`.~~ **Done (2026-06-14,
+   A32)** — inter-package deps pinned to hosted `^0.1.0`; `publish_to: none`
+   dropped from the six members (the root workspace pubspec keeps it).
+   `dart pub publish --dry-run` on `genesis_tree` validates; `resolution:
+   workspace` stays for local dev resolution.
+3. **Remaining (the dry-run's standing warnings):** add a `README.md` to
+   `tree` / `perception` / `taxonomy` / `typesetting` (`dialogue` + `consent`
+   already have one), and a `CHANGELOG.md` to all six. Warnings, not blockers —
+   they lower the pub score but do not stop a publish.
+4. **Publish in dependency order** — each package's `^0.1.0` deps must already
+   be on pub.dev: `genesis_tree` → `genesis_perception` + `genesis_taxonomy` →
+   `genesis_typesetting` + `genesis_dialogue` → `genesis_consent`. This is the
+   one remaining outward-facing, irreversible step (needs pub.dev auth).

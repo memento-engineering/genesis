@@ -2,7 +2,6 @@ name: genesis_typesetting
 description: >-
   The cell/terminal render backend: a double-buffered character grid set in
   minimal ANSI, repainted from the tree's drained dirty set (ADR-0004).
-publish_to: none
 version: 0.1.0
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
@@ -11,10 +10,10 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
-  genesis_tree: any
+  genesis_tree: ^0.1.0
   meta: ^1.15.0
 
 dev_dependencies:
-  genesis_perception: any
+  genesis_perception: ^0.1.0
   lints: ^5.1.0
   test: ^1.25.0

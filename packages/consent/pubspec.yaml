@@ -4,7 +4,6 @@ description: >-
   by hit-testing the live Seed/Branch tree against catalog-declared affordances,
   enforcing valid intents through the target state and rejecting invalid ones
   with a structured, side-effect-free taxonomy.
-publish_to: none
 version: 0.1.0
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
@@ -13,12 +12,12 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
-  genesis_dialogue: any
-  genesis_taxonomy: any
-  genesis_tree: any
+  genesis_dialogue: ^0.1.0
+  genesis_taxonomy: ^0.1.0
+  genesis_tree: ^0.1.0
 
 dev_dependencies:
   build_runner: ^2.15.0
-  genesis_perception: any
+  genesis_perception: ^0.1.0
   lints: ^5.1.0
   test: ^1.25.0
