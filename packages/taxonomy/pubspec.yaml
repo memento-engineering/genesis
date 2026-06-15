@@ -2,7 +2,7 @@ name: genesis_taxonomy
 description: >-
   Schema-first UI catalog codegen: one catalog generates a typed Dart component
   registry and a matching LLM tool schema.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 

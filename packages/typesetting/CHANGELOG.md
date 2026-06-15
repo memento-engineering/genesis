@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Docs: package documentation (README, dartdoc) made self-contained for pub.dev; no API changes.
+
 ## 0.1.0
 
 - Initial release: the bare-VM cell/ANSI render-branch backend — Stage/Box/Text with double-buffered diff emission.

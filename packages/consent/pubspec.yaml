@@ -2,7 +2,7 @@ name: genesis_consent
 description: >-
   An enforce/reject action substrate: validate A2UI actions by hit-testing the
   live tree against catalog-declared affordances, then enforce or refuse.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 
