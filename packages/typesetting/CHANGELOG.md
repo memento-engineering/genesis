@@ -4,5 +4,4 @@
 
 - Initial release: the bare-VM cell/ANSI render-branch backend — Stage/Box/Text with double-buffered diff emission.
 
-  Pre-1.0 / experimental; see `docs/adr/` in the
-  [genesis](https://github.com/memento-engineering/genesis) monorepo.
+  Pre-1.0 and experimental; APIs may change before 1.0.

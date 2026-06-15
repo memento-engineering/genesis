@@ -6,7 +6,7 @@ import 'cell_grid.dart';
 import 'rect.dart';
 import 'stage.dart';
 
-/// The typesetting-side render-parent protocol (register A23).
+/// The typesetting-side render-parent protocol.
 ///
 /// A render container provides one canonical link instance to its child
 /// subtrees (via [RenderBranch.renderScopeFor]); a mounting render branch
@@ -43,7 +43,7 @@ class RenderParentLink {
 }
 
 /// A [Seed] whose branch bears render artifacts — the RenderObjectWidget
-/// analog (register A23). Mounting one produces a [RenderBranch].
+/// analog. Mounting one produces a [RenderBranch].
 abstract class RenderSeed extends Seed {
   /// Creates a render seed, optionally [key]ed.
   const RenderSeed({super.key});
@@ -54,9 +54,8 @@ abstract class RenderSeed extends Seed {
 
 /// A mounted branch that owns geometry ([rect]) and paints cells — the
 /// RenderObjectElement+RenderObject analog, collapsed into one type because
-/// the cell grid needs no separate retained render node (register A23;
-/// ADR-0001 Decision 3's "non-component branches define their own artifact
-/// response", taken literally).
+/// the cell grid needs no separate retained render node (non-component
+/// branches define their own artifact response, taken literally).
 ///
 /// The artifact response in the rebuild hook is paint: [performRebuild]
 /// marks this branch needing paint, and the stage's frame pass paints it in
@@ -70,7 +69,7 @@ abstract class RenderSeed extends Seed {
 /// intervening component branches; [renderChildren] is the downward
 /// adjacency, derived from the live tree in tree order.
 ///
-/// Layout v1 is minimal flow (register A23): the parent assigns [rect]
+/// Layout v1 is minimal flow: the parent assigns [rect]
 /// top-down via [layout]; a child reports the rows it occupies via
 /// [flowHeight]. A constraints-down/sizes-up protocol is explicitly
 /// DEFERRED — this is placement, not negotiation.
@@ -194,7 +193,7 @@ abstract class RenderBranch extends Branch {
     _binding = binding;
   }
 
-  /// The artifact response (ADR-0001 Decisions 3 and 4): a rebuilt render
+  /// The artifact response: a rebuilt render
   /// branch repaints, and — layout v1 — re-flows, in the same frame pass.
   /// Containers override to reconcile children FIRST, then super-call.
   @override

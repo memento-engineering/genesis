@@ -2,7 +2,7 @@ import 'package:genesis_tree/genesis_tree.dart';
 
 /// Provides an ambient value of type [T] to all descendants in the
 /// perception tree — the perception-domain face of the tree composition
-/// layer's [InheritedSeed] (genesis ADR-0001 Decisions 3 and 6).
+/// layer's [InheritedSeed].
 ///
 /// Usage:
 ///   `InheritedPerception<String>(value: 'hello', child: MyNode())`

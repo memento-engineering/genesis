@@ -4,7 +4,7 @@ import 'perception.dart';
 import 'perception_context.dart';
 
 /// Mounted, live node in the perception tree — `PerceptionElement extends
-/// Branch` (genesis ADR-0001 Decision 6 / A12).
+/// Branch`.
 ///
 /// Identity, lifecycle, keyed reconciliation, dirtiness, and the rebuild hook
 /// are all inherited from the tree spine; this class adds the measurement
@@ -16,12 +16,11 @@ import 'perception_context.dart';
 ///   the single domain override point: tree-core invalidation
 ///   ([markNeedsRebuild], e.g. provider `dependencyChanged`) funnels through
 ///   it, so subclasses observing harvest scheduling override one method;
-/// - [context] — the A8 capability handle, upgraded to [PerceptionContext].
+/// - [context] — the capability handle, upgraded to [PerceptionContext].
 ///
-/// Per ADR-0001 Decision 2 (A8) this element deliberately does NOT implement
-/// [PerceptionContext] — lenny ADR 0001's `PerceptionElement implements
-/// PerceptionContext` re-committed Flutter's Element≡BuildContext sin, and
-/// genesis sheds it.
+/// This element deliberately does NOT implement [PerceptionContext]: making
+/// the element its own context re-commits Flutter's Element≡BuildContext sin,
+/// and genesis sheds it.
 abstract class PerceptionElement extends Branch {
   /// Creates an element configured by [perception].
   PerceptionElement(Perception super.seed);
@@ -35,9 +34,9 @@ abstract class PerceptionElement extends Branch {
 
   PerceptionContext? _handle;
 
-  /// The capability handle for this element (A8), upgraded with the
-  /// perception capabilities (A12 handle layering). Lazily wraps the
-  /// canonical tree handle once; never the element itself.
+  /// The capability handle for this element, upgraded with the perception
+  /// capabilities. Lazily wraps the canonical tree handle once; never the
+  /// element itself.
   @override
   PerceptionContext get context =>
       _handle ??= createPerceptionContext(super.context);

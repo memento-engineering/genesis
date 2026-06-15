@@ -3,8 +3,7 @@ import 'dart:convert' show utf8;
 import 'cell.dart';
 import 'cell_grid.dart';
 
-/// Encodes change lists into minimal ANSI escape sequences (ADR-0004
-/// Decision 2).
+/// Encodes change lists into minimal ANSI escape sequences.
 ///
 /// Write-only output: cursor positioning (`ESC[row;colH`, 1-based) plus
 /// 256-color SGR (`ESC[0;1;38;5;N;48;5;Mm`). Adjacent changed cells on the

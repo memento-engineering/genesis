@@ -1,7 +1,7 @@
 # genesis_perception
 
 The measurement domain, built on the [`genesis_tree`](https://pub.dev/packages/genesis_tree)
-spine by subclassing (genesis ADR-0001 Decision 6). Pure Dart, bare VM.
+spine by subclassing. Pure Dart, bare VM.
 
 A *measurement* is a read-only projection of the world: the model never
 constructs perceptions directly — it observes, and its only write is a
@@ -33,8 +33,6 @@ The tree spine is **re-exported in full**, so one import surfaces
 ## Status
 
 Pre-1.0; tracks `genesis_tree`. The measurement domain is stable in shape.
-Design rationale: `docs/adr/ADR-0001-foundations.md` (Decision 6) in the
-monorepo.
 
 ## License
 

@@ -4,8 +4,7 @@ import 'package:meta/meta.dart';
 import 'perception_context.dart';
 
 /// A configuration whose element owns mutable [PerceptionState] — the
-/// perception-domain face of the tree composition layer's [StatefulSeed]
-/// (genesis ADR-0001 Decisions 3 and 6).
+/// perception-domain face of the tree composition layer's [StatefulSeed].
 abstract class StatefulPerception extends StatefulSeed {
   /// Creates a stateful perception, optionally [key]ed.
   const StatefulPerception({super.key});
@@ -31,7 +30,7 @@ abstract class PerceptionState<T extends StatefulPerception> extends State<T> {
   /// configuration of the owning element.
   T get perception => seed;
 
-  /// The owning element's capability handle (A8), upgraded to
+  /// The owning element's capability handle, upgraded to
   /// [PerceptionContext]: a separate object, never the element itself;
   /// throws [StateError] when used after unmount (except `mounted`).
   @override

@@ -1,14 +1,14 @@
-/// Measurement domain on the tree spine (perception; lenny ADR 0001 lineage).
+/// Measurement domain on the tree spine.
 ///
 /// `Perception extends Seed`, `PerceptionElement extends Branch`,
 /// `PerceptionContext` is a capability extension of `TreeContext`, and
-/// `PerceptionOwner` builds on `TreeOwner` (genesis ADR-0001 Decision 6).
+/// `PerceptionOwner` builds on `TreeOwner`.
 ///
 /// The tree spine is re-exported in full: perception's public signatures
-/// deliberately surface tree types (A12), so consumers get `Seed`/`Branch`/
+/// deliberately surface tree types, so consumers get `Seed`/`Branch`/
 /// `TreeContext`/`TreeOwner` — and the composition layer, including
-/// `Watch<T>` (register A13: Watch lives in tree's composition layer;
-/// perception consumes it via this re-export) — from this one import.
+/// `Watch<T>`, which lives in tree's composition layer and perception consumes
+/// via this re-export — from this one import.
 library;
 
 export 'package:genesis_tree/genesis_tree.dart';

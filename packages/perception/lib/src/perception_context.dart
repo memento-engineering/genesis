@@ -1,11 +1,10 @@
 import 'package:meta/meta.dart';
 import 'package:genesis_tree/genesis_tree.dart';
 
-/// Capability extension of [TreeContext] for the perception domain
-/// (genesis ADR-0001 Decision 6 / A12).
+/// Capability extension of [TreeContext] for the perception domain.
 ///
 /// The domain layers its capabilities onto the separate handle — exactly what
-/// the A8 separate-handle architecture is for. A `PerceptionContext` is never
+/// the separate-handle design is for. A `PerceptionContext` is never
 /// the mounted element itself; like its [TreeContext] base, every member
 /// except [mounted] throws [StateError] once the bound element unmounts, so a
 /// handle held across an async gap fails loudly instead of acting on a stale
@@ -13,9 +12,9 @@ import 'package:genesis_tree/genesis_tree.dart';
 ///
 /// Today this interface adds the harvest vocabulary ([markNeedsHarvest],
 /// [perceptionId]). It is deliberately the seam where the perception-owned
-/// **token budget** capability lands later (ADR-0001 Decision 3: budget ==
-/// constraints, the render-tree concern that belongs to the measurement
-/// domain, never to the tree spine).
+/// **token budget** capability lands later (budget == constraints, the
+/// render-tree concern that belongs to the measurement domain, never to the
+/// tree spine).
 abstract class PerceptionContext implements TreeContext {
   /// Domain alias of [TreeContext.branchId]: the stable id of the bound
   /// element, issued at mount.
@@ -39,8 +38,8 @@ abstract class PerceptionContext implements TreeContext {
 PerceptionContext createPerceptionContext(TreeContext inner) =>
     _PerceptionHandle(inner);
 
-/// The private domain handle (A12 handle layering): delegates every
-/// [TreeContext] member to the wrapped tree handle — inheriting its A8
+/// The private domain handle (the layered capability handle): delegates every
+/// [TreeContext] member to the wrapped tree handle — inheriting its
 /// throw-after-unmount protection — and maps the harvest vocabulary onto it.
 class _PerceptionHandle implements PerceptionContext {
   _PerceptionHandle(this._inner);

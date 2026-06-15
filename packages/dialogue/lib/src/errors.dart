@@ -1,4 +1,4 @@
-/// Structured error hierarchy for genesis_dialogue (ADR-0003).
+/// Structured error hierarchy for genesis_dialogue.
 ///
 /// These cover the *envelope-level* structural faults the wire layer owns:
 /// a malformed `updateComponents` message or a malformed `action` message,
@@ -41,8 +41,8 @@ sealed class EnvelopeException extends DialogueException {
 
 /// The envelope carries a `version` other than the one this codec speaks.
 ///
-/// genesis_dialogue is **strict** on version (ADR-0003 / register A19: the
-/// wire is pure A2UI v0.9): the field must be present and equal to `v0.9`.
+/// genesis_dialogue is **strict** on version (the wire is pure A2UI v0.9):
+/// the field must be present and equal to `v0.9`.
 /// A missing field, or a v0.8 `version`, is rejected here rather than parsed
 /// leniently — silently accepting the wrong version is how a standard rots
 /// into a dialect.

@@ -7,8 +7,7 @@ import 'seed.dart';
 typedef VoidCallback = void Function();
 
 /// Owns the root branch, holds the dirty set, and drives synchronous
-/// depth-ordered flushes — the BuildOwner.buildScope analogue (ADR-0001
-/// Decision 2).
+/// depth-ordered flushes — the BuildOwner.buildScope analogue.
 class TreeOwner {
   final SplayTreeSet<Branch> _dirtyBranches = SplayTreeSet((a, b) {
     final d = a.depth.compareTo(b.depth);
@@ -60,11 +59,11 @@ class TreeOwner {
   /// Drains the dirty set in depth order (parents before children),
   /// rebuilding each branch, and returns the branches this call actually
   /// rebuilt, in flush order — the drained dirty set exposed to render
-  /// backends (ADR-0001 Decision 5).
+  /// backends.
   ///
   /// A drained branch is included iff it was still mounted and dirty when
   /// drained. A branch that was force-rebuilt earlier by an update cascade
-  /// (ADR-0001 Decision 4 clears its dirty flag) or unmounted after being
+  /// (the update cascade clears its dirty flag) or unmounted after being
   /// scheduled is drained but excluded — it was not rebuilt by this call.
   /// Branches dirtied mid-flush are rebuilt in the same pass and included.
   List<Branch> flush() {

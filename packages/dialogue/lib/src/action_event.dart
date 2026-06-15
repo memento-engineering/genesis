@@ -1,11 +1,11 @@
 /// The client→server half of the dialogue: parsing the A2UI v0.9 `action`
-/// message into a typed [ActionEvent] (ADR-0003 Decision 1).
+/// message into a typed [ActionEvent].
 ///
 /// This is **parse only**. dialogue produces the typed event; it does not
 /// route it, hit-test the `sourceComponentId` against the live tree, check
 /// the affordance, or validate the payload against an action contract — that
-/// is `genesis_consent`'s job (ADR-0005, the enforce/reject substrate; the
-/// next package). The seam is deliberate: dialogue owns the wire vocabulary,
+/// is `genesis_consent`'s job (the enforce/reject substrate; the next
+/// package). The seam is deliberate: dialogue owns the wire vocabulary,
 /// consent owns the world-side enforcement. An [ActionEvent] crossing this
 /// boundary has been *decoded*, not *authorized*.
 library;

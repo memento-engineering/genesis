@@ -1,6 +1,6 @@
 /// The receive side of the dialogue: a live surface that mounts an
 /// `updateComponents` message onto a `genesis_tree` and reconciles
-/// re-emissions by key (ADR-0003 Decisions 2 and 3).
+/// re-emissions by key.
 ///
 /// Component ids become `Seed` keys (tree keys == A2UI component ids), which
 /// is what turns whole-tree re-emission into an identity-preserving patch:
@@ -30,7 +30,7 @@ const String rootComponentId = 'root';
 ///
 /// - [mount] builds the first tree from a message and roots it on the owner;
 /// - [apply] reconciles a subsequent message against the mounted tree by key,
-///   preserving identity (ADR-0003 Decision 3).
+///   preserving identity.
 final class DialogueSurface {
   /// Creates a surface that deserializes through [registry] onto [owner].
   ///
@@ -82,7 +82,7 @@ final class DialogueSurface {
   }
 
   /// Reconciles [message] against the mounted tree **by key**, preserving
-  /// element identity (ADR-0003 Decision 3).
+  /// element identity.
   ///
   /// Builds the new keyed `Seed` tree from the message and calls
   /// `rootBranch.update(newRootSeed)`: the root id is `"root"` (a stable key)
@@ -93,7 +93,7 @@ final class DialogueSurface {
   /// removed ids are unmounted (`.mounted == false`); inserted ids are
   /// mounted fresh.
   ///
-  /// Honest limit (ADR-0001's A18 fast path): the fast path skips only on
+  /// Honest limit (the reconcile fast path): the fast path skips only on
   /// `identical()` seeds, and freshly *deserialized* seeds are never
   /// identical — so re-applying a byte-identical message does not short-circuit
   /// the reconcile. Keyed identity preservation still holds; only the skip

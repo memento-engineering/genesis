@@ -1,7 +1,7 @@
 import 'branch.dart';
 
-/// Immutable configuration node — the Widget analogue (ADR-0001 Decision 2:
-/// planted, describes what grows).
+/// Immutable configuration node — the Widget analogue: planted, describes
+/// what grows.
 ///
 /// Pure Dart; zero Flutter imports.
 abstract class Seed {

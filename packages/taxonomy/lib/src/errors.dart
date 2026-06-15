@@ -1,10 +1,9 @@
-/// Structured error hierarchy for genesis_taxonomy (ADR-0002).
+/// Structured error hierarchy for genesis_taxonomy.
 ///
 /// Every failure mode is a sealed-union member carrying structured fields
 /// (component type, prop name, expected/actual, ...) so an agent loop can
 /// feed [TaxonomyException.message] back to an LLM verbatim, or switch
-/// exhaustively over the kinds. Nothing here throws bare [StateError] — that
-/// was a recorded spike shortcut (ADR-0002 Decision 5).
+/// exhaustively over the kinds. Nothing here throws bare [StateError].
 library;
 
 /// Root of the genesis_taxonomy error union.
@@ -65,7 +64,7 @@ final class CatalogFormatException extends CatalogException {
 
 /// One or more type-level catalog keys were claimed by no registered extension.
 ///
-/// This is the loud-extension-key seam (ADR-0002 Decision 4 seam 1): unknown
+/// This is the loud-extension-key seam: unknown
 /// type-level keys are never silently dropped — either a registered
 /// [CatalogExtension] handles the key or parsing fails with this error listing
 /// every unhandled key.

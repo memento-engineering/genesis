@@ -1,5 +1,4 @@
-/// The build_runner shell over the programmatic generator core (ADR-0002
-/// Decision 5).
+/// The build_runner shell over the programmatic generator core.
 ///
 /// Consumes a `*.catalog.json` asset and emits the `.g.dart` factory
 /// registry plus the `.g.json` tool schema next to it (`build_to: source`,

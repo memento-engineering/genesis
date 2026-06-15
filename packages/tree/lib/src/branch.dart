@@ -4,17 +4,16 @@ import 'seed.dart';
 import 'tree_context.dart';
 import 'tree_owner.dart';
 
-/// Mounted, persistent node in the tree — the Element analogue (ADR-0001
-/// Decision 2).
+/// Mounted, persistent node in the tree — the Element analogue.
 ///
-/// `Branch` core is artifact-agnostic (ADR-0001 Decision 3): it owns identity,
-/// lifecycle (mount/update/unmount), keyed reconciliation, dirtiness, and the
-/// single [performRebuild] hook. It carries no build contract — the
-/// composition layer (`ComponentBranch` and friends) defines the hook as
-/// re-running `build()`; other branches define their own artifact response.
+/// `Branch` core is artifact-agnostic: it owns identity, lifecycle
+/// (mount/update/unmount), keyed reconciliation, dirtiness, and the single
+/// [performRebuild] hook. It carries no build contract — the composition layer
+/// (`ComponentBranch` and friends) defines the hook as re-running `build()`;
+/// other branches define their own rebuild behavior.
 ///
-/// Per ADR-0001 Decision 2 (A8), `Branch` deliberately does NOT implement
-/// [TreeContext]. The build-time capability handle is a separate object
+/// `Branch` deliberately does NOT implement [TreeContext]. The build-time
+/// capability handle is a separate object
 /// obtained via [context]; it throws [StateError] on use after this branch
 /// unmounts, so a handle held across an async gap fails loudly instead of
 /// silently acting on a stale node.
@@ -36,7 +35,7 @@ abstract class Branch {
 
   TreeContext? _context;
 
-  /// The capability handle for this branch (ADR-0001 Decision 2 / A8).
+  /// The capability handle for this branch.
   ///
   /// This is the object the composition layer passes to `build()` and
   /// surfaces as `State.context`. It is never the branch itself; after this
@@ -84,7 +83,7 @@ abstract class Branch {
   void dependencyChanged() => markNeedsRebuild();
 
   /// Runs [performRebuild] when this branch is mounted and dirty (or when
-  /// [force] is true — the ADR-0001 Decision 4 update path). Clears the dirty
+  /// [force] is true — the update path). Clears the dirty
   /// flag first, so a branch force-rebuilt during reconciliation is skipped
   /// when the owner later drains it in the same flush.
   void rebuild({bool force = false}) {
@@ -94,9 +93,9 @@ abstract class Branch {
     }
   }
 
-  /// The single rebuild hook (ADR-0001 Decision 3). `Branch` core attaches no
-  /// meaning to it; the composition layer defines it as re-running `build()`,
-  /// and non-component branches define their own artifact response.
+  /// The single rebuild hook. `Branch` core attaches no meaning to it; the
+  /// composition layer defines it as re-running `build()`, and non-component
+  /// branches define their own rebuild behavior.
   @protected
   void performRebuild() {}
 
@@ -127,7 +126,7 @@ abstract class Branch {
   // --- Traversal ---
 
   /// Calls [visitor] once for each direct child of this branch, in tree
-  /// order (ADR-0001 Decision 5).
+  /// order.
   ///
   /// `Branch` core holds no children, so the base implementation visits
   /// nothing; subclasses that own children override this. The walk is
@@ -157,10 +156,10 @@ abstract class Branch {
   }
 
   /// Updates the config node when [Seed.canUpdate] is true, then invokes the
-  /// rebuild path (ADR-0001 Decision 4 / A9): a config update reaches
-  /// [performRebuild] with the new [seed] already in place. What the hook
-  /// does is layered per Decision 3 — components re-run `build()`;
-  /// non-component branches respond with their own artifact semantics.
+  /// rebuild path: a config update reaches [performRebuild] with the new
+  /// [seed] already in place. What the hook does is layered — components
+  /// re-run `build()`; non-component branches respond with their own
+  /// rebuild semantics.
   @mustCallSuper
   void update(Seed newSeed) {
     assert(_mounted, 'update() called on unmounted branch.');
@@ -197,33 +196,34 @@ abstract class Branch {
   /// Reconciles [child] against [newSeed] at [slot].
   ///
   /// When an existing [child] is reconciled against an *identical* [newSeed]
-  /// (`identical(child.seed, newSeed)` — the A18 fast path, ported from
-  /// Flutter's `Element.updateChild`), the child is returned untouched: no
+  /// (`identical(child.seed, newSeed)` — the identical-skip fast path, ported
+  /// from Flutter's `Element.updateChild`), the child is returned untouched: no
   /// [update], no [rebuild], no subtree cascade. A `const`-canonicalized seed
   /// or a deliberately reused instance therefore prunes its whole subtree at
   /// reconcile time. The skip is identity-only by construction — it never
   /// consults [Seed.operator==], so seeds remain free to define value
   /// equality (e.g. for wire diffing) without changing reconcile semantics.
   ///
-  /// The skip is reconciliation's concern only: [update] keeps its A9
+  /// The skip is reconciliation's concern only: [update] keeps its
   /// force-rebuild semantics, so a direct `branch.update(sameInstance)` still
   /// rebuilds. A provider whose value changed but whose child instance is
   /// reused invalidates its dependents through [dependencyChanged]
   /// independently of this skip; they land in the owner dirty set and rebuild
-  /// when [TreeOwner.flush] drains them (the A14 inclusion path).
+  /// when [TreeOwner.flush] drains them.
   ///
   /// Deferred obligation: Flutter still updates a skipped child's *slot* on
   /// the fast path (`updateSlotForChild`). [Branch] stores no slot — position
   /// lives only in the parent's child list — so there is no slot-update branch
   /// here yet. The day render branches grow slots, the skip must update the
-  /// slot before returning (per A18 refinement 3).
+  /// slot before returning.
   Branch? updateChild(Branch? child, Seed? newSeed, Object? slot) {
     if (newSeed == null) {
       child?.unmount();
       return null;
     }
     if (child != null) {
-      // A18 fast path: an identical config skips the rebuild entirely.
+      // Identical-skip fast path: an identical config skips the rebuild
+      // entirely.
       if (identical(child._seed, newSeed)) {
         return child;
       }
@@ -245,7 +245,7 @@ abstract class Branch {
   /// Each new seed is matched to an old branch — keyed seeds by key, unkeyed
   /// seeds positionally by cursor — and the matched pair is reconciled through
   /// [updateChild] (Flutter's shape: `updateChildren` delegates per position),
-  /// so the A18 identical-config fast path applies uniformly to the multichild
+  /// so the identical-config fast path applies uniformly to the multichild
   /// path from a single skip site. A matched-but-incompatible branch
   /// (`canUpdate` false) is unmounted and replaced by [updateChild]; matched
   /// old branches left unconsumed (a keyed branch whose key vanished, or

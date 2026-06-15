@@ -4,7 +4,7 @@ import 'cell_grid.dart';
 import 'rect.dart';
 import 'render_branch.dart';
 
-/// A titled, bordered region (render vocabulary v1, register A23): draws a
+/// A titled, bordered region (render vocabulary v1): draws a
 /// box-drawing frame with [title] embedded in the top border and stacks its
 /// children's render branches as lines inside the border.
 ///

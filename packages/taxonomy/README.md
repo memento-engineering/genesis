@@ -1,6 +1,6 @@
 # genesis_taxonomy
 
-Schema-first node vocabulary (ADR-0002): one **catalog** classifies the node
+Schema-first node vocabulary: one **catalog** classifies the node
 species of a domain; codegen emits two projections from it —
 
 1. **the typed Dart factory registry** (`.g.dart`) — a `ComponentRegistry`
@@ -78,17 +78,17 @@ The core format owns only `description` / `container` / `props` / `dart` at
 the type level. **Any other type-level key must be claimed by a registered
 `CatalogExtension`, or parsing fails with `UnhandledCatalogKeysException`
 listing every unhandled key** — unknown vocabulary is never silently dropped
-(the spike-5 failure mode this seam exists to kill).
+(the silent-key-drop failure mode this seam exists to kill).
 
 The `actions` block itself rides this seam as the proof:
 `ActionsCatalogExtension` (in `defaultCatalogExtensions`) parses it into
 `ActionDeclaration` data on `CatalogType.actions` and projects it into the
 tool schema (`x-actions` + description prose). Affordances are carried as
-data here; `genesis_consent` consumes them for hit-test routing (ADR-0005).
+data here; `genesis_consent` consumes them for hit-test routing.
 
 ## Consuming the generator
 
-**Via build_runner** (the production path, ADR-0002 Decision 5): depend on
+**Via build_runner** (the production path): depend on
 `genesis_taxonomy`, drop a `<name>.catalog.json` anywhere build_runner looks
 (`lib/`, `test/`, ...), and run:
 
@@ -118,9 +118,9 @@ builder.
 
 `buildSeedTree(registry, components, {rootId})` turns a flat keyed component
 list into a `Seed` tree **through a registry passed as a parameter** — it
-never imports a generated file (the one line spike 5 had to fork, now a
-seam). Component ids become `Seed` keys, so whole-tree re-emission
-reconciles to an identity-preserving patch (ADR-0003). Tree-shape violations
+never imports a generated file (the one line a consumer would otherwise have
+to fork, now a seam). Component ids become `Seed` keys, so whole-tree
+re-emission reconciles to an identity-preserving patch. Tree-shape violations
 (duplicate id, unknown root, dangling child, cycle) throw structured
 `TreeShapeException`s. Envelope parsing (`updateComponents` itself) is wire
 vocabulary and lives with `genesis_dialogue`, which hands the flat list to
@@ -135,8 +135,8 @@ this builder.
 - **Per-instance actions** — real A2UI v0.9 wires actions per instance via a
   component's `action` property; the catalog declares type-level affordances
   only ("what CAN this afford"). Instance wiring is `genesis_dialogue` /
-  `genesis_consent` territory (spike-5 fidelity ledger).
-- **Extra extension projections** — spike 5 emitted a third artifact
+  `genesis_consent` territory.
+- **Extra extension projections** — a third artifact
   (`actions.g.dart`, the Perception-class -> wire-type map for the action
   router's hit-test). The extension seam currently projects into the tool
   schema only; an emit-side artifact hook lands with `genesis_consent`,

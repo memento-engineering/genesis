@@ -4,10 +4,10 @@ import 'perception.dart';
 import 'perception_element.dart';
 
 /// Named container perception: a keyed-multichild structural node in a
-/// measurement (lenny ADR 0001 vocabulary, ported to the tree spine).
+/// measurement (the measurement vocabulary, built on the tree spine).
 ///
-/// Children are typed [Seed] (A12: perception's public signatures surface
-/// tree types), so a Node freely mixes domain artifacts ([Perception]s such
+/// Children are typed [Seed] — perception's public signatures surface tree
+/// types — so a Node freely mixes domain artifacts ([Perception]s such
 /// as `Field`) with composition configs (`StatelessPerception`, `Watch`, …).
 class Node extends Perception {
   /// Creates a named container with [children], optionally [key]ed.
@@ -24,8 +24,8 @@ class Node extends Perception {
 }
 
 /// Mounted element for [Node]: a NON-component element whose artifact
-/// response in the rebuild hook is keyed reconciliation of its children
-/// (ADR-0001 Decisions 3 and 4) — no build contract.
+/// response in the rebuild hook is keyed reconciliation of its children —
+/// no build contract.
 class NodeElement extends PerceptionElement {
   /// Creates the element for [seed].
   NodeElement(Node super.seed);
@@ -44,9 +44,9 @@ class NodeElement extends PerceptionElement {
     performRebuild();
   }
 
-  /// The artifact response (ADR-0001 Decision 4): reconcile the children
-  /// against the current configuration. A config update reaches this hook
-  /// automatically (A9), so children reconcile on every in-place update.
+  /// The artifact response: reconcile the children against the current
+  /// configuration. A config update reaches this hook automatically, so
+  /// children reconcile on every in-place update.
   @override
   void performRebuild() {
     _children = updateChildren(_children, _node.children);

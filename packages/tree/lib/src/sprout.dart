@@ -1,5 +1,5 @@
-/// EXPERIMENTAL — two-consumer rule (ADR-0001): this API freezes only after
-/// perception and one expression surface both consume it.
+/// EXPERIMENTAL: this API may change before 1.0; it freezes only after a
+/// second consumer beyond perception adopts it.
 ///
 /// `Sprout` is the hooks-style stateful primitive — one class, one [build],
 /// state declared inline. It removes the `StatefulSeed` + separate `State<T>`
@@ -7,7 +7,7 @@
 /// lifecycles (additive, not a replacement). The `Sprout` subclass is still the
 /// reconciliation type-tag (`Seed.canUpdate` keys on `runtimeType`); state lives
 /// on the persistent [SproutBranch] and is reached only through the [SproutContext]
-/// handle (A8) — never the branch itself.
+/// handle — never the branch itself.
 library;
 
 import 'dart:async';
@@ -28,7 +28,7 @@ typedef Dispose = void Function();
 /// Subclass it and override [build], calling `context.useState` / `useStream` /
 /// `useEffect` / `useMemo` to declare state. The subclass type is the reconcile
 /// tag, so two `Sprout`s of different subclasses never update into one another;
-/// state persists on the branch across config updates (A9), keyed by call order.
+/// state persists on the branch across config updates, keyed by call order.
 abstract class Sprout extends Seed {
   /// Creates a sprout, optionally [key]ed.
   const Sprout({super.key});
@@ -61,8 +61,8 @@ class StateCell<T> {
   /// Sets the value and marks the owning branch for rebuild. Always schedules
   /// a rebuild (no equality gate), matching `State.setState`. A no-op once the
   /// branch has unmounted (`markNeedsRebuild` guards on `mounted` — the same
-  /// post-unmount silence as `setState`, deliberately *not* the A8 handle's
-  /// throw, since a late async callback should not crash).
+  /// post-unmount silence as `setState`, deliberately *not* the context
+  /// handle's throw, since a late async callback should not crash).
   set value(T next) {
     assert(
       !_branch._debugInBuild,
@@ -80,7 +80,7 @@ class StateCell<T> {
 
 /// The build-time hook-dispatch handle passed to [Sprout.build].
 ///
-/// Extends the A8 [TreeContext] (throw-after-unmount inherited) with the hook
+/// Extends [TreeContext] (throw-after-unmount inherited) with the hook
 /// surface. Hooks may only be called inside [Sprout.build], unconditionally and
 /// in a stable order. A changed hook count or a type change at a position
 /// throws; a call outside build asserts; a same-shape reorder is undetectable
@@ -315,7 +315,7 @@ bool _keysEqual(List<Object?>? a, List<Object?>? b) {
   return true;
 }
 
-// Creates the SproutContext handle bound to [branch] (wraps the canonical A8
+// Creates the SproutContext handle bound to [branch] (wraps the canonical
 // TreeContext). Private: build receives it lazily via the branch.
 SproutContext _createSproutContext(SproutBranch branch) =>
     _SproutContext(branch);
@@ -326,7 +326,7 @@ class _SproutContext implements SproutContext {
   final SproutBranch _branch;
   final TreeContext _delegate;
 
-  // TreeContext surface — delegated so throw-after-unmount (A8) is inherited.
+  // TreeContext surface — delegated so throw-after-unmount is inherited.
   @override
   bool get mounted => _delegate.mounted;
 

@@ -1,5 +1,5 @@
-/// EXPERIMENTAL — two-consumer rule (ADR-0001): this API freezes only after
-/// perception and one expression surface both consume it.
+/// EXPERIMENTAL: this API may change before 1.0; it freezes only after a
+/// second consumer beyond perception adopts it.
 library;
 
 import 'component_branch.dart';
@@ -13,7 +13,7 @@ abstract class StatelessSeed extends Seed {
   const StatelessSeed({super.key});
 
   /// Describes the child subtree for this configuration. [context] is the
-  /// branch's capability handle (A8).
+  /// branch's capability handle, never the branch itself.
   Seed build(TreeContext context);
 
   @override

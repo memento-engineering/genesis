@@ -1,4 +1,4 @@
-/// The programmatic generator core (ADR-0002 Decisions 1 and 5).
+/// The programmatic generator core.
 ///
 /// Pure (String in, Strings out) so the same code path is exercised by the
 /// build_runner builder (writes files) and by generator-in-sync tests
@@ -13,7 +13,7 @@ import 'extension.dart';
 import 'registry_emitter.dart';
 import 'tool_schema_emitter.dart';
 
-/// The two projections generated from one catalog (ADR-0002 Decision 1).
+/// The two projections generated from one catalog.
 class GeneratedOutputs {
   /// Bundles the projections.
   const GeneratedOutputs({

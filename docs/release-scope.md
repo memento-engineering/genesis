@@ -52,18 +52,18 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
    warnings).~~ **Done (2026-06-14)** — added READMEs for `tree` / `perception`
    (the other four already had them) and an initial `0.1.0` `CHANGELOG.md` for
    all six; `dart pub publish --dry-run` on `genesis_tree` is now clean.
-4. **Refine the public docs** *(in progress)* — strip internal references from
-   everything pub.dev renders. **Descriptions: done** (commit `863380b` — the
-   ADR / "lenny" refs removed). **Pending:** the six **READMEs** and the **lib
-   docblocks** (plus the CHANGELOGs' "see docs/adr/" pointer) still carry inline
-   ADR/register numbers, spike-`NOTES.md` references, `docs/adr/` / "monorepo"
-   pointers a public reader can't follow, and a mention of the unshipped
-   `genesis_expression` (typesetting README). Rewrite to be self-contained —
-   keep the technical substance + examples; replace load-bearing ADR refs with
-   plain prose (e.g. "the rebuild hook" not "ADR-0001 Decision 3's artifact
-   response"). **Open question:** link readers to
-   `github.com/memento-engineering/genesis` for deeper design docs, or leave
-   design pointers out of the public docs entirely.
+4. ~~**Refine the public docs** — strip internal references from everything
+   pub.dev renders.~~ **Done (2026-06-14)** — descriptions (commit `863380b`)
+   plus all six **READMEs**, every **lib docblock**, and the **CHANGELOGs**
+   scrubbed of inline ADR/register numbers, spike/`NOTES.md` references,
+   `docs/adr/` / "monorepo" pointers, and the unshipped `genesis_expression`
+   mention; load-bearing refs rewritten as plain prose. Two user-facing
+   error-strings (`tree_context.dart`, `consent/router.dart`) also de-jargoned.
+   Decision: **self-contained, no design pointers** — pub.dev already links the
+   repo from each pubspec's `repository:` field, so the prose carries none.
+   Verified clean (internal-ref + bare-`A<n>` greps empty bar legitimate
+   domain text); `dart format` 0-changed, `dart analyze` clean, full `melos run
+   test` green.
 5. **Publish — via `melos publish`** (the remaining outward step). `melos
    publish` is dry-run by default and resolves the dependency order
    automatically; `melos publish --no-dry-run` does the real publish. Order:

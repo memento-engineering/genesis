@@ -1,4 +1,4 @@
-/// Projection 2: the LLM-facing JSON Schema (ADR-0002 Decision 1).
+/// Projection 2: the LLM-facing JSON Schema.
 ///
 /// Emits a `.g.json` JSON Schema (draft 2020-12) for authoring an A2UI
 /// v0.9-shaped `updateComponents` message against the catalog: the type enum
@@ -20,9 +20,9 @@ import 'registry_emitter.dart';
 /// Generates the tool-schema JSON for [catalog].
 ///
 /// Provenance (`$comment`, title, description) is parameterized from the
-/// catalog's name block (ADR-0002 Decision 4 seam 2). Each registered
-/// extension's `augmentToolSchemaVariant` runs over every type variant — this
-/// is how affordance declarations reach the LLM (ADR-0005).
+/// catalog's name block. Each registered extension's
+/// `augmentToolSchemaVariant` runs over every type variant — this is how
+/// affordance declarations reach the LLM.
 String emitToolSchema(Catalog catalog) {
   final schema = <String, Object?>{
     r'$comment': 'GENERATED — do not edit. ${dartProvenanceLine(catalog)}',

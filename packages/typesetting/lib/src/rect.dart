@@ -2,12 +2,12 @@
 ///
 /// The API is modeled on `dart:ui`'s `Rect` ([Rect.fromLTWH], [left]/[top]/
 /// [width]/[height], [right]/[bottom], [contains], [Rect.zero]) so that
-/// typesetting geometry reads like Flutter render geometry (register A23) —
+/// typesetting geometry reads like Flutter render geometry —
 /// but it deliberately does NOT import `dart:ui`: that library is part of the
 /// Flutter engine and is unavailable on the bare Dart VM, which is exactly
-/// where this backend must run (ADR-0004 Decision 2 — no engine, no Skia).
-/// `genesis_expression`'s windowed backend uses the real `dart:ui.Rect`; the
-/// conformance oracle (ADR-0004 Decision 3) bridges the two.
+/// where this backend must run (no engine, no Skia).
+/// A windowed (Flutter) render backend would use the real `dart:ui.Rect`; a
+/// conformance oracle bridges the two.
 ///
 /// Divergences forced by integer cell space: coordinates are `int` cells, not
 /// `double` logical pixels, and [right]/[bottom] are exclusive bounds

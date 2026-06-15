@@ -1,14 +1,14 @@
 import 'cell_grid.dart';
 import 'render_branch.dart';
 
-/// A single glyph run (render vocabulary v1, register A23): one line of
+/// A single glyph run (render vocabulary v1): one line of
 /// [content], e.g. a name-value readout like `count: 3`.
 class Text extends RenderSeed {
   /// Creates a one-line glyph run, optionally [key]ed.
   const Text(this.content, {super.key});
 
   /// The characters to set. Truncated to the laid-out rect's width; one
-  /// rune == one column (CJK width is ADR-0004 backlog).
+  /// rune == one column (CJK width is backlog).
   final String content;
 
   @override

@@ -1,26 +1,25 @@
-/// The dispatch seam: how a live component honors a consented action
-/// (ADR-0005 Decisions 2 gate 3 and 4).
+/// The dispatch seam: how a live component honors a consented action.
 ///
 /// A domain's stateful component implements [Actionable] on its `State`. The
 /// router (`genesis_consent`) calls into it only after the action has already
 /// cleared the exists/mounted and catalog-declared gates — so [Actionable]
-/// owns exactly the two remaining steps the ADR delegates to the target state:
+/// owns exactly the two remaining steps delegated to the target state:
 ///
 /// - [validateAction] — gate 3, payload validation. **Pure**: it must inspect
 ///   the payload and throw [ActionPayloadException] on a violation without
 ///   mutating anything. Keeping it side-effect-free is what lets a `badPayload`
-///   rejection leave the tree byte-for-byte untouched (ADR-0005 Decision 2) by
+///   rejection leave the tree byte-for-byte untouched by
 ///   construction, not by domain discipline.
 /// - [applyAction] — enforce. Applies the (already validated) action through
 ///   the state's setState-analogue (`perceived()` in perception), so the
 ///   rebuild flows through the standard dirty/flush pipeline and exactly the
-///   target subtree invalidates (ADR-0005 Decision 4).
+///   target subtree invalidates.
 library;
 
 import 'outcome.dart';
 
 /// Implemented by a domain's stateful component `State` to afford client
-/// actions (ADR-0005). The router invokes these only for a mounted component
+/// actions. The router invokes these only for a mounted component
 /// whose catalog type declares the action name.
 abstract interface class Actionable {
   /// Validates [payload] for the catalog-declared action [name] (gate 3).
@@ -31,7 +30,7 @@ abstract interface class Actionable {
   void validateAction(String name, Map<String, Object?> payload);
 
   /// Applies the already-validated action [name] with [payload], returning the
-  /// before/after [ActionChange] provenance (ADR-0005 Decisions 4 and 6).
+  /// before/after [ActionChange] provenance.
   ///
   /// Apply through the state's setState-analogue so invalidation flows through
   /// the dirty/flush pipeline and exactly the target subtree rebuilds.

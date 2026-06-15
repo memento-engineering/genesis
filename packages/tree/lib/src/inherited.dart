@@ -1,5 +1,5 @@
-/// EXPERIMENTAL — two-consumer rule (ADR-0001): this API freezes only after
-/// perception and one expression surface both consume it.
+/// EXPERIMENTAL: this API may change before 1.0; it freezes only after a
+/// second consumer beyond perception adopts it.
 library;
 
 import 'branch.dart';
@@ -79,8 +79,8 @@ class InheritedBranch<T extends Object> extends InheritedBranchBase {
     performRebuild();
   }
 
-  /// The artifact response of an inherited branch (ADR-0001 Decision 3/4):
-  /// reconcile the single child against the current seed's child config.
+  /// The rebuild hook of an inherited branch: reconcile the single child
+  /// against the current seed's child config.
   @override
   void performRebuild() {
     _child = updateChild(_child, _typed.child, 0);
@@ -95,7 +95,7 @@ class InheritedBranch<T extends Object> extends InheritedBranchBase {
     );
     final old = _typed;
     // Flutter ProxyElement order: notify dependents BEFORE the base update
-    // invokes the rebuild hook (ADR-0001 Decision 4). A dependent inside the
+    // invokes the rebuild hook. A dependent inside the
     // child subtree is then force-rebuilt exactly once during reconciliation
     // (clearing its dirty flag) instead of rebuilding a second time when the
     // owner drains the dirty set.

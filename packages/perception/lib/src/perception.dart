@@ -4,17 +4,16 @@ import 'perception_element.dart';
 
 /// Immutable measurement configuration node — the domain's config base.
 ///
-/// `Perception extends Seed` (genesis ADR-0001 Decision 6 / A12): perception
-/// is a tree domain, visibly — its public signatures surface tree types.
-/// Lineage: lenny ADR 0001 (declarative perception framework); the Widget
-/// analog of the measurement domain. Pure Dart; zero Flutter imports.
+/// `Perception extends Seed`: perception is a tree domain, visibly — its
+/// public signatures surface tree types. It is the Widget analog of the
+/// measurement domain. Pure Dart; zero Flutter imports.
 ///
 /// `Perception` is the config base for measurement *artifacts* (containers
 /// and leaves such as [Node]-style structure and `Field` values) whose
 /// mounted form is a [PerceptionElement]. Composition configs
 /// (`StatelessPerception`/`StatefulPerception`/`InheritedPerception`) extend
-/// the tree composition layer directly per ADR-0001 Decision 3 — composition
-/// is tree-owned; artifact semantics are domain-owned.
+/// the tree composition layer directly — composition is tree-owned; artifact
+/// semantics are domain-owned.
 abstract class Perception extends Seed {
   /// Creates a perception, optionally [key]ed for keyed reconciliation.
   const Perception({super.key});

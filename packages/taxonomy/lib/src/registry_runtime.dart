@@ -1,10 +1,10 @@
-/// Runtime types instantiated by generated registries (ADR-0002).
+/// Runtime types instantiated by generated registries.
 ///
 /// The generated `.g.dart` file is deliberately thin: it wires catalog data
 /// (type names, known props, Dart constructors, defaults) into a
 /// [ComponentRegistry]; all validation machinery lives here, tested once.
-/// Construction-time violations throw structured `ComponentBuildException`s
-/// (never bare `StateError` — ADR-0002 Decision 5's recorded gap, closed).
+/// Construction-time violations throw structured `ComponentBuildException`s,
+/// never bare `StateError`.
 library;
 
 import 'package:genesis_tree/genesis_tree.dart';
@@ -40,8 +40,7 @@ final class RegistryEntry {
 ///
 /// Instances are emitted by the registry emitter as a generated `.g.dart`
 /// file; consumers (the tree builder, the wire layer) take the registry as a
-/// parameter and never import generated files themselves (ADR-0002
-/// Decision 4 seam 3).
+/// parameter and never import generated files themselves.
 final class ComponentRegistry {
   /// Creates a registry. Generated code is the only intended caller.
   const ComponentRegistry({

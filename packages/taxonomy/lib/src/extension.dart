@@ -1,13 +1,13 @@
-/// The catalog extension seam (ADR-0002 Decision 4 seam 1).
+/// The catalog extension seam.
 ///
 /// The core catalog format owns only `description` / `container` / `props` /
 /// `dart` at the type level. Any other type-level key must be claimed by a
 /// registered [CatalogExtension] — otherwise parsing fails loudly with
-/// `UnhandledCatalogKeysException`. Silent dropping (the spike-5 failure
-/// mode, where `actions` would have vanished from the tool schema) is
-/// impossible by construction.
+/// `UnhandledCatalogKeysException`. Silent dropping (the failure mode where
+/// `actions` would have vanished from the tool schema) is impossible by
+/// construction.
 ///
-/// [ActionsCatalogExtension] — the affordance channel (ADR-0005) — ships as the
+/// [ActionsCatalogExtension] — the affordance channel — ships as the
 /// proof of the seam: the `actions` block is itself extension vocabulary, not a
 /// core key.
 library;
@@ -51,7 +51,7 @@ abstract class CatalogExtension {
   ) {}
 }
 
-/// One declared action affordance on a catalog type (ADR-0005's affordance
+/// One declared action affordance on a catalog type (the affordance
 /// channel, carried as catalog data; `genesis_consent` consumes it later).
 class ActionDeclaration {
   /// Creates a declaration of action [name] with its contract [description].
@@ -67,7 +67,7 @@ class ActionDeclaration {
 
 /// Parses the `actions` type-level block and projects it into the tool
 /// schema — structurally as `x-actions` and as prose in the variant
-/// description (the spike-5 shape, ADR-0002 Decision 1).
+/// description.
 final class ActionsCatalogExtension extends CatalogExtension {
   /// Creates the extension.
   const ActionsCatalogExtension();

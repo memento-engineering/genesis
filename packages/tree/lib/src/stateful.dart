@@ -1,5 +1,5 @@
-/// EXPERIMENTAL — two-consumer rule (ADR-0001): this API freezes only after
-/// perception and one expression surface both consume it.
+/// EXPERIMENTAL: this API may change before 1.0; it freezes only after a
+/// second consumer beyond perception adopts it.
 library;
 
 import 'package:meta/meta.dart';
@@ -28,7 +28,7 @@ abstract class State<T extends StatefulSeed> {
   /// The current [StatefulSeed] configuration of the owning branch.
   T get seed => _branch!.seed as T;
 
-  /// The owning branch's capability handle (A8): a separate object, never
+  /// The owning branch's capability handle: a separate object, never
   /// the branch itself; throws [StateError] when used after unmount.
   TreeContext get context {
     assert(_branch != null, 'context accessed outside branch lifecycle');

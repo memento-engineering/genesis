@@ -1,11 +1,11 @@
 # genesis_dialogue
 
-The A2UI v0.9 wire format (ADR-0003): the bidirectional grammar of the
+The A2UI v0.9 wire format: the bidirectional grammar of the
 agent↔surface exchange. The agent **authors and re-emits** surfaces; the
 surface **reports actions** back. `genesis_dialogue` is the codec + receive
 side of that conversation.
 
-It is pure A2UI v0.9 (register A19): the `updateComponents` envelope (never
+It is pure A2UI v0.9: the `updateComponents` envelope (never
 v0.8's `surfaceUpdate`), root by the `id == "root"` convention, **no** `rootId`
 field.
 
@@ -56,7 +56,7 @@ maps to `ActionEvent{name, surfaceId, sourceComponentId, payload, timestamp?}`
 (`payload` is the wire `context`). Both the `{"action": {…}}` wrapper and a
 bare action object are accepted.
 
-## The `genesis_taxonomy` consume boundary (the seam, register A19)
+## The `genesis_taxonomy` consume boundary (the seam)
 
 `genesis_dialogue` does **not** re-implement deserialization. The deserialize
 half already exists in `genesis_taxonomy`:
@@ -83,7 +83,7 @@ Rejection lives at the layer that owns the invariant:
   duplicate id, cycle, unknown type, bad/missing props, children on a leaf —
   all `TaxonomyException`s. dialogue does **not** duplicate these.
 
-## Reconcile by key (ADR-0003 Decision 3)
+## Reconcile by key
 
 `DialogueSurface.apply` builds the new keyed `Seed` tree and calls
 `rootBranch.update(newRootSeed)`. The root id is `"root"` (a stable key) with
@@ -93,20 +93,20 @@ identity-preserving patch: kept ids keep their `Branch` instances (reordered
 at their new index, deep into moved subtrees), a prop-changed id keeps its
 instance with the new seed, removed ids unmount, inserted ids mount fresh.
 
-**Honest limit (ADR-0001's A18 fast path).** The reconcile fast path skips
+**Honest limit (the reconcile fast path).** The reconcile fast path skips
 only on `identical()` seeds. Freshly *deserialized* seeds are never
 `identical()`, so re-applying a byte-identical message does **not**
-short-circuit the reconcile — the wire path does not benefit from A18. Keyed
+short-circuit the reconcile — the wire path does not benefit from it. Keyed
 identity preservation still holds; only the skip optimization does not fire.
 This is the point of keyed reconciliation, and the `surface_reconcile_test`
-A18 case asserts both halves.
+fast-path case asserts both halves.
 
 ## The action seam → genesis_consent
 
 `parseActionEvent` is **parse only**. It produces a typed `ActionEvent`; it
 does not route it, hit-test `sourceComponentId` against the live tree, check
 the affordance, or validate the payload. That is `genesis_consent`'s job
-(ADR-0005, the enforce/reject substrate). An `ActionEvent` crossing this
+(the enforce/reject substrate). An `ActionEvent` crossing this
 boundary has been *decoded*, not *authorized*. dialogue owns the wire
 vocabulary; consent owns the world-side enforcement.
 
@@ -121,19 +121,19 @@ path only.
 
 ## A2UI v0.9 fidelity ledger
 
-Carried forward from spike 3's `NOTES.md` (the model for ADR-0003's standing
-practice), updated for the as-built dialogue layer.
+Carried-forward decisions from the wire design, updated for the as-built
+dialogue layer.
 
 | Status | Item |
 |---|---|
 | **Mirrored** | Envelope shape `{version, updateComponents:{surfaceId, components}}`; flat components + string `component` discriminator; props at top level; `children` as ordered id arrays; root by `id == "root"`. |
 | **Mirrored** | Action message fields `{name, surfaceId, sourceComponentId, timestamp, context}` (a2ui.org Message Reference); `context` is the payload; `sourceComponentId` is the hit-test back-reference. |
-| **Dropped** | The spike's `rootId` extension. There is no wire `rootId` override — root is `id == "root"`, period (register A19, ratified pure v0.9). |
-| **Diverged** | **`version` is now parsed STRICTLY** (must be present and `== "v0.9"`), where spike 3 parsed it leniently. The default that keeps pure-v0.9 parsing unchanged: a real v0.9 message always carries `version: "v0.9"`, so it still parses; only a missing/wrong version is now rejected loudly rather than ignored. |
+| **Dropped** | The earlier `rootId` extension. There is no wire `rootId` override — root is `id == "root"`, period (pure v0.9). |
+| **Diverged** | **`version` is now parsed STRICTLY** (must be present and `== "v0.9"`), where earlier drafts parsed it leniently. The default that keeps pure-v0.9 parsing unchanged: a real v0.9 message always carries `version: "v0.9"`, so it still parses; only a missing/wrong version is now rejected loudly rather than ignored. |
 | **Diverged** | Component vocabulary is the consumer's genesis catalog (the test catalog here binds `node`/`field` → perception `Node`/`Field`), not the A2UI standard catalog (`Text`, `Column`, `Button`, …). |
-| **Diverged** | The action transport **envelope nesting is unverified** against the spec (spike 5): the parser accepts both `{"action": {…}}` and a bare action object. |
+| **Diverged** | The action transport **envelope nesting is unverified** against the spec: the parser accepts both `{"action": {…}}` and a bare action object. |
 | **Diverged** | The action message's `timestamp` and `context` are parsed as **optional** (lenient-in: `timestamp` may be absent, `context` defaults to `{}`), where a2ui_core marks both required on `A2uiClientAction`. Well-formed v0.9 actions still parse; this only tolerates a thinner client. |
-| **Unknown** | Exact JSON-Schema text of the official v0.9 catalog definitions (the google/A2UI raw schema path 404'd at spike time); field names are as quoted by a2ui.org reference pages. |
+| **Unknown** | Exact JSON-Schema text of the official v0.9 catalog definitions (the google/A2UI raw schema path 404'd when checked); field names are as quoted by a2ui.org reference pages. |
 
 ## Deferred (NOT in v1)
 
@@ -144,7 +144,7 @@ practice), updated for the as-built dialogue layer.
   authored-representation serialize path only.
 - **Action routing → `genesis_consent`** — hit-testing, affordance checks,
   payload validation, and applying the action. dialogue produces the typed
-  event; consent consumes it (ADR-0005).
+  event; consent consumes it.
 - **Data binding** — `updateDataModel` and `/path` data-model references
   (v0.9's message, per the a2ui.org reference). The codec carries no data
   model.
@@ -153,7 +153,7 @@ practice), updated for the as-built dialogue layer.
 - **Streaming / incremental** — partial or chunked `updateComponents`
   delivery; v1 parses a whole message.
 
-## Test catalog (A22)
+## Test catalog
 
 `test/src/dialogue_fixture.catalog.json` binds wire types to **real**
 `genesis_perception` species — `node` → `Node` (container), `field` → `Field`

@@ -1,6 +1,6 @@
 import 'cell.dart';
 
-/// Double-buffered W x H cell grid (ADR-0004 Decision 2).
+/// Double-buffered W x H cell grid.
 ///
 /// Draw ops ([set], [putText], [drawBox], [clear]) target the back buffer;
 /// [swap] diffs back vs front, promotes the back buffer to front, and
@@ -50,8 +50,8 @@ class CellGrid {
   }
 
   /// Writes [text] into the back buffer starting at ([x], [y]); clips at
-  /// grid edges. One rune == one column (no wide-glyph awareness — deferred,
-  /// see ADR-0004 backlog).
+  /// grid edges. One rune == one column (no wide-glyph awareness — deferred
+  /// to the backlog).
   void putText(
     int x,
     int y,

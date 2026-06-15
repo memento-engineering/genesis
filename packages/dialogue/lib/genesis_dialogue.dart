@@ -1,4 +1,4 @@
-/// The A2UI v0.9 wire format (ADR-0003): the bidirectional grammar of the
+/// The A2UI v0.9 wire format: the bidirectional grammar of the
 /// agent↔surface exchange.
 ///
 /// Three pieces:
@@ -13,7 +13,7 @@
 ///   patch;
 /// - **the action half** ([parseActionEvent] → [ActionEvent]) — parses the
 ///   client→server `action` message. Parse only: routing/hit-testing/consent
-///   belong to `genesis_consent` (ADR-0005).
+///   belong to `genesis_consent`.
 ///
 /// dialogue is registry-agnostic (the registry is injected) and does not
 /// re-implement deserialization (`buildSeedTree` lives in `genesis_taxonomy`).

@@ -3,7 +3,7 @@ import 'package:meta/meta.dart';
 import 'branch.dart';
 
 /// Build-time capability handle into the tree — the BuildContext analogue
-/// minus the Element≡BuildContext "original sin" (ADR-0001 Decision 2 / A8).
+/// minus the Element≡BuildContext "original sin".
 ///
 /// A [Branch] never implements this interface. The handle is a distinct
 /// object bound to a branch; once that branch unmounts, every member except
@@ -44,7 +44,7 @@ abstract class TreeContext {
 @internal
 TreeContext createTreeContext(Branch branch) => _BranchContext(branch);
 
-/// The private handle implementation (A8): delegates to the bound [Branch]
+/// The private handle implementation: delegates to the bound [Branch]
 /// and asserts validity on every use — the async-gap protection, executable.
 class _BranchContext implements TreeContext {
   _BranchContext(this._branch);
@@ -54,7 +54,7 @@ class _BranchContext implements TreeContext {
   void _checkMounted(String member) {
     if (!_branch.mounted) {
       throw StateError(
-        'TreeContext.$member used after its branch unmounted (A8 async-gap '
+        'TreeContext.$member used after its branch unmounted (async-gap '
         'protection). Probe TreeContext.mounted after an async gap before '
         'using the handle.',
       );

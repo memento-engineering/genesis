@@ -1,5 +1,5 @@
 /// The A2UI v0.9 `updateComponents` envelope codec — the bidirectional
-/// grammar of surface emission (ADR-0003 Decision 1).
+/// grammar of surface emission.
 ///
 /// The wire shape, pure A2UI v0.9:
 ///
@@ -21,8 +21,7 @@
 /// discriminator, props sit directly on the component object (v0.9's flat
 /// style), and `children` is an ordered array of component-id strings
 /// (containers only). The root is the component with `id == "root"` — there
-/// is **no** `rootId` field (register A19: the spike's `rootId` extension is
-/// dropped, the wire is pure v0.9).
+/// is **no** `rootId` field (the wire is pure v0.9).
 ///
 /// [parseUpdateComponents] and [UpdateComponents.toJson] are a lossless
 /// round-trip in both directions. The serialize direction **is** emission of
@@ -83,7 +82,7 @@ final class UpdateComponents {
 
 /// Parses an A2UI v0.9 `updateComponents` envelope into [UpdateComponents].
 ///
-/// Strict version policy (ADR-0003 / register A19 — the wire is pure v0.9):
+/// Strict version policy (the wire is pure v0.9):
 /// the `version` field must be present and equal to `v0.9`. A missing
 /// version, or a v0.8 `surfaceUpdate`-keyed message, is rejected.
 ///

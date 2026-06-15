@@ -1,5 +1,4 @@
-/// The enforce/reject router: action validation IS hit-testing the live tree
-/// (ADR-0005 Decision 2).
+/// The enforce/reject router: action validation IS hit-testing the live tree.
 ///
 /// `genesis_consent` is the world-side end of the dialogue that `genesis_dialogue`
 /// opened: dialogue *decodes* an `action` message into an [ActionEvent] (parse
@@ -17,7 +16,7 @@ import 'actionable.dart';
 import 'outcome.dart';
 
 /// Routes parsed A2UI actions onto a live [DialogueSurface], enforcing or
-/// rejecting each by hit-testing the mounted tree (ADR-0005).
+/// rejecting each by hit-testing the mounted tree.
 ///
 /// The router is the **front door** for an action-enabled surface. It owns the
 /// emission bookkeeping the hit-test needs — the set of component ids ever
@@ -30,12 +29,12 @@ import 'outcome.dart';
 /// What it consumes (the seams that already exist):
 ///
 /// - the live [DialogueSurface] — the mounted tree to hit-test against, walked
-///   *fresh on every [route] call* (no cached branch refs — the A8 rule);
+///   *fresh on every [route] call* (no cached branch refs);
 /// - the parsed [Catalog] — `genesis_taxonomy`'s catalog-declared `actions`
 ///   (the same source of truth the LLM saw as `x-actions` in the tool schema),
 ///   for the affordance gate;
 /// - the target state's [Actionable] seam — for payload validation (gate 3)
-///   and enforcement (the `perceived()`/setState path of Decision 4).
+///   and enforcement (the `perceived()`/setState path).
 final class ConsentRouter {
   /// Creates a router over a live [surface] and its [catalog].
   ///
@@ -92,8 +91,8 @@ final class ConsentRouter {
     }
   }
 
-  /// Routes [event] against the live tree, returning the structured outcome
-  /// (ADR-0005 Decision 2). Never mutates the tree on a [Rejected] path.
+  /// Routes [event] against the live tree, returning the structured outcome.
+  /// Never mutates the tree on a [Rejected] path.
   ///
   /// Three catalog/tree-derived gates, none hardcoded:
   ///
@@ -106,7 +105,7 @@ final class ConsentRouter {
   ///    `badPayload`.
   ///
   /// A valid intent is enforced via the target state's [Actionable.applyAction]
-  /// (Decision 4) and returned as [Applied] with the change provenance.
+  /// and returned as [Applied] with the change provenance.
   ///
   /// Throws [StateError] for developer/authoring errors (never actor feedback):
   /// called before [mount]; [ActionEvent.sourceComponentId] resolving to more
@@ -123,7 +122,7 @@ final class ConsentRouter {
 
     // Gate 1a — surface scoping. Single-surface v1: an action addressed to a
     // different surface targets a component that is not on this one, folded
-    // into unknownComponent (the spike-5 fold; no dedicated reason).
+    // into unknownComponent (no dedicated reason).
     final boundSurface = surface.surfaceId;
     if (boundSurface != null && event.surfaceId != boundSurface) {
       return Rejected(
@@ -133,7 +132,7 @@ final class ConsentRouter {
       );
     }
 
-    // Gate 1b — exists/mounted. Walk the live tree FRESH (no cached refs, A8),
+    // Gate 1b — exists/mounted. Walk the live tree FRESH (no cached refs),
     // collecting EVERY mounted branch under this id.
     final matches = _mountedMatches(root, event.sourceComponentId);
     if (matches.isEmpty) {
@@ -147,7 +146,7 @@ final class ConsentRouter {
     }
     if (matches.length > 1) {
       // A component id reachable from two parents is built once per reference
-      // (buildSeedTree's DAG-share semantics, A19), so the live tree holds
+      // (buildSeedTree's DAG-share semantics), so the live tree holds
       // multiple distinct branches under one id, each with its own state. The
       // hit-test target is then ambiguous and enforcement would silently
       // mutate an arbitrary copy — a developer/authoring error (a surface must
@@ -193,7 +192,7 @@ final class ConsentRouter {
       );
     }
 
-    // Enforce — apply through the target state (Decision 4); the rebuild flows
+    // Enforce — apply through the target state; the rebuild flows
     // through the standard dirty/flush pipeline when the owner next flushes.
     final change = handler.applyAction(event.name, event.payload);
     return Applied(
@@ -206,11 +205,11 @@ final class ConsentRouter {
   /// Returns every mounted branch whose key equals [id], walking the live tree
   /// fresh from [root] in tree order. Normally a singleton; more than one means
   /// the emission shared this id across parents (a DAG share — built once per
-  /// reference by buildSeedTree, A19), which [route] rejects as ambiguous. The
+  /// reference by buildSeedTree), which [route] rejects as ambiguous. The
   /// walk descends transparently through component branches (`visitChildren`
   /// composes), so a target nested under `Watch`/stateless wrappers is still
   /// found. No branch refs are cached between calls — staleness is detected by
-  /// re-walking (A8).
+  /// re-walking.
   List<Branch> _mountedMatches(Branch root, String id) {
     final matches = <Branch>[];
     void walk(Branch branch) {
@@ -223,9 +222,9 @@ final class ConsentRouter {
   }
 
   /// Resolves the [Actionable] dispatch seam for a resolved target branch
-  /// (ADR-0005 Decision 4 — "applied via the target state").
+  /// ("applied via the target state").
   ///
-  /// The target **branch** must implement [Actionable] — the spike-5 "seam on
+  /// The target **branch** must implement [Actionable] — the "seam on
   /// elements": an actionable component declares it on its element, which
   /// forwards to its own `State`. consent never reaches a branch's `State`
   /// directly (`StatefulBranch.state` is `@protected`); the element exposes only
@@ -240,7 +239,7 @@ final class ConsentRouter {
       'component "${target.key}" (${target.seed.runtimeType}) has a '
       'catalog-declared action but its live branch does not implement '
       'Actionable: the catalog affords an action the component cannot honor. '
-      'Implement Actionable on the component\'s element (ADR-0005 Decision 4).',
+      'Implement Actionable on the component\'s element.',
     );
   }
 }

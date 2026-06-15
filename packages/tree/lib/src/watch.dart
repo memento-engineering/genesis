@@ -1,5 +1,5 @@
-/// EXPERIMENTAL — two-consumer rule (ADR-0001): this API freezes only after
-/// perception and one expression surface both consume it.
+/// EXPERIMENTAL: this API may change before 1.0; it freezes only after a
+/// second consumer beyond perception adopts it.
 library;
 
 import 'dart:async';
@@ -9,8 +9,7 @@ import 'stateful.dart';
 import 'tree_context.dart';
 
 /// Subscribes to [source] and rebuilds with each event — the Attention
-/// primitive (register A13: Watch lives in tree's composition layer; it is
-/// pure composition + dart:async with zero domain semantics).
+/// primitive: pure composition + dart:async with zero domain semantics.
 class Watch<T> extends StatefulSeed {
   /// Creates a watcher over [source], building via [builder], starting from
   /// [initialValue] until the first event arrives.

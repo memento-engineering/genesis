@@ -1,15 +1,15 @@
-/// The structured result of routing an action (ADR-0005 Decision 2).
+/// The structured result of routing an action.
 ///
 /// [ConsentOutcome] is a sealed union so call sites switch exhaustively (the
 /// memento house style): either the action was [Applied] — enforced through
 /// the target state — or it was [Rejected] with one of four kinds, each a
 /// refusal of consent. A rejection is **side-effect-free**: the tree is left
 /// byte-for-byte untouched, and the structured [Rejected.message] is the
-/// feedback channel back to the actor (the A8 agent-async-gap loop).
+/// feedback channel back to the actor (the agent-async-gap loop).
 library;
 
-/// The before/after provenance of a state change an action produced
-/// (ADR-0005 Decision 6 — the last-write-wins audit trail). [from] and [to]
+/// The before/after provenance of a state change an action produced —
+/// the last-write-wins audit trail. [from] and [to]
 /// are the domain's own representation of the value that changed.
 final class ActionChange {
   /// Records that the value moved from [from] to [to].
@@ -25,17 +25,17 @@ final class ActionChange {
   String toString() => 'ActionChange($from -> $to)';
 }
 
-/// Why an action was refused (ADR-0005 Decision 2). Four kinds; the
+/// Why an action was refused. Four kinds; the
 /// load-bearing distinction is [unknownComponent] vs [staleUnmounted] — a
-/// boolean rejection would erase it (the A8 feedback channel).
+/// boolean rejection would erase it (the feedback channel).
 enum RejectionKind {
   /// The `sourceComponentId` was never part of any emission of this surface
   /// (it never existed, or it addresses a different surface).
   unknownComponent,
 
   /// The component existed in an earlier emission but is no longer mounted —
-  /// the projection moved under the actor (ADR-0005 Decision 3, the A8
-  /// async-gap bridge: consent revoked because the world changed).
+  /// the projection moved under the actor (the async-gap bridge: consent
+  /// revoked because the world changed).
   staleUnmounted,
 
   /// The component is mounted, but its catalog type does not declare the
@@ -52,8 +52,8 @@ sealed class ConsentOutcome {
   const ConsentOutcome();
 }
 
-/// The action passed every gate and was enforced through the target state
-/// (ADR-0005 Decision 4). [change] carries the before/after provenance.
+/// The action passed every gate and was enforced through the target state.
+/// [change] carries the before/after provenance.
 final class Applied extends ConsentOutcome {
   /// Records a successful enforcement of [action] on [componentId].
   const Applied({
@@ -76,8 +76,8 @@ final class Applied extends ConsentOutcome {
       'Applied(action: "$action", component: "$componentId", $change)';
 }
 
-/// The action was refused; the tree is byte-for-byte untouched (ADR-0005
-/// Decision 2). [message] is the LLM-feedback-ready explanation.
+/// The action was refused; the tree is byte-for-byte untouched.
+/// [message] is the LLM-feedback-ready explanation.
 final class Rejected extends ConsentOutcome {
   /// Records a refusal of [action] on [componentId] for [kind].
   ///

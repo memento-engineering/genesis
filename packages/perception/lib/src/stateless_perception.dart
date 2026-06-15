@@ -3,8 +3,7 @@ import 'package:genesis_tree/genesis_tree.dart';
 import 'perception_context.dart';
 
 /// A configuration that composes purely from itself — the perception-domain
-/// face of the tree composition layer's [StatelessSeed] (genesis ADR-0001
-/// Decisions 3 and 6).
+/// face of the tree composition layer's [StatelessSeed].
 ///
 /// Composition is tree-owned: this class inherits the build-driven rebuild
 /// hook from `ComponentBranch` via [StatelessBranch] and only upgrades the
@@ -14,8 +13,8 @@ abstract class StatelessPerception extends StatelessSeed {
   const StatelessPerception({super.key});
 
   /// Describes the child subtree for this configuration. [context] is the
-  /// element's [PerceptionContext] capability handle (A8/A12) — never the
-  /// element itself.
+  /// element's [PerceptionContext] capability handle — never the element
+  /// itself.
   @override
   Seed build(covariant PerceptionContext context);
 

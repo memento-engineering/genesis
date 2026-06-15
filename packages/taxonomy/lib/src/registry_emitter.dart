@@ -1,4 +1,4 @@
-/// Projection 1: the typed Dart factory registry (ADR-0002 Decision 1).
+/// Projection 1: the typed Dart factory registry.
 ///
 /// Emits a `.g.dart` source file that instantiates a `ComponentRegistry`
 /// binding the catalog's wire types to `Seed` constructors. The generated
@@ -17,9 +17,8 @@ import 'catalog.dart';
 
 /// Generates the registry source for [catalog].
 ///
-/// Provenance headers are parameterized from the catalog's name block
-/// (ADR-0002 Decision 4 seam 2) — nothing in the output hardcodes a package
-/// or catalog name.
+/// Provenance headers are parameterized from the catalog's name block —
+/// nothing in the output hardcodes a package or catalog name.
 String emitRegistry(Catalog catalog) {
   final buf = StringBuffer()
     ..writeln('// GENERATED — do not edit.')

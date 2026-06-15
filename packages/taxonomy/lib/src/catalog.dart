@@ -1,4 +1,4 @@
-/// The parsed, validated catalog document (ADR-0002).
+/// The parsed, validated catalog document.
 ///
 /// A catalog classifies the node species of one domain: each [CatalogType]
 /// declares its wire name, typed props, container/leaf shape, Dart binding,
@@ -140,10 +140,10 @@ class CatalogType {
   final DartBinding dart;
 
   /// Extension-parsed extension data, keyed by the catalog key the extension
-  /// claimed (ADR-0002 Decision 4 seam 1).
+  /// claimed.
   final Map<String, Object> extensions;
 
-  /// Type-level action declarations (the affordance channel, ADR-0005),
+  /// Type-level action declarations (the affordance channel),
   /// parsed by [ActionsCatalogExtension]; empty when the type declares none.
   Map<String, ActionDeclaration> get actions {
     final raw = extensions[ActionsCatalogExtension.catalogKey];
@@ -173,7 +173,7 @@ class Catalog {
   });
 
   /// Catalog name from the provenance block; parameterizes every generated
-  /// header (ADR-0002 Decision 4 seam 2).
+  /// header.
   final String name;
 
   /// Catalog version from the provenance block.
@@ -358,7 +358,7 @@ CatalogType _parseType(
     propNames: {for (final p in props) p.name},
   );
 
-  // The extension seam (ADR-0002 Decision 4 seam 1): every non-core key is
+  // The extension seam: every non-core key is
   // routed to the extension that claims it; unclaimed keys are collected and
   // reported loudly, never dropped.
   final extensions = <String, Object>{};

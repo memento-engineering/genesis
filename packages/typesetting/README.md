@@ -1,10 +1,10 @@
 # genesis_typesetting
 
-The cell/terminal render backend (ADR-0004 Decision 2) as **render-bearing
-tree vocabulary** (register A23): render seeds mount as render branches that
-own their `Rect` and paint into a double-buffered character grid **as their
-artifact response** — ADR-0001 Decision 3's "non-component branches define
-their own artifact response", taken literally. There is no side-car driver
+The cell/terminal render backend as **render-bearing tree vocabulary**: render
+seeds mount as render branches that own their `Rect` and paint into a
+double-buffered character grid **as their artifact response** — non-component
+branches define their own artifact response, taken literally. There is no
+side-car driver
 and no paint delegate: the stage branch is the render root *and* the
 scheduling glue, and painting is what the tree does when it rebuilds.
 
@@ -31,7 +31,7 @@ The factoring mirrors Flutter's widget → element → render pipeline exactly:
 | `Box(title, children, accent?)` | `BoxBranch` | titled bordered region; stacks its children's render branches as lines inside the border |
 | `Text(content)` | `TextBranch` | one glyph run / name-value line |
 
-The cell core underneath is unchanged from the spike lineage: `Cell` /
+The cell core underneath is unchanged: `Cell` /
 `CellChange` (value equality), `CellGrid` (double buffer; `swap()` returns
 the minimal change list), `AnsiEncoder` (`ESC[row;colH` addressing, SGR only
 on style transitions, horizontal-run batching, one trailing reset;
@@ -59,8 +59,7 @@ Every pass is recorded as a `FrameRecord` (the **verbatim** `flush()`
 return, repainted rects, cell changes, bytes), reachable from the stage
 branch (`StageBranch.frames`) for tests and ops. Zero-change frames are
 recorded but never written to the sink. The stage is write-only — screen
-setup/teardown (clear, cursor parking) is the embedder's choice (ADR-0004
-Decision 1).
+setup/teardown (clear, cursor parking) is the embedder's choice.
 
 ## Render-parent threading
 
@@ -83,8 +82,8 @@ replacement re-attaches with no container reconcile on the call stack.
 `contains`, `Rect.zero`) so typesetting geometry reads like Flutter render
 geometry. It does **not** import `dart:ui`: that library is engine-only and
 unavailable on the bare Dart VM, which is exactly where this backend must
-run (ADR-0004 — no engine, no Skia). `genesis_expression`'s windowed backend
-uses the real `dart:ui.Rect`; the conformance oracle bridges. Divergence:
+run (no engine, no Skia). A windowed (Flutter) render backend would use the
+real `dart:ui.Rect`; a conformance oracle bridges the two. Divergence:
 coordinates are `int` cells and `right`/`bottom` are exclusive bounds.
 
 ## Layout v1: minimal flow (constraints protocol DEFERRED)
@@ -111,8 +110,8 @@ bytes/frame (same encoder over every cell — apples-to-apples):
 ```
 
 Every update frame is under 1.5% of the grid and under 3% of a full redraw —
-identical to the spike-4 record, now produced by render branches instead of
-a paint delegate. Demo (44×12, full-redraw baseline 1297 bytes/frame):
+identical to the earlier hand-written backend's record, now produced by render
+branches instead of a paint delegate. Demo (44×12, full-redraw baseline 1297 bytes/frame):
 frame 0 paints the scene in 1236 bytes; the 10 scripted update frames total
 **268 bytes (0–38 each; the duplicate event costs 0)** vs 12970 for 10 full
 redraws — **~48× cheaper**, on a tiny scene; locality makes the ratio scale
@@ -128,14 +127,14 @@ adjacency asserted explicitly); keyed reorder moves the render tree with
 branch identity preserved; and `FrameRecord.rebuilt` is the verbatim
 `owner.flush()` return — no side channels.
 
-## Domain composition (A22)
+## Domain composition
 
 The lib knows no domain node types. Tests and the demo consume
 `genesis_perception` (dev dependency) and map its vocabulary into render
 seeds with a Stateless adapter — `Node('ticker', [Field('count', 3), ...])`
 → `Box(title: 'ticker', children: [Text('count: 3'), ...])` — the way
-widgets compose `RenderObjectWidget`s. The demo is ADR-0004's sleeper win
-made literal: a live perception tree typeset in the terminal.
+widgets compose `RenderObjectWidget`s. The demo is the sleeper win made
+literal: a live perception tree typeset in the terminal.
 
 ## Run
 

@@ -9,7 +9,7 @@ import 'frame_record.dart';
 import 'rect.dart';
 import 'render_branch.dart';
 
-/// The root render seed (register A23): a fixed [width] x [height] cell
+/// The root render seed: a fixed [width] x [height] cell
 /// surface emitting ANSI bytes to [sink], stacking its [children]'s render
 /// branches top-to-bottom full-width (layout v1 flow).
 ///
@@ -26,7 +26,7 @@ import 'render_branch.dart';
 ///
 /// Write-only: the stage emits diff payloads and nothing else — no
 /// clear-screen, no cursor parking, no terminal queries. Screen setup and
-/// teardown are the embedder's choice (ADR-0004 Decision 1).
+/// teardown are the embedder's choice.
 class Stage extends RenderSeed {
   /// Creates the root surface configuration.
   const Stage({
@@ -39,7 +39,7 @@ class Stage extends RenderSeed {
   });
 
   /// Surface width in columns. Fixed for the stage's lifetime (resize is
-  /// ADR-0004 backlog).
+  /// backlog).
   final int width;
 
   /// Surface height in rows.
@@ -59,7 +59,7 @@ class Stage extends RenderSeed {
   StageBranch createBranch() => StageBranch(this);
 }
 
-/// The root render branch — the RenderView analog (register A23) and the
+/// The root render branch — the RenderView analog and the
 /// scheduling glue's owner. At mount it creates its [StageBinding], claims
 /// `TreeOwner.onNeedsFlush`, builds its subtree, and paints frame 0
 /// synchronously; after that, every dirty edge schedules one microtask frame
@@ -179,8 +179,8 @@ class StageBranch extends RenderBranch {
   }
 }
 
-/// The thin scheduling-and-pipeline glue the stage branch owns (register
-/// A23): the BuildOwner-edge-to-PipelineOwner wiring, folded into the tree.
+/// The thin scheduling-and-pipeline glue the stage branch owns: the
+/// BuildOwner-edge-to-PipelineOwner wiring, folded into the tree.
 ///
 /// `TreeOwner.onNeedsFlush` (the dirty set's empty -> non-empty edge) ->
 /// one scheduled microtask -> `owner.flush()` -> the verbatim drained list

@@ -1,9 +1,9 @@
-/// Flat keyed components -> `Seed` tree, parameterized over the registry
-/// (ADR-0002 Decision 4 seam 3).
+/// Flat keyed components -> `Seed` tree, parameterized over the registry.
 ///
 /// This is the deserialize half the wire package (`genesis_dialogue`) builds
 /// on: it takes a [ComponentRegistry] as an argument and never imports a
-/// generated file — the one line spike 5 had to fork is a parameter here.
+/// generated file — the one line a consumer would otherwise fork is a
+/// parameter here.
 /// Envelope parsing (the A2UI `updateComponents` message itself) is wire
 /// vocabulary and stays out of this package; callers hand over the flat
 /// component list they parsed.

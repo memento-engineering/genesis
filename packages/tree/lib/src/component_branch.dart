@@ -1,5 +1,5 @@
-/// EXPERIMENTAL — two-consumer rule (ADR-0001): this API freezes only after
-/// perception and one expression surface both consume it.
+/// EXPERIMENTAL: this API may change before 1.0; it freezes only after a
+/// second consumer beyond perception adopts it.
 library;
 
 import 'package:meta/meta.dart';
@@ -9,8 +9,8 @@ import 'seed.dart';
 import 'tree_context.dart';
 
 /// A branch that composes by building a single child [Seed] — the
-/// ComponentElement analogue (ADR-0001 Decision 3). Defines the rebuild hook
-/// as re-running [build], so a config update re-runs the builder (Decision 4).
+/// ComponentElement analogue. Defines the rebuild hook as re-running [build],
+/// so a config update re-runs the builder.
 abstract class ComponentBranch extends Branch {
   /// Forwards [seed] to [Branch].
   ComponentBranch(super.seed);
@@ -22,7 +22,7 @@ abstract class ComponentBranch extends Branch {
   Branch? get child => _child;
 
   /// Builds the child configuration. [context] is this branch's capability
-  /// handle (A8) — never the branch itself.
+  /// handle — never the branch itself.
   @protected
   Seed build(TreeContext context);
 
@@ -33,7 +33,7 @@ abstract class ComponentBranch extends Branch {
     // ComponentBranch builds its subtree immediately, so mountRoot(seed)
     // produces a tree without an external markNeedsRebuild. Subsequent
     // rebuilds flow through markNeedsRebuild + TreeOwner.flush, or through
-    // update() (ADR-0001 Decision 4).
+    // update().
     performRebuild();
   }
 

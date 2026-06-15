@@ -1,12 +1,11 @@
-/// Domain-free Seed/Branch tree engine extracted from Flutter (genesis
-/// ADR-0001).
+/// Domain-free Seed/Branch tree engine — Flutter's element/reconciliation
+/// model extracted to pure Dart.
 ///
 /// The spine: `Seed` (immutable config) mounts as `Branch` (persistent node),
 /// with `TreeContext` as a separate capability handle — never the `Branch`
-/// itself — and `TreeOwner` as the scheduler (ADR-0001 Decision 2). The
-/// composition layer (`ComponentBranch`, `StatelessSeed`/`StatefulSeed` +
-/// `State`, `InheritedSeed`, `Watch`) is EXPERIMENTAL under the two-consumer
-/// rule (ADR-0001 Decision 3).
+/// itself — and `TreeOwner` as the scheduler. The composition layer
+/// (`ComponentBranch`, `StatelessSeed`/`StatefulSeed` + `State`,
+/// `InheritedSeed`, `Watch`) is EXPERIMENTAL and may change before 1.0.
 library;
 
 export 'src/branch.dart' hide InheritedBranchBase;
