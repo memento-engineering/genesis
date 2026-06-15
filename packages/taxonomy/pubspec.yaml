@@ -1,7 +1,7 @@
 name: genesis_taxonomy
 description: >-
-  Schema-first node vocabulary: one catalog classifies the node species; codegen
-  emits the Dart factory registry and the LLM tool schema (ADR-0002).
+  Schema-first UI catalog codegen: one catalog generates a typed Dart component
+  registry and a matching LLM tool schema.
 version: 0.1.0
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace

@@ -1,7 +1,7 @@
 name: genesis_typesetting
 description: >-
-  The cell/terminal render backend: a double-buffered character grid set in
-  minimal ANSI, repainted from the tree's drained dirty set (ADR-0004).
+  A bare-VM terminal render backend: a double-buffered character grid painted to
+  minimal ANSI from a genesis_tree's drained dirty set.
 version: 0.1.0
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace

@@ -1,9 +1,7 @@
 name: genesis_consent
 description: >-
-  The enforce/reject action substrate (ADR-0005): routes a parsed A2UI action
-  by hit-testing the live Seed/Branch tree against catalog-declared affordances,
-  enforcing valid intents through the target state and rejecting invalid ones
-  with a structured, side-effect-free taxonomy.
+  An enforce/reject action substrate: validate A2UI actions by hit-testing the
+  live tree against catalog-declared affordances, then enforce or refuse.
 version: 0.1.0
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace

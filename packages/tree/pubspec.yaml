@@ -1,7 +1,7 @@
 name: genesis_tree
 description: >-
-  Domain-free Seed/Branch tree engine extracted from Flutter (genesis
-  ADR-0001).
+  A framework-agnostic Seed/Branch keyed-reconcile tree engine — Flutter's
+  element/reconciliation model extracted to pure, bare-VM Dart.
 version: 0.1.0
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
