@@ -61,3 +61,11 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
    outward-facing, irreversible step — needs pub.dev auth, so it's a human run.
    Future version bumps + changelog entries: `melos version` (Conventional
    Commits) once there are release tags.
+5. **Assign each package to the `memento.engineering` verified publisher.** pub
+   has no publisher pubspec field or CLI flag — packages publish under the
+   uploader's Google account first, then transfer via the web UI: each
+   package's page → **Admin** → enter `memento.engineering` →
+   **Transfer to Publisher**. Once per package, and **irreversible** (can't move
+   back to an individual). After transfer, any publisher member can publish
+   future versions. (No repo change — package names stay `genesis_*`; the
+   publisher is the verified owner identity, not a name prefix.)
