@@ -2,7 +2,7 @@ name: genesis_typesetting
 description: >-
   A bare-VM terminal render backend: a double-buffered character grid painted to
   minimal ANSI from a genesis_tree's drained dirty set.
-version: 0.1.1
+version: 0.1.2
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 
