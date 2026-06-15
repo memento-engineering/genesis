@@ -48,11 +48,16 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
    dropped from the six members (the root workspace pubspec keeps it).
    `dart pub publish --dry-run` on `genesis_tree` validates; `resolution:
    workspace` stays for local dev resolution.
-3. **Remaining (the dry-run's standing warnings):** add a `README.md` to
-   `tree` / `perception` / `taxonomy` / `typesetting` (`dialogue` + `consent`
-   already have one), and a `CHANGELOG.md` to all six. Warnings, not blockers —
-   they lower the pub score but do not stop a publish.
-4. **Publish in dependency order** — each package's `^0.1.0` deps must already
-   be on pub.dev: `genesis_tree` → `genesis_perception` + `genesis_taxonomy` →
-   `genesis_typesetting` + `genesis_dialogue` → `genesis_consent`. This is the
-   one remaining outward-facing, irreversible step (needs pub.dev auth).
+3. ~~Per-package `README.md` + `CHANGELOG.md` (the dry-run's standing
+   warnings).~~ **Done (2026-06-14)** — added READMEs for `tree` / `perception`
+   (the other four already had them) and an initial `0.1.0` `CHANGELOG.md` for
+   all six; `dart pub publish --dry-run` on `genesis_tree` is now clean.
+4. **Publish — via `melos publish`** (the only remaining step). `melos publish`
+   is dry-run by default and resolves the dependency order automatically;
+   `melos publish --no-dry-run` does the real publish. Order:
+   `genesis_tree` → `genesis_perception` + `genesis_taxonomy` →
+   `genesis_typesetting` + `genesis_dialogue` → `genesis_consent` (each
+   package's `^0.1.0` deps must already be on pub.dev). This is the one
+   outward-facing, irreversible step — needs pub.dev auth, so it's a human run.
+   Future version bumps + changelog entries: `melos version` (Conventional
+   Commits) once there are release tags.
