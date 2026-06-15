@@ -13,3 +13,6 @@ pubspec.lock
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Claude Code workflow worktrees (transient)
+.claude/worktrees/

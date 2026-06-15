@@ -127,14 +127,24 @@ abstract class RenderBranch extends Branch {
   /// mounting inside it (however deep under component branches) attaches to
   /// this branch. Render containers wrap each child seed they reconcile.
   ///
-  /// The wrapper carries the child's key, so keyed reconciliation of wrapped
-  /// children preserves branch identity exactly as it would unwrapped.
+  /// A keyed child's wrapper gets a NAMESPACED key ([_RenderScopeKey]): it is
+  /// stable across rebuilds, so the container's keyed reconcile keeps pairing
+  /// each wrapper with its child (including across reorders), but it is
+  /// DISTINCT from the child's own key — so the child stays the single branch
+  /// that answers to that key. Reusing the bare child key would mint a second
+  /// branch (this wrapper) bearing the child's key, and any key-based tree
+  /// lookup — e.g. an action router resolving an A2UI component id to its
+  /// branch — would then find two branches for one id. An unkeyed child
+  /// leaves the wrapper unkeyed (positional reconcile), unchanged.
   @protected
-  Seed renderScopeFor(Seed child) => InheritedSeed<RenderParentLink>(
-    value: _link,
-    child: child,
-    key: child.key,
-  );
+  Seed renderScopeFor(Seed child) {
+    final childKey = child.key;
+    return InheritedSeed<RenderParentLink>(
+      value: _link,
+      child: child,
+      key: childKey == null ? null : _RenderScopeKey(childKey),
+    );
+  }
 
   @override
   void mount(Branch? parent, Object? slot) {
@@ -262,4 +272,28 @@ abstract class RenderBranch extends Branch {
     _renderParent?.dropRenderChild(this);
     super.unmount();
   }
+}
+
+/// The namespaced key a render container puts on each keyed child's
+/// [RenderBranch.renderScopeFor] wrapper.
+///
+/// The wrapper must be keyed so the container's keyed reconcile pairs it with
+/// its child across rebuilds and reorders, but it must not reuse the child's
+/// own key (see [RenderBranch.renderScopeFor]): wrapping the child key in a
+/// distinct type keeps reconcile stable while preserving one-branch-per-key
+/// for the child itself. Compared by value so two wrappers derived from the
+/// same child key are interchangeable across a rebuild.
+@immutable
+class _RenderScopeKey {
+  const _RenderScopeKey(this.childKey);
+
+  /// The wrapped child's key this scope key is derived from.
+  final Object childKey;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _RenderScopeKey && other.childKey == childKey;
+
+  @override
+  int get hashCode => Object.hash(_RenderScopeKey, childKey);
 }
