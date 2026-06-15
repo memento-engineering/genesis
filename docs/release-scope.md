@@ -64,19 +64,18 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
    Verified clean (internal-ref + bare-`A<n>` greps empty bar legitimate
    domain text); `dart format` 0-changed, `dart analyze` clean, full `melos run
    test` green.
-5. **Publish — via `melos publish`** (the remaining outward step). `melos
-   publish` is dry-run by default and resolves the dependency order
-   automatically; `melos publish --no-dry-run` does the real publish. Order:
-   `genesis_tree` → `genesis_perception` + `genesis_taxonomy` →
-   `genesis_typesetting` + `genesis_dialogue` → `genesis_consent` (each
-   package's `^0.1.0` deps must already be on pub.dev). Needs pub.dev auth, so
-   it's a human run. Future version bumps + changelogs: `melos version`
-   (Conventional Commits) once there are release tags.
-6. **Assign each package to the `memento.engineering` verified publisher.** pub
-   has no publisher pubspec field or CLI flag — packages publish under the
-   uploader's Google account first, then transfer via the web UI: each
-   package's page → **Admin** → enter `memento.engineering` →
-   **Transfer to Publisher**. Once per package, and **irreversible** (can't move
-   back to an individual). After transfer, any publisher member can publish
-   future versions. (No repo change — package names stay `genesis_*`; the
-   publisher is the verified owner identity, not a name prefix.)
+5. ~~**Publish — via `melos publish`.**~~ **Done.** `0.1.0` published, then
+   `0.1.1` (this docs patch) published via `melos publish --no-dry-run --yes`
+   (dry-run all-green, 0 warnings) in dependency order: `genesis_tree` →
+   `genesis_perception` + `genesis_taxonomy` → `genesis_typesetting` +
+   `genesis_dialogue` → `genesis_consent`. `melos publish` resolves that order
+   automatically. Note: pub.dev versions are immutable — to update rendered docs
+   you must ship a new version (that's why the scrub went out as `0.1.1`).
+   Inter-package deps stay `^0.1.0` (`0.1.1` satisfies it). Future bumps:
+   `melos version` (Conventional Commits) once there are release tags.
+6. ~~**Assign each package to the `memento.engineering` verified publisher.**~~
+   **Done** — all six transferred to the `memento.engineering` publisher via each
+   package's **Admin → Transfer to Publisher** (once per package, irreversible).
+   New versions auto-inherit the publisher, so `0.1.1` shipped under it with no
+   re-transfer. (No repo change — package names stay `genesis_*`; the publisher
+   is the verified owner identity, not a name prefix.)
