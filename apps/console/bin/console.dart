@@ -14,12 +14,27 @@ Future<void> main(List<String> args) async {
   // diff stream is discarded — display does not depend on the ANSI bytes.
   final console = await Console.create(sink: _DiscardSink());
 
+  // The live agent is optional: if no swift-infer token is configured, the
+  // offline commands still work and `ask` reports how to enable it.
+  Agent? agent;
+  var agentReason = '';
+  try {
+    final config = await AgentConfig.resolve();
+    agent = Agent(
+      console: console,
+      llm: SwiftInferClient(config),
+      tool: await renderTool(),
+    );
+  } on Object catch (error) {
+    agentReason = error.toString();
+  }
+
   final scriptIdx = args.indexOf('--script');
   if (scriptIdx != -1 && scriptIdx + 1 < args.length) {
     final file = File(args[scriptIdx + 1]);
     final base = file.parent;
     for (final line in await file.readAsLines()) {
-      await _run(console, line, base);
+      await _run(console, agent, agentReason, line, base);
     }
     return;
   }
@@ -28,12 +43,20 @@ Future<void> main(List<String> args) async {
   stdout.write('> ');
   final lines = stdin.transform(utf8.decoder).transform(const LineSplitter());
   await for (final line in lines) {
-    if (!await _run(console, line, Directory.current)) break;
+    if (!await _run(console, agent, agentReason, line, Directory.current)) {
+      break;
+    }
     stdout.write('> ');
   }
 }
 
-Future<bool> _run(Console console, String raw, Directory base) async {
+Future<bool> _run(
+  Console console,
+  Agent? agent,
+  String agentReason,
+  String raw,
+  Directory base,
+) async {
   final line = raw.trim();
   if (line.isEmpty || line.startsWith('#')) return true;
   final parts = line.split(RegExp(r'\s+'));
@@ -80,6 +103,24 @@ Future<bool> _run(Console console, String raw, Directory base) async {
         );
         _printOutcome(outcome);
         stdout.writeln(console.snapshot());
+      case 'ask':
+        final prompt = line.substring(cmd.length).trim();
+        if (prompt.isEmpty) {
+          stdout.writeln('usage: ask <prompt>');
+        } else if (agent == null) {
+          stdout.writeln('ask unavailable: $agentReason');
+        } else {
+          final outcome = await agent.ask(prompt);
+          switch (outcome) {
+            case AgentRendered(:final summary):
+              stdout.writeln('+ $summary');
+            case AgentSaid(:final text):
+              stdout.writeln('agent: $text');
+            case AgentFailed(:final error, :final attempts):
+              stdout.writeln('x agent failed after $attempts rounds: $error');
+          }
+          stdout.writeln(console.snapshot());
+        }
       case 'tree':
         stdout.writeln(console.treeDump());
       case 'help':
@@ -111,6 +152,7 @@ genesis console — commands:
   apply <file.json>       reconcile a subsequent updateComponents message
   press <id> [amount]     fire a press action on a counter (amount defaults to 1)
   set <id> <key>=<value>  fire a set action (e.g. set c1 value=42)
+  ask <prompt>            ask the agent to render/update the screen (swift-infer)
   tree                    dump the live branch tree
   help                    show this help
   quit                    exit''';

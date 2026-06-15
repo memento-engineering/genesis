@@ -16,3 +16,10 @@ pubspec.lock
 
 # Claude Code workflow worktrees (transient)
 .claude/worktrees/
+
+# Local credentials — NEVER commit secrets. Tokens live in the shell env
+# (e.g. SWIFT_INFER_AGENT_TOKEN) or in a local, gitignored secrets file.
+# A committed `*.secrets.example.json` documents the shape without values.
+**/.secrets.json
+.env
+.env.local
