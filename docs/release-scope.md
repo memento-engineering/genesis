@@ -52,16 +52,27 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
    warnings).~~ **Done (2026-06-14)** — added READMEs for `tree` / `perception`
    (the other four already had them) and an initial `0.1.0` `CHANGELOG.md` for
    all six; `dart pub publish --dry-run` on `genesis_tree` is now clean.
-4. **Publish — via `melos publish`** (the only remaining step). `melos publish`
-   is dry-run by default and resolves the dependency order automatically;
-   `melos publish --no-dry-run` does the real publish. Order:
+4. **Refine the public docs** *(in progress)* — strip internal references from
+   everything pub.dev renders. **Descriptions: done** (commit `863380b` — the
+   ADR / "lenny" refs removed). **Pending:** the six **READMEs** and the **lib
+   docblocks** (plus the CHANGELOGs' "see docs/adr/" pointer) still carry inline
+   ADR/register numbers, spike-`NOTES.md` references, `docs/adr/` / "monorepo"
+   pointers a public reader can't follow, and a mention of the unshipped
+   `genesis_expression` (typesetting README). Rewrite to be self-contained —
+   keep the technical substance + examples; replace load-bearing ADR refs with
+   plain prose (e.g. "the rebuild hook" not "ADR-0001 Decision 3's artifact
+   response"). **Open question:** link readers to
+   `github.com/memento-engineering/genesis` for deeper design docs, or leave
+   design pointers out of the public docs entirely.
+5. **Publish — via `melos publish`** (the remaining outward step). `melos
+   publish` is dry-run by default and resolves the dependency order
+   automatically; `melos publish --no-dry-run` does the real publish. Order:
    `genesis_tree` → `genesis_perception` + `genesis_taxonomy` →
    `genesis_typesetting` + `genesis_dialogue` → `genesis_consent` (each
-   package's `^0.1.0` deps must already be on pub.dev). This is the one
-   outward-facing, irreversible step — needs pub.dev auth, so it's a human run.
-   Future version bumps + changelog entries: `melos version` (Conventional
-   Commits) once there are release tags.
-5. **Assign each package to the `memento.engineering` verified publisher.** pub
+   package's `^0.1.0` deps must already be on pub.dev). Needs pub.dev auth, so
+   it's a human run. Future version bumps + changelogs: `melos version`
+   (Conventional Commits) once there are release tags.
+6. **Assign each package to the `memento.engineering` verified publisher.** pub
    has no publisher pubspec field or CLI flag — packages publish under the
    uploader's Google account first, then transfer via the web UI: each
    package's page → **Admin** → enter `memento.engineering` →
