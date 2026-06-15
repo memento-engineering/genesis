@@ -9,6 +9,7 @@ workspace:
   - packages/typesetting
   - packages/dialogue
   - packages/consent
+  - apps/console
 
 dev_dependencies:
   melos: ^7.7.0

@@ -1,0 +1,15 @@
+# genesis console — offline scripted demo
+# run from the repo root:
+#   dart run apps/console/bin/console.dart --script apps/console/examples/demo.commands
+load counters.json
+press c1
+press c1 3
+press c2
+set c1 value=42
+set c1 value=oops
+press nope
+tree
+apply counters_v2.json
+press c1
+press c2
+quit

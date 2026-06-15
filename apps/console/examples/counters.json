@@ -1,0 +1,13 @@
+{
+  "version": "v0.9",
+  "updateComponents": {
+    "surfaceId": "console",
+    "components": [
+      {"id": "root", "component": "screen", "children": ["panel"]},
+      {"id": "panel", "component": "box", "title": "Counters", "children": ["c1", "c2", "hint"]},
+      {"id": "c1", "component": "counter", "label": "Apples", "start": 0},
+      {"id": "c2", "component": "counter", "label": "Oranges", "start": 10},
+      {"id": "hint", "component": "text", "content": "press a counter"}
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+# The genesis_taxonomy builder (auto_apply: dependents) projects each
+# lib/*.catalog.json into a sibling .g.dart factory registry and a .g.json LLM
+# tool schema. Scope it to lib/ so it only runs on the console catalog.
+targets:
+  $default:
+    builders:
+      genesis_taxonomy|taxonomy:
+        enabled: true
+        generate_for:
+          - lib/*.catalog.json

@@ -1,0 +1,12 @@
+{
+  "version": "v0.9",
+  "updateComponents": {
+    "surfaceId": "console",
+    "components": [
+      {"id": "root", "component": "screen", "children": ["panel"]},
+      {"id": "panel", "component": "box", "title": "Counters", "children": ["c2", "hint"]},
+      {"id": "c2", "component": "counter", "label": "Oranges", "start": 10},
+      {"id": "hint", "component": "text", "content": "c1 was removed; Oranges kept its live count"}
+    ]
+  }
+}
