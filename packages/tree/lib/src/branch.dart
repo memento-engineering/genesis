@@ -251,6 +251,7 @@ abstract class Branch {
   /// old branches left unconsumed (a keyed branch whose key vanished, or
   /// unkeyed branches past the new length) are unmounted after the pass.
   List<Branch> updateChildren(List<Branch> oldChildren, List<Seed> newSeeds) {
+    assert(_debugChildKeysUnique(newSeeds));
     final Map<Object, Branch> keyedOld = {};
     final List<Branch> unkeyedOld = [];
     for (final branch in oldChildren) {
@@ -287,6 +288,30 @@ abstract class Branch {
     }
 
     return result;
+  }
+
+  /// Debug guard (zero release cost — stripped with the [assert] that calls it):
+  /// a key must identify exactly ONE child of a parent. Two siblings sharing a
+  /// key collapse silently here — the keyed-reconcile map keeps only one, and a
+  /// key-based tree lookup (an A2UI id → branch resolve) would find more than
+  /// one. Catch it at build time with the offending key, rather than as a
+  /// downstream ambiguity. Unkeyed children are matched positionally and are
+  /// exempt.
+  bool _debugChildKeysUnique(List<Seed> seeds) {
+    final seen = <Object>{};
+    for (final seed in seeds) {
+      final key = seed.key;
+      if (key != null && !seen.add(key)) {
+        throw StateError(
+          'Duplicate child key "$key" among the children of one parent. A key '
+          'identifies exactly one child — it is the reconciliation identity, '
+          'and a key-based lookup expects one branch per key. Give each '
+          'sibling a distinct key (or leave them unkeyed for positional '
+          'matching).',
+        );
+      }
+    }
+    return true;
   }
 }
 
