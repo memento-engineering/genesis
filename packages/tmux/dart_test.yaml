@@ -1,0 +1,6 @@
+# Integration tests are tagged `integration`: they shell out to a real `tmux`
+# on an isolated `-L` socket and self-skip when tmux is absent. They run by
+# default on a host that has tmux; exclude them with `dart test -x integration`.
+tags:
+  integration:
+    description: Talks to a real tmux on an isolated socket; self-skips if absent.

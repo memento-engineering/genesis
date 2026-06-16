@@ -1,0 +1,3 @@
+# Internal build handoff (carries cross-project/decision references); kept in
+# the repo but excluded from the published pub.dev archive.
+HANDOFF.md
