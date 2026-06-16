@@ -33,6 +33,18 @@ void main() {
     expect(config.model, 'gemma4');
   });
 
+  test('modelOverride wins over the env model and the default', () async {
+    final config = await AgentConfig.resolve(
+      env: {
+        'SWIFT_INFER_AGENT_TOKEN': 'env-token',
+        'SWIFT_INFER_MODEL': 'gemma4',
+      },
+      secretsFile: missing,
+      modelOverride: 'qwen2.5-vl',
+    );
+    expect(config.model, 'qwen2.5-vl');
+  });
+
   test('falls back to the secrets file when the env token is absent', () async {
     final dir = Directory.systemTemp.createTempSync('genesis-console-secrets');
     addTearDown(() => dir.deleteSync(recursive: true));

@@ -37,17 +37,22 @@ class AgentConfig {
   /// the token is absent there, from [secretsFile] (`apps/console/.secrets.json`
   /// by default — a `{"agentToken","baseUrl","model"}` object).
   ///
+  /// [modelOverride] (e.g. the REPL's `--model` flag) takes precedence over the
+  /// env/file model and the default — handy for switching between swift-infer
+  /// models per run.
+  ///
   /// Throws [StateError] with remediation when no token can be found.
   static Future<AgentConfig> resolve({
     Map<String, String>? env,
     File? secretsFile,
+    String? modelOverride,
   }) async {
     final e = env ?? Platform.environment;
     final envToken = e[tokenEnv];
     if (envToken != null && envToken.isNotEmpty) {
       return AgentConfig(
         baseUrl: e['SWIFT_INFER_URL'] ?? defaultBaseUrl,
-        model: e['SWIFT_INFER_MODEL'] ?? defaultModel,
+        model: modelOverride ?? e['SWIFT_INFER_MODEL'] ?? defaultModel,
         agentToken: envToken,
       );
     }
@@ -59,7 +64,7 @@ class AgentConfig {
       if (token != null && token.isNotEmpty) {
         return AgentConfig(
           baseUrl: (json['baseUrl'] as String?) ?? defaultBaseUrl,
-          model: (json['model'] as String?) ?? defaultModel,
+          model: modelOverride ?? (json['model'] as String?) ?? defaultModel,
           agentToken: token,
         );
       }

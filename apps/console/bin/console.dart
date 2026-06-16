@@ -8,6 +8,7 @@ import 'package:genesis_console/genesis_console.dart';
 ///
 /// `dart run genesis_console:console` for an interactive session, or
 /// `--script FILE` to run a newline-delimited command list (the offline demo).
+/// `--model <id>` overrides the swift-infer model the `ask` agent uses.
 /// See the `help` command (and [_help]) for the command set.
 Future<void> main(List<String> args) async {
   // The REPL redraws a full grid snapshot after each command, so the surface
@@ -15,11 +16,15 @@ Future<void> main(List<String> args) async {
   final console = await Console.create(sink: _DiscardSink());
 
   // The live agent is optional: if no swift-infer token is configured, the
-  // offline commands still work and `ask` reports how to enable it.
+  // offline commands still work and `ask` reports how to enable it. `--model
+  // <id>` overrides the swift-infer model for this run.
+  final modelArg = _flagValue(args, '--model');
   Agent? agent;
   var agentReason = '';
+  String? agentModel;
   try {
-    final config = await AgentConfig.resolve();
+    final config = await AgentConfig.resolve(modelOverride: modelArg);
+    agentModel = config.model;
     agent = Agent(
       console: console,
       llm: SwiftInferClient(config),
@@ -40,6 +45,9 @@ Future<void> main(List<String> args) async {
   }
 
   stdout.writeln(_help);
+  stdout.writeln(
+    agent != null ? 'agent ready · model: $agentModel' : 'ask: $agentReason',
+  );
   stdout.write('> ');
   final lines = stdin.transform(utf8.decoder).transform(const LineSplitter());
   await for (final line in lines) {
@@ -135,6 +143,12 @@ Future<bool> _run(
     stdout.writeln('error: $error');
   }
   return true;
+}
+
+/// The value following [flag] in [args], or null if absent (e.g. `--model x`).
+String? _flagValue(List<String> args, String flag) {
+  final i = args.indexOf(flag);
+  return (i != -1 && i + 1 < args.length) ? args[i + 1] : null;
 }
 
 void _printOutcome(ConsentOutcome outcome) {
