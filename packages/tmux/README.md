@@ -81,4 +81,12 @@ much older tmux, so the client degrades gracefully: acts work everywhere; events
 fall back to polling when control mode is unavailable. Practical tested floor:
 tmux 3.2.
 
+## Acknowledgments
+
+genesis_tmux is a Dart port of the tmux client in
+[gastown / gascity](https://github.com/gastownhall/gascity). Its Go
+implementation — battle-tested supervising long-lived agent panes — shaped this
+package's verb set and hard-won gotcha handling, and served as the conformance
+oracle for the port.
+
 > Pre-1.0 and experimental; APIs may change before 1.0.
