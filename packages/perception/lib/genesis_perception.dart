@@ -20,5 +20,6 @@ export 'src/perception.dart';
 export 'src/perception_context.dart' show PerceptionContext;
 export 'src/perception_element.dart';
 export 'src/perception_owner.dart';
+export 'src/serialize.dart';
 export 'src/stateful_perception.dart';
 export 'src/stateless_perception.dart';

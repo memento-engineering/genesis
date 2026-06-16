@@ -2,7 +2,7 @@ name: genesis_perception
 description: >-
   A measurement domain built on the genesis_tree spine: read-only perception
   trees with Node/Field leaves and a harvest pipeline.
-version: 0.1.1
+version: 0.1.2
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 
