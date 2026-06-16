@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Add a debug assertion that sibling keys are unique within `updateChildren`
+  (debug-mode only; surfaces duplicate-key reconcile bugs earlier, no
+  release-mode behavior change).
+
 ## 0.1.1
 
 - Docs: package documentation (README, dartdoc) made self-contained for pub.dev.
