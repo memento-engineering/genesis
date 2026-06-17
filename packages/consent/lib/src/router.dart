@@ -210,10 +210,15 @@ final class ConsentRouter {
   /// composes), so a target nested under `Watch`/stateless wrappers is still
   /// found. No branch refs are cached between calls — staleness is detected by
   /// re-walking.
+  ///
+  /// The A2UI id is matched as `ValueKey(id)`: `buildSeedTree` wraps each
+  /// component id in a `ValueKey<String>` (the typed-key bridge), so the
+  /// "tree key == component id" invariant resolves through key equality.
   List<Branch> _mountedMatches(Branch root, String id) {
+    final target = ValueKey(id);
     final matches = <Branch>[];
     void walk(Branch branch) {
-      if (branch.mounted && branch.key == id) matches.add(branch);
+      if (branch.mounted && branch.key == target) matches.add(branch);
       branch.visitChildren(walk);
     }
 

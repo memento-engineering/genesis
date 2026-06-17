@@ -21,8 +21,8 @@ void main() {
           children: [
             Box(
               title: 'panel',
-              key: 'b1',
-              children: [Text('hello', key: 't1')],
+              key: ValueKey('b1'),
+              children: [Text('hello', key: ValueKey('t1'))],
             ),
           ],
         ),
@@ -49,8 +49,8 @@ void main() {
           height: 12,
           sink: _NullSink(),
           children: [
-            Text('a', key: 'x1'),
-            Text('b', key: 'x2'),
+            Text('a', key: ValueKey('x1')),
+            Text('b', key: ValueKey('x2')),
           ],
         ),
       );
@@ -69,7 +69,10 @@ void main() {
         Stage(width: 40, height: 12, sink: sink, children: kids);
 
     final root = owner.mountRoot(
-      scene([Box(title: 'A', key: 'a'), Box(title: 'B', key: 'b')]),
+      scene([
+        Box(title: 'A', key: ValueKey('a')),
+        Box(title: 'B', key: ValueKey('b')),
+      ]),
     );
 
     final beforeA = _branchKeyed(_walk(root), 'a');
@@ -78,7 +81,12 @@ void main() {
     // Reorder the two keyed children. Keyed reconcile must move each branch to
     // its new slot WITHOUT remounting — proving the namespaced wrapper key
     // still drives correct keyed matching.
-    root.update(scene([Box(title: 'B', key: 'b'), Box(title: 'A', key: 'a')]));
+    root.update(
+      scene([
+        Box(title: 'B', key: ValueKey('b')),
+        Box(title: 'A', key: ValueKey('a')),
+      ]),
+    );
 
     final afterA = _branchKeyed(_walk(root), 'a');
     final afterB = _branchKeyed(_walk(root), 'b');
@@ -102,11 +110,11 @@ List<Branch> _walk(Branch root) {
   return out;
 }
 
-int _countKey(List<Branch> branches, Object key) =>
-    branches.where((b) => b.mounted && b.key == key).length;
+int _countKey(List<Branch> branches, String id) =>
+    branches.where((b) => b.mounted && b.key == ValueKey(id)).length;
 
-Branch _branchKeyed(List<Branch> branches, Object key) =>
-    branches.firstWhere((b) => b.mounted && b.key == key);
+Branch _branchKeyed(List<Branch> branches, String id) =>
+    branches.firstWhere((b) => b.mounted && b.key == ValueKey(id));
 
 /// A byte sink that discards everything — these tests assert on tree shape,
 /// not emitted frames.

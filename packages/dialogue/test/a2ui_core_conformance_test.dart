@@ -46,7 +46,7 @@ void main() {
       final surface = DialogueSurface(registry: componentRegistry);
       final root = surface.mount(parseUpdateComponents(wire));
       expect(root, isA<NodeElement>());
-      expect((root as NodeElement).children.single.key, 'f1');
+      expect((root as NodeElement).children.single.key, const ValueKey('f1'));
     });
 
     test('our toJson() is a shape a2ui_core A2uiMessage.fromJson accepts', () {

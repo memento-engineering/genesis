@@ -96,9 +96,9 @@ void main() {
       () {
         final owner = TreeOwner();
         addTearDown(owner.dispose);
-        final branch = owner.mountRoot(_S(key: 'a')) as _B;
+        final branch = owner.mountRoot(_S(key: ValueKey('a'))) as _B;
         expect(
-          () => branch.update(_S(key: 'b')),
+          () => branch.update(_S(key: ValueKey('b'))),
           throwsA(isA<AssertionError>()),
         );
       },
@@ -165,8 +165,8 @@ void main() {
     );
 
     test('canUpdate=false (key mismatch): unmounts old, mounts new', () {
-      final child = _S(key: 'x').createBranch()..mount(root, 0);
-      final result = root.updateChild(child, _S(key: 'y'), 0);
+      final child = _S(key: ValueKey('x')).createBranch()..mount(root, 0);
+      final result = root.updateChild(child, _S(key: ValueKey('y')), 0);
       expect(result, isNot(same(child)));
       expect(child.mounted, isFalse);
       expect(result!.mounted, isTrue);
@@ -190,16 +190,16 @@ void main() {
 
     test('keyed reorder preserves branch identity (fork #2)', () {
       final branches = mountAll([
-        _S(tag: 'a', key: 'k-a'),
-        _S(tag: 'b', key: 'k-b'),
-        _S(tag: 'c', key: 'k-c'),
+        _S(tag: 'a', key: ValueKey('k-a')),
+        _S(tag: 'b', key: ValueKey('k-b')),
+        _S(tag: 'c', key: ValueKey('k-c')),
       ]);
       final ids = branches.map((b) => b.branchId).toList();
 
       final result = root.updateChildren(branches, [
-        _S(tag: 'c2', key: 'k-c'),
-        _S(tag: 'a2', key: 'k-a'),
-        _S(tag: 'b2', key: 'k-b'),
+        _S(tag: 'c2', key: ValueKey('k-c')),
+        _S(tag: 'a2', key: ValueKey('k-a')),
+        _S(tag: 'b2', key: ValueKey('k-b')),
       ]);
 
       expect(result[0].branchId, equals(ids[2])); // c reused
@@ -209,10 +209,13 @@ void main() {
     });
 
     test('unmatched key: old unmounted, new branch mounted', () {
-      final branches = mountAll([_S(key: 'k-a'), _S(key: 'k-b')]);
+      final branches = mountAll([
+        _S(key: ValueKey('k-a')),
+        _S(key: ValueKey('k-b')),
+      ]);
       final result = root.updateChildren(branches, [
-        _S(key: 'k-a'),
-        _S(key: 'k-c'),
+        _S(key: ValueKey('k-a')),
+        _S(key: ValueKey('k-c')),
       ]);
 
       expect(result[0], same(branches[0]));
@@ -222,8 +225,11 @@ void main() {
     });
 
     test('shorter new list: extra old branches are unmounted', () {
-      final branches = mountAll([_S(key: 'k-a'), _S(key: 'k-b')]);
-      final result = root.updateChildren(branches, [_S(key: 'k-a')]);
+      final branches = mountAll([
+        _S(key: ValueKey('k-a')),
+        _S(key: ValueKey('k-b')),
+      ]);
+      final result = root.updateChildren(branches, [_S(key: ValueKey('k-a'))]);
 
       expect(result.length, equals(1));
       expect(result[0], same(branches[0]));
@@ -231,10 +237,10 @@ void main() {
     });
 
     test('longer new list: extra seeds are mounted fresh', () {
-      final branches = mountAll([_S(key: 'k-a')]);
+      final branches = mountAll([_S(key: ValueKey('k-a'))]);
       final result = root.updateChildren(branches, [
-        _S(key: 'k-a'),
-        _S(key: 'k-b'),
+        _S(key: ValueKey('k-a')),
+        _S(key: ValueKey('k-b')),
       ]);
 
       expect(result.length, equals(2));

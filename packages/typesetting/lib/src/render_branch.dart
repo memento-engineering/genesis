@@ -283,12 +283,16 @@ abstract class RenderBranch extends Branch {
 /// distinct type keeps reconcile stable while preserving one-branch-per-key
 /// for the child itself. Compared by value so two wrappers derived from the
 /// same child key are interchangeable across a rebuild.
-@immutable
-class _RenderScopeKey {
-  const _RenderScopeKey(this.childKey);
+///
+/// A first-class [Key] (it extends [Key], so it slots straight into
+/// `Seed.key`): the spine types reconciliation identity as [Key], and this
+/// namespaced wrapper is just another key kind defined by a consumer — exactly
+/// the open-`Key` extension point the spine reserves for domains.
+class _RenderScopeKey extends Key {
+  const _RenderScopeKey(this.childKey) : super.empty();
 
-  /// The wrapped child's key this scope key is derived from.
-  final Object childKey;
+  /// The wrapped child's [Key] this scope key is derived from.
+  final Key childKey;
 
   @override
   bool operator ==(Object other) =>

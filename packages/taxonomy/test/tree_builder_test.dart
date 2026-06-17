@@ -28,9 +28,12 @@ void main() {
   group('buildSeedTree through the registry (seam 3)', () {
     test('component ids become Seed keys', () {
       final root = buildSeedTree(componentRegistry, v1) as Panel;
-      expect(root.key, 'root');
+      expect(root.key, const ValueKey('root'));
       expect(root.name, 'dash');
-      expect(root.children.map((c) => c.key), ['l1', 'g1']);
+      expect(root.children.map((c) => c.key), const [
+        ValueKey('l1'),
+        ValueKey('g1'),
+      ]);
       expect(root.children[0], isA<Label>());
       expect(root.children[1], isA<Gauge>());
       expect((root.children[1] as Gauge).scale, 10); // catalog default
@@ -45,8 +48,8 @@ void main() {
       root.visitChildren(visited.add);
       expect(visited[0], isA<LabelBranch>());
       expect(visited[1], isA<GaugeBranch>());
-      expect(visited[0].key, 'l1');
-      expect(visited[1].key, 'g1');
+      expect(visited[0].key, const ValueKey('l1'));
+      expect(visited[1].key, const ValueKey('g1'));
       owner.dispose();
     });
 
@@ -84,7 +87,7 @@ void main() {
       expect(identical(root.children[1], labelBranch), isTrue);
       expect((root.children[1].seed as Label).value, 'Nico Spencer');
       expect(gaugeBranch.mounted, isFalse);
-      expect(root.children[0].key, 'l2');
+      expect(root.children[0].key, const ValueKey('l2'));
       expect(root.children[0].mounted, isTrue);
       owner.dispose();
     });
@@ -98,7 +101,7 @@ void main() {
         ),
       ];
       final seed = buildSeedTree(componentRegistry, components, rootId: 'main');
-      expect(seed.key, 'main');
+      expect(seed.key, const ValueKey('main'));
     });
 
     test('a DAG share builds twice rather than rejecting', () {
@@ -130,8 +133,8 @@ void main() {
       final root = buildSeedTree(componentRegistry, components) as Panel;
       final p1 = root.children[0] as Panel;
       final p2 = root.children[1] as Panel;
-      expect(p1.children.single.key, 'shared');
-      expect(p2.children.single.key, 'shared');
+      expect(p1.children.single.key, const ValueKey('shared'));
+      expect(p2.children.single.key, const ValueKey('shared'));
     });
   });
 

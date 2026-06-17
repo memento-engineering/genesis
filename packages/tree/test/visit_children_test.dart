@@ -86,13 +86,15 @@ void main() {
                 Node(
                   'root',
                   children: [
-                    const Leaf('a', key: 'ka'),
-                    const Leaf('b', key: 'kb'),
+                    const Leaf('a', key: ValueKey('ka')),
+                    const Leaf('b', key: ValueKey('kb')),
                   ],
                 ),
               )
               as NodeBranch;
-      root.update(Node('root', children: [const Leaf('b', key: 'kb')]));
+      root.update(
+        Node('root', children: [const Leaf('b', key: ValueKey('kb'))]),
+      );
       final children = _directChildren(root);
       expect(children.length, 1);
       expect((children.single.seed as Leaf).tag, 'b');
@@ -114,7 +116,7 @@ void main() {
                       value: 'v',
                       child: const _StatefulWrapperSeed(Leaf('s-inner')),
                     ),
-                    const Leaf('plain', key: 'kp'),
+                    const Leaf('plain', key: ValueKey('kp')),
                   ],
                 ),
               )

@@ -1,4 +1,5 @@
 import 'package:genesis_taxonomy/genesis_taxonomy.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 import 'package:test/test.dart';
 
 import 'src/fixture.g.dart';
@@ -24,7 +25,7 @@ void main() {
                   'align': 'center',
                 },
                 const [],
-                'g1',
+                ValueKey('g1'),
               )
               as Gauge;
       expect(seed.label, 'Fuel');
@@ -32,7 +33,7 @@ void main() {
       expect(seed.scale, 20);
       expect(seed.enabled, isFalse);
       expect(seed.align, 'center');
-      expect(seed.key, 'g1');
+      expect(seed.key, const ValueKey('g1'));
     });
 
     test('omitted optional props take their catalog defaults', () {
@@ -41,7 +42,7 @@ void main() {
                 'gauge',
                 {'label': 'Fuel', 'value': 1.0},
                 const [],
-                'g1',
+                ValueKey('g1'),
               )
               as Gauge;
       expect(seed.scale, 10);
@@ -55,7 +56,7 @@ void main() {
                 'gauge',
                 {'label': 'Fuel', 'value': 1.0, 'align': null},
                 const [],
-                'g1',
+                ValueKey('g1'),
               )
               as Gauge;
       expect(seed.align, 'start');
@@ -67,7 +68,7 @@ void main() {
                 'gauge',
                 {'label': 'Fuel', 'value': 7},
                 const [],
-                'g1',
+                ValueKey('g1'),
               )
               as Gauge;
       expect(seed.value, 7.0);
@@ -79,7 +80,7 @@ void main() {
                 'label',
                 {'name': 'Name', 'value': 'Nico'},
                 const [],
-                'l1',
+                ValueKey('l1'),
               )
               as Label;
       expect(label.name, 'Name');
@@ -90,12 +91,12 @@ void main() {
                 'panel',
                 {'name': 'form'},
                 [label],
-                'root',
+                ValueKey('root'),
               )
               as Panel;
       expect(panel.name, 'form');
       expect(panel.children, [label]);
-      expect(panel.key, 'root');
+      expect(panel.key, const ValueKey('root'));
     });
   });
 
@@ -228,7 +229,7 @@ void main() {
         'label',
         {'name': 'n', 'value': 'v'},
         const [],
-        'l1',
+        ValueKey('l1'),
       );
       expect(
         () => componentRegistry.buildComponent(

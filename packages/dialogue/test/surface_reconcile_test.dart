@@ -86,7 +86,7 @@ Map<String, Object?> v2() => {
 
 /// Returns the direct child of [node] whose Seed key equals [id].
 Branch childById(NodeElement node, String id) =>
-    node.children.firstWhere((c) => c.key == id);
+    node.children.firstWhere((c) => c.key == ValueKey(id));
 
 void main() {
   group('mount: deserialize -> buildSeedTree -> mountRoot', () {
@@ -96,15 +96,15 @@ void main() {
 
       // root is a Node mounted by id "root".
       expect(root, isA<NodeElement>());
-      expect(root.key, 'root');
+      expect(root.key, const ValueKey('root'));
       expect((root.seed as Node).name, 'form');
 
       final rootEl = root as NodeElement;
-      expect(rootEl.children.map((c) => c.key), [
-        'f_name',
-        'f_email',
-        'n_addr',
-        'f_age',
+      expect(rootEl.children.map((c) => c.key), const [
+        ValueKey('f_name'),
+        ValueKey('f_email'),
+        ValueKey('n_addr'),
+        ValueKey('f_age'),
       ]);
 
       // A leaf field: props landed.
@@ -114,13 +114,13 @@ void main() {
 
       // The nested subtree: n_addr -> f_street.
       final addr = childById(rootEl, 'n_addr') as NodeElement;
-      expect(addr.children.single.key, 'f_street');
+      expect(addr.children.single.key, const ValueKey('f_street'));
       final street = addr.children.single as FieldElement;
       expect(street.field.value, '1 Main');
 
       // Every component id surfaced as the Seed key.
-      expect(name.seed.key, 'f_name');
-      expect(addr.seed.key, 'n_addr');
+      expect(name.seed.key, const ValueKey('f_name'));
+      expect(addr.seed.key, const ValueKey('n_addr'));
     });
   });
 
@@ -155,11 +155,11 @@ void main() {
           final phoneAfter = childById(root, 'f_phone');
 
           // New child order reflects the re-emission.
-          expect(root.children.map((c) => c.key), [
-            'f_name',
-            'n_addr',
-            'f_email',
-            'f_phone',
+          expect(root.children.map((c) => c.key), const [
+            ValueKey('f_name'),
+            ValueKey('n_addr'),
+            ValueKey('f_email'),
+            ValueKey('f_phone'),
           ]);
 
           // Prop-changed id: SAME instance, new seed/props.

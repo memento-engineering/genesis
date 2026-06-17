@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import 'branch.dart';
+import 'key.dart';
 
 /// Build-time capability handle into the tree — the BuildContext analogue
 /// minus the Element≡BuildContext "original sin".
@@ -15,10 +16,10 @@ abstract class TreeContext {
   /// safe staleness probe for handles held across async gaps.
   bool get mounted;
 
-  /// The key of the bound branch's `Seed` config, or null if unkeyed.
+  /// The [Key] of the bound branch's `Seed` config, or null if unkeyed.
   ///
   /// Throws [StateError] after the bound branch unmounts.
-  Object? get key;
+  Key? get key;
 
   /// Stable id of the bound branch, issued by `TreeOwner.issueId` at mount.
   ///
@@ -65,7 +66,7 @@ class _BranchContext implements TreeContext {
   bool get mounted => _branch.mounted;
 
   @override
-  Object? get key {
+  Key? get key {
     _checkMounted('key');
     return _branch.key;
   }

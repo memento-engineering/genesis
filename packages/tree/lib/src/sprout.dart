@@ -15,6 +15,7 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 
 import 'component_branch.dart';
+import 'key.dart';
 import 'seed.dart';
 import 'tree_context.dart';
 
@@ -331,7 +332,7 @@ class _SproutContext implements SproutContext {
   bool get mounted => _delegate.mounted;
 
   @override
-  Object? get key => _delegate.key;
+  Key? get key => _delegate.key;
 
   @override
   String get branchId => _delegate.branchId;

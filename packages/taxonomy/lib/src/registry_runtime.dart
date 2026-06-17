@@ -12,9 +12,9 @@ import 'package:genesis_tree/genesis_tree.dart';
 import 'errors.dart';
 
 /// Builds one `Seed` from validated wire props, already-built children, and
-/// the reconciliation key.
+/// the reconciliation [Key].
 typedef SeedFactoryFn =
-    Seed Function(Map<String, Object?> props, List<Seed> children, Object? key);
+    Seed Function(Map<String, Object?> props, List<Seed> children, Key? key);
 
 /// One catalog type's runtime entry: shape flags plus the bound constructor.
 final class RegistryEntry {
@@ -71,7 +71,7 @@ final class ComponentRegistry {
     String type,
     Map<String, Object?> props,
     List<Seed> children,
-    Object? key,
+    Key? key,
   ) {
     final entry = entries[type];
     if (entry == null) {

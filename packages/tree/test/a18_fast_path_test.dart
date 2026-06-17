@@ -285,7 +285,7 @@ void main() {
       final sharedChild = Node(
         'container',
         children: [
-          _DependentSeed(depTracker, key: 'dep'),
+          _DependentSeed(depTracker, key: ValueKey('dep')),
           _NonDependentSeed(nonDepTracker),
           _OrderSeed(orderLog),
         ],
@@ -338,7 +338,7 @@ void main() {
       final depTracker = _Tracker();
       final sharedChild = Node(
         'container',
-        children: [_DependentSeed(depTracker, key: 'dep')],
+        children: [_DependentSeed(depTracker, key: ValueKey('dep'))],
       );
 
       final ip =
@@ -393,7 +393,7 @@ void main() {
       final depTracker = _Tracker();
       final sharedChild = Node(
         'container',
-        children: [_DependentSeed(depTracker, key: 'dep')],
+        children: [_DependentSeed(depTracker, key: ValueKey('dep'))],
       );
 
       final ip =
@@ -579,7 +579,7 @@ class _HookBranch extends Branch {
 /// A keyed container-ish seed wrapping a single child seed, used to give #7 a
 /// keyed multichild element whose own build counts.
 class _KeyedCounting extends StatelessSeed {
-  const _KeyedCounting(String key, this.inner) : super(key: key);
+  _KeyedCounting(String key, this.inner) : super(key: ValueKey(key));
   final Seed inner;
   @override
   Seed build(TreeContext context) => inner;

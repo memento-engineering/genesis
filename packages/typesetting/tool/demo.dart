@@ -59,24 +59,27 @@ Future<void> main(List<String> args) async {
                     Node(
                       'ticker',
                       children: [
-                        Field('count', '$v', key: 'count'),
-                        Field('square', '${v * v}', key: 'square'),
+                        Field('count', '$v', key: ValueKey('count')),
+                        Field('square', '${v * v}', key: ValueKey('square')),
                       ],
                     ),
                     accent: 2,
                   ),
                   initialValue: 0,
-                  key: 'ticker',
+                  key: ValueKey('ticker'),
                 ),
-                const StaticAboutBox(key: 'about'),
+                const StaticAboutBox(key: ValueKey('about')),
                 Watch<String>(
                   feed.stream,
                   (msg) => NodeBox(
-                    Node('feed', children: [Field('last', msg, key: 'last')]),
+                    Node(
+                      'feed',
+                      children: [Field('last', msg, key: ValueKey('last'))],
+                    ),
                     accent: 6,
                   ),
                   initialValue: '(none)',
-                  key: 'feed',
+                  key: ValueKey('feed'),
                 ),
               ],
             ),
@@ -151,8 +154,8 @@ class StaticAboutBox extends StatelessSeed {
     Node(
       'about',
       children: [
-        Field('package', 'genesis_typesetting', key: 'package'),
-        Field('backend', 'render branches -> ANSI', key: 'backend'),
+        Field('package', 'genesis_typesetting', key: ValueKey('package')),
+        Field('backend', 'render branches -> ANSI', key: ValueKey('backend')),
       ],
     ),
     accent: 4,

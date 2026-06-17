@@ -97,8 +97,11 @@ void main() {
       () {
         final owner = PerceptionOwner();
         addTearDown(owner.dispose);
-        final el = owner.mountRoot(_P(key: 'a')) as _E;
-        expect(() => el.update(_P(key: 'b')), throwsA(isA<AssertionError>()));
+        final el = owner.mountRoot(_P(key: ValueKey('a'))) as _E;
+        expect(
+          () => el.update(_P(key: ValueKey('b'))),
+          throwsA(isA<AssertionError>()),
+        );
       },
     );
   });
@@ -163,8 +166,8 @@ void main() {
     );
 
     test('canUpdate=false (key mismatch): unmounts old, mounts new', () {
-      final child = _P(key: 'x').createElement()..mount(root, 0);
-      final result = root.updateChild(child, _P(key: 'y'), 0);
+      final child = _P(key: ValueKey('x')).createElement()..mount(root, 0);
+      final result = root.updateChild(child, _P(key: ValueKey('y')), 0);
       expect(result, isNot(same(child)));
       expect(child.mounted, isFalse);
       expect(result!.mounted, isTrue);
@@ -188,16 +191,16 @@ void main() {
 
     test('keyed reorder preserves element identity (fork #2)', () {
       final els = mountAll([
-        _P(tag: 'a', key: 'k-a'),
-        _P(tag: 'b', key: 'k-b'),
-        _P(tag: 'c', key: 'k-c'),
+        _P(tag: 'a', key: ValueKey('k-a')),
+        _P(tag: 'b', key: ValueKey('k-b')),
+        _P(tag: 'c', key: ValueKey('k-c')),
       ]);
       final ids = els.map((e) => e.perceptionId).toList();
 
       final result = root.updateChildren(els, [
-        _P(tag: 'c2', key: 'k-c'),
-        _P(tag: 'a2', key: 'k-a'),
-        _P(tag: 'b2', key: 'k-b'),
+        _P(tag: 'c2', key: ValueKey('k-c')),
+        _P(tag: 'a2', key: ValueKey('k-a')),
+        _P(tag: 'b2', key: ValueKey('k-b')),
       ]);
 
       expect(result[0].branchId, equals(ids[2])); // c reused
@@ -207,8 +210,14 @@ void main() {
     });
 
     test('unmatched key: old unmounted, new element mounted', () {
-      final els = mountAll([_P(key: 'k-a'), _P(key: 'k-b')]);
-      final result = root.updateChildren(els, [_P(key: 'k-a'), _P(key: 'k-c')]);
+      final els = mountAll([
+        _P(key: ValueKey('k-a')),
+        _P(key: ValueKey('k-b')),
+      ]);
+      final result = root.updateChildren(els, [
+        _P(key: ValueKey('k-a')),
+        _P(key: ValueKey('k-c')),
+      ]);
 
       expect(result[0], same(els[0]));
       expect(result[1], isNot(same(els[1])));
@@ -217,8 +226,11 @@ void main() {
     });
 
     test('shorter new list: extra old elements are unmounted', () {
-      final els = mountAll([_P(key: 'k-a'), _P(key: 'k-b')]);
-      final result = root.updateChildren(els, [_P(key: 'k-a')]);
+      final els = mountAll([
+        _P(key: ValueKey('k-a')),
+        _P(key: ValueKey('k-b')),
+      ]);
+      final result = root.updateChildren(els, [_P(key: ValueKey('k-a'))]);
 
       expect(result.length, equals(1));
       expect(result[0], same(els[0]));
@@ -226,8 +238,11 @@ void main() {
     });
 
     test('longer new list: extra perceptions are mounted fresh', () {
-      final els = mountAll([_P(key: 'k-a')]);
-      final result = root.updateChildren(els, [_P(key: 'k-a'), _P(key: 'k-b')]);
+      final els = mountAll([_P(key: ValueKey('k-a'))]);
+      final result = root.updateChildren(els, [
+        _P(key: ValueKey('k-a')),
+        _P(key: ValueKey('k-b')),
+      ]);
 
       expect(result.length, equals(2));
       expect(result[0], same(els[0]));

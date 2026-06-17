@@ -11,6 +11,7 @@ library;
 export 'src/branch.dart' hide InheritedBranchBase;
 export 'src/component_branch.dart';
 export 'src/inherited.dart';
+export 'src/key.dart';
 export 'src/seed.dart';
 export 'src/sprout.dart';
 export 'src/stateful.dart';

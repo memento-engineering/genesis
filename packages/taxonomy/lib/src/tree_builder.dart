@@ -84,12 +84,16 @@ Seed buildSeedTree(
       for (final childId in instance.childIds) build(childId, id),
     ];
     visiting.removeLast();
-    // Component id becomes the Seed key — the reconciliation identity.
+    // Component id becomes the Seed key — the reconciliation identity. The
+    // wire id (a String) is wrapped in a ValueKey<String> at this one bridge
+    // seam, so "tree key == A2UI component id" (ADR-0003) now holds as a typed
+    // key: id-keyed children reconcile by value, and a key-based lookup
+    // compares against `ValueKey(id)` (see consent's router).
     return registry.buildComponent(
       instance.type,
       instance.props,
       children,
-      instance.id,
+      ValueKey(instance.id),
     );
   }
 
