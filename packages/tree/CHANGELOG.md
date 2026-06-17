@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.3
+
+- Add `MultiChildSeed`/`MultiChildBranch` to the (experimental) composition
+  layer: a config-declared multi-child container that keyed-reconciles its
+  `List<Seed> children` via `Branch.updateChildren` — the
+  `MultiChildRenderObjectElement` analogue, beside the single-child
+  `StatelessSeed`/`StatefulSeed`/`Sprout`. Matched children (keyed by key,
+  unkeyed by position) keep their branch identity across rebuilds; new children
+  mount, removed children unmount, and child order follows `children`. The
+  identical-config skip fast path and the duplicate-sibling-key debug guard are
+  inherited from `Branch`. Additive; the spine is unchanged.
+
 ## 0.1.2
 
 - Add a debug assertion that sibling keys are unique within `updateChildren`

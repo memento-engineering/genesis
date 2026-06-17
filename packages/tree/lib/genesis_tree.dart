@@ -5,12 +5,14 @@
 /// with `TreeContext` as a separate capability handle — never the `Branch`
 /// itself — and `TreeOwner` as the scheduler. The composition layer
 /// (`ComponentBranch`, `StatelessSeed`/`StatefulSeed` + `State`,
-/// `InheritedSeed`, `Watch`) is EXPERIMENTAL and may change before 1.0.
+/// `MultiChildSeed`, `InheritedSeed`, `Watch`) is EXPERIMENTAL and may change
+/// before 1.0.
 library;
 
 export 'src/branch.dart' hide InheritedBranchBase;
 export 'src/component_branch.dart';
 export 'src/inherited.dart';
+export 'src/multi_child.dart';
 export 'src/seed.dart';
 export 'src/sprout.dart';
 export 'src/stateful.dart';
