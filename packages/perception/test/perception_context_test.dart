@@ -52,11 +52,11 @@ void main() {
     test('perceptionId aliases branchId; key surfaces the seed key', () {
       final owner = PerceptionOwner();
       addTearDown(owner.dispose);
-      final el = owner.mountRoot(_P(key: 'k')) as _E;
+      final el = owner.mountRoot(_P(key: ValueKey('k'))) as _E;
       final context = el.context;
       expect(context.perceptionId, equals(el.branchId));
       expect(context.branchId, equals(el.branchId));
-      expect(context.key, equals('k'));
+      expect(context.key, equals(const ValueKey('k')));
     });
 
     test('markNeedsHarvest via handle routes through the element funnel and '

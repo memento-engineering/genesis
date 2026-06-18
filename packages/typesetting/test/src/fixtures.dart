@@ -49,8 +49,8 @@ class CountingStaticBox extends StatelessSeed {
       Node(
         'static',
         children: [
-          Field('mode', 'idle', key: 'mode'),
-          Field('uptime', 'n/a', key: 'uptime'),
+          Field('mode', 'idle', key: ValueKey('mode')),
+          Field('uptime', 'n/a', key: ValueKey('uptime')),
         ],
       ),
     );
@@ -82,26 +82,32 @@ class LocalityFixture {
               Node(
                 'ticker',
                 children: [
-                  Field('count', '$v', key: 'count'),
-                  Field('square', '${v * v}', key: 'square'),
+                  Field('count', '$v', key: ValueKey('count')),
+                  Field('square', '${v * v}', key: ValueKey('square')),
                 ],
               ),
             );
           },
           initialValue: 0,
-          key: 'ticker',
+          key: ValueKey('ticker'),
         ),
-        CountingStaticBox(onBuild: () => staticBuilds++, key: 'static'),
+        CountingStaticBox(
+          onBuild: () => staticBuilds++,
+          key: ValueKey('static'),
+        ),
         Watch<String>(
           feed.stream,
           (msg) {
             feedBuilds++;
             return NodeBox(
-              Node('feed', children: [Field('last', msg, key: 'last')]),
+              Node(
+                'feed',
+                children: [Field('last', msg, key: ValueKey('last'))],
+              ),
             );
           },
           initialValue: '(none)',
-          key: 'feed',
+          key: ValueKey('feed'),
         ),
       ],
     );

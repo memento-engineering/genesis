@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import 'key.dart';
 import 'seed.dart';
 import 'tree_context.dart';
 import 'tree_owner.dart';
@@ -30,8 +31,8 @@ abstract class Branch {
   /// [TreeOwner.issueId] and never changes during the branch's lifetime.
   late final String branchId;
 
-  /// The key of the underlying [Seed] config, or null if unkeyed.
-  Object? get key => _seed.key;
+  /// The [Key] of the underlying [Seed] config, or null if unkeyed.
+  Key? get key => _seed.key;
 
   TreeContext? _context;
 
@@ -252,7 +253,7 @@ abstract class Branch {
   /// unkeyed branches past the new length) are unmounted after the pass.
   List<Branch> updateChildren(List<Branch> oldChildren, List<Seed> newSeeds) {
     assert(_debugChildKeysUnique(newSeeds));
-    final Map<Object, Branch> keyedOld = {};
+    final Map<Key, Branch> keyedOld = {};
     final List<Branch> unkeyedOld = [];
     for (final branch in oldChildren) {
       if (branch._seed.key != null) {
@@ -298,7 +299,7 @@ abstract class Branch {
   /// downstream ambiguity. Unkeyed children are matched positionally and are
   /// exempt.
   bool _debugChildKeysUnique(List<Seed> seeds) {
-    final seen = <Object>{};
+    final seen = <Key>{};
     for (final seed in seeds) {
       final key = seed.key;
       if (key != null && !seen.add(key)) {

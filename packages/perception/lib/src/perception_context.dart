@@ -50,7 +50,7 @@ class _PerceptionHandle implements PerceptionContext {
   bool get mounted => _inner.mounted;
 
   @override
-  Object? get key => _inner.key;
+  Key? get key => _inner.key;
 
   @override
   String get branchId => _inner.branchId;

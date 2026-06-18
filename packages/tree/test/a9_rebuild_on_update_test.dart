@@ -32,7 +32,7 @@ class _WrapperSeed extends StatelessSeed {
   final String label;
   @override
   Seed build(TreeContext context) =>
-      _CountedSeed(tracker, label: label, key: 'inner');
+      _CountedSeed(tracker, label: label, key: ValueKey('inner'));
 }
 
 class _LabelSeed extends StatefulSeed {
@@ -77,12 +77,12 @@ void main() {
       addTearDown(owner.dispose);
       final tracker = _Tracker();
       final branch =
-          owner.mountRoot(_CountedSeed(tracker, label: 'a', key: 'k'))
+          owner.mountRoot(_CountedSeed(tracker, label: 'a', key: ValueKey('k')))
               as StatelessBranch;
       expect(tracker.builds, 1);
       expect(tracker.lastLabel, 'a');
 
-      branch.update(_CountedSeed(tracker, label: 'b', key: 'k'));
+      branch.update(_CountedSeed(tracker, label: 'b', key: ValueKey('k')));
 
       // The builder re-ran synchronously with the new config in place.
       expect(tracker.builds, 2);
@@ -143,7 +143,9 @@ void main() {
       final owner = TreeOwner();
       addTearDown(owner.dispose);
       final branch =
-          owner.mountRoot(Node('root', children: [const Leaf('a', key: 'k')]))
+          owner.mountRoot(
+                Node('root', children: [const Leaf('a', key: ValueKey('k'))]),
+              )
               as NodeBranch;
       // Not a component: there is no build() to gain (compile-level — the
       // member does not exist on NodeBranch), and no ComponentBranch in its
@@ -155,7 +157,7 @@ void main() {
         Node(
           'root',
           children: [
-            const Leaf('b', key: 'k'),
+            const Leaf('b', key: ValueKey('k')),
             const Leaf('c'),
           ],
         ),

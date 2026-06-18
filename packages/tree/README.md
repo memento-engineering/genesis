@@ -20,6 +20,23 @@ Reconciliation is by **key/identity**, not structural diff: whole-(sub)tree
 re-emission becomes an identity-preserving patch (matched keys keep their
 `Branch` instance and live state; an `identical()` seed prunes its subtree).
 
+## Keys
+
+`Seed.key` is a first-class `Key` (not a bare `Object`), so reconciliation
+identity carries intent and type-safety:
+
+- `ValueKey<T>(value)` — value `==`/`hashCode`; the type parameter is part of
+  identity, so `ValueKey<int>(1)` never collides with `ValueKey<num>(1)`.
+  `const Key('id')` is the ergonomic shorthand for `ValueKey<String>('id')`.
+- `ObjectKey(value)` — identity equality, to tell apart two objects that are
+  equal by `==`.
+
+`Key` is **open** — define your own kinds by extending it. There is
+**deliberately no `GlobalKey`**: cross-tree lookup is refused so the tree stays
+one-way (cross-boundary references pass handles down through the parent, never
+through a global registry). A genuine global-lookup need would be a separate,
+explicit, opt-in mechanism — never the default key.
+
 ## Composition layer (experimental)
 
 A thin composition layer on the spine, **experimental** and subject to change

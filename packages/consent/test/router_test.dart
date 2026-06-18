@@ -102,9 +102,10 @@ ActionEvent setTo(String id, Object? value, {String surfaceId = 'main'}) =>
 
 Branch? findByKey(Branch root, String id) {
   Branch? found;
+  final target = ValueKey(id);
   void walk(Branch b) {
     if (found != null) return;
-    if (b.key == id) {
+    if (b.key == target) {
       found = b;
       return;
     }
@@ -177,7 +178,7 @@ void main() {
       final rebuilt = surface.owner.flush();
 
       // Exactly the target rebuilt: cA's builder ran again, cB's did NOT.
-      expect(rebuilt.map((b) => b.key), ['cA']);
+      expect(rebuilt.map((b) => b.key), [const ValueKey('cA')]);
       expect(consentFixtureBuildCounts['cA'], 1);
       expect(consentFixtureBuildCounts.containsKey('cB'), isFalse);
 
@@ -210,7 +211,7 @@ void main() {
       // Two unflushed writes coalesce into ONE rebuild; the observer of the
       // rendered projection never sees the intermediate 5.
       final rebuilt = surface.owner.flush();
-      expect(rebuilt.map((b) => b.key), ['cA']);
+      expect(rebuilt.map((b) => b.key), [const ValueKey('cA')]);
       expect(consentFixtureBuildCounts['cA'], 1);
       expect(renderedValue(root, 'cA'), '9');
     });

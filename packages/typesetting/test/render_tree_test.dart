@@ -103,8 +103,8 @@ void main() {
                     Node(
                       'group',
                       children: [
-                        Box(title: 'a', key: 'a'),
-                        Box(title: 'b', key: 'b'),
+                        Box(title: 'a', key: ValueKey('a')),
+                        Box(title: 'b', key: ValueKey('b')),
                       ],
                     ),
                   ],
@@ -235,8 +235,10 @@ void main() {
                           for (final k in keys)
                             Box(
                               title: k,
-                              key: k,
-                              children: [Text('$k line', key: 'line')],
+                              key: ValueKey(k),
+                              children: [
+                                Text('$k line', key: ValueKey('line')),
+                              ],
                             ),
                         ],
                       ),

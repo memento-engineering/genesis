@@ -59,9 +59,11 @@ void main() {
     test('update throws AssertionError when canUpdate=false (key change)', () {
       final owner = PerceptionOwner();
       addTearDown(owner.dispose);
-      final el = owner.mountRoot(const Field('n', 1, key: 'a')) as FieldElement;
+      final el =
+          owner.mountRoot(const Field('n', 1, key: ValueKey('a')))
+              as FieldElement;
       expect(
-        () => el.update(const Field('n', 1, key: 'b')),
+        () => el.update(const Field('n', 1, key: ValueKey('b'))),
         throwsA(isA<AssertionError>()),
       );
     });
@@ -92,8 +94,8 @@ void main() {
                 Node(
                   'reading',
                   children: [
-                    const Field('a', 1, key: 'ka'),
-                    const Field('b', 2, key: 'kb'),
+                    const Field('a', 1, key: ValueKey('ka')),
+                    const Field('b', 2, key: ValueKey('kb')),
                   ],
                 ),
               )
@@ -106,8 +108,8 @@ void main() {
         Node(
           'reading',
           children: [
-            const Field('b', 2, key: 'kb'),
-            const Field('a', 1, key: 'ka'),
+            const Field('b', 2, key: ValueKey('kb')),
+            const Field('a', 1, key: ValueKey('ka')),
           ],
         ),
       );
@@ -123,12 +125,20 @@ void main() {
         addTearDown(owner.dispose);
         final el =
             owner.mountRoot(
-                  Node('reading', children: [const Field('a', 1, key: 'ka')]),
+                  Node(
+                    'reading',
+                    children: [const Field('a', 1, key: ValueKey('ka'))],
+                  ),
                 )
                 as NodeElement;
 
         final fieldEl = el.children[0] as FieldElement;
-        el.update(Node('reading', children: [const Field('a', 99, key: 'ka')]));
+        el.update(
+          Node(
+            'reading',
+            children: [const Field('a', 99, key: ValueKey('ka'))],
+          ),
+        );
 
         expect(el.children[0], same(fieldEl));
         expect(fieldEl.field.value, equals(99));

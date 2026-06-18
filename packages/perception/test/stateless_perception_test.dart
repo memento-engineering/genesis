@@ -69,7 +69,7 @@ void main() {
 
     test('child remounted when canUpdate=false (key change)', () {
       final el =
-          owner.mountRoot(_SimpleP(child: const _Leaf(key: 'a')))
+          owner.mountRoot(_SimpleP(child: const _Leaf(key: ValueKey('a'))))
               as StatelessPerceptionElement;
       final oldChild = el.child!;
       expect(oldChild.mounted, isTrue);
@@ -77,7 +77,7 @@ void main() {
       // A9 delta: update() alone now re-runs build and swaps the child
       // (ADR-0001 Decision 4); the explicit markNeedsRebuild + flushHarvest
       // is kept from the lenny suite but is no longer required.
-      el.update(_SimpleP(child: const _Leaf(key: 'b')));
+      el.update(_SimpleP(child: const _Leaf(key: ValueKey('b'))));
       el.markNeedsRebuild();
       owner.flushHarvest();
 

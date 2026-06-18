@@ -16,8 +16,8 @@ void main() {
         const Node(
           'parent',
           children: [
-            Leaf('a', key: 'dup'),
-            Leaf('b', key: 'dup'),
+            Leaf('a', key: ValueKey('dup')),
+            Leaf('b', key: ValueKey('dup')),
           ],
         ),
       ),
@@ -37,8 +37,8 @@ void main() {
               const Node(
                 'parent',
                 children: [
-                  Leaf('a', key: 'k1'),
-                  Leaf('b', key: 'k2'),
+                  Leaf('a', key: ValueKey('k1')),
+                  Leaf('b', key: ValueKey('k2')),
                   Leaf('c'), // unkeyed — positional, no collision
                   Leaf('d'), // unkeyed
                 ],
@@ -51,7 +51,7 @@ void main() {
   test('an update that introduces a duplicate key also trips the guard', () {
     final root =
         TreeOwner().mountRoot(
-              const Node('parent', children: [Leaf('a', key: 'k1')]),
+              const Node('parent', children: [Leaf('a', key: ValueKey('k1'))]),
             )
             as NodeBranch;
     expect(
@@ -59,8 +59,8 @@ void main() {
         const Node(
           'parent',
           children: [
-            Leaf('a', key: 'x'),
-            Leaf('b', key: 'x'),
+            Leaf('a', key: ValueKey('x')),
+            Leaf('b', key: ValueKey('x')),
           ],
         ),
       ),

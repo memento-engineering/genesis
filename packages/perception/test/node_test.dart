@@ -83,8 +83,8 @@ void main() {
                 Node(
                   'root',
                   children: [
-                    const _Tagged('a', key: 'ka'),
-                    const _Tagged('b', key: 'kb'),
+                    const _Tagged('a', key: ValueKey('ka')),
+                    const _Tagged('b', key: ValueKey('kb')),
                   ],
                 ),
               )
@@ -97,8 +97,8 @@ void main() {
         Node(
           'root',
           children: [
-            const _Tagged('b', key: 'kb'),
-            const _Tagged('a', key: 'ka'),
+            const _Tagged('b', key: ValueKey('kb')),
+            const _Tagged('a', key: ValueKey('ka')),
           ],
         ),
       );
@@ -116,15 +116,17 @@ void main() {
                 Node(
                   'root',
                   children: [
-                    const _Tagged('a', key: 'ka'),
-                    const _Tagged('b', key: 'kb'),
+                    const _Tagged('a', key: ValueKey('ka')),
+                    const _Tagged('b', key: ValueKey('kb')),
                   ],
                 ),
               )
               as NodeElement;
 
       final removed = el.children[1];
-      el.update(Node('root', children: [const _Tagged('a', key: 'ka')]));
+      el.update(
+        Node('root', children: [const _Tagged('a', key: ValueKey('ka'))]),
+      );
 
       expect(el.children.length, equals(1));
       expect(removed.mounted, isFalse);
@@ -135,7 +137,10 @@ void main() {
       addTearDown(owner.dispose);
       final el =
           owner.mountRoot(
-                Node('root', children: [const _Tagged('a', key: 'ka')]),
+                Node(
+                  'root',
+                  children: [const _Tagged('a', key: ValueKey('ka'))],
+                ),
               )
               as NodeElement;
 
@@ -143,8 +148,8 @@ void main() {
         Node(
           'root',
           children: [
-            const _Tagged('a', key: 'ka'),
-            const _Tagged('b', key: 'kb'),
+            const _Tagged('a', key: ValueKey('ka')),
+            const _Tagged('b', key: ValueKey('kb')),
           ],
         ),
       );
@@ -207,8 +212,8 @@ void main() {
                 Node(
                   'root',
                   children: [
-                    const _Tagged('a', key: 'ka'),
-                    const _Tagged('b', key: 'kb'),
+                    const _Tagged('a', key: ValueKey('ka')),
+                    const _Tagged('b', key: ValueKey('kb')),
                   ],
                 ),
               )

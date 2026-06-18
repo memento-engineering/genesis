@@ -67,7 +67,7 @@ void main() {
 
     test('child remounted when canUpdate=false (key change)', () {
       final branch =
-          owner.mountRoot(_SimpleS(child: const _Leaf(key: 'a')))
+          owner.mountRoot(_SimpleS(child: const _Leaf(key: ValueKey('a'))))
               as StatelessBranch;
       final oldChild = branch.child!;
       expect(oldChild.mounted, isTrue);
@@ -75,7 +75,7 @@ void main() {
       // A9 delta: update() alone now re-runs build and swaps the child
       // (ADR-0001 Decision 4); the explicit markNeedsRebuild + flush is kept
       // from the perception suite but is no longer required.
-      branch.update(_SimpleS(child: const _Leaf(key: 'b')));
+      branch.update(_SimpleS(child: const _Leaf(key: ValueKey('b'))));
       branch.markNeedsRebuild();
       owner.flush();
 

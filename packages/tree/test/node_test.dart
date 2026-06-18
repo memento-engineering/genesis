@@ -72,8 +72,8 @@ void main() {
                 Node(
                   'root',
                   children: [
-                    const Leaf('a', key: 'ka'),
-                    const Leaf('b', key: 'kb'),
+                    const Leaf('a', key: ValueKey('ka')),
+                    const Leaf('b', key: ValueKey('kb')),
                   ],
                 ),
               )
@@ -86,8 +86,8 @@ void main() {
         Node(
           'root',
           children: [
-            const Leaf('b', key: 'kb'),
-            const Leaf('a', key: 'ka'),
+            const Leaf('b', key: ValueKey('kb')),
+            const Leaf('a', key: ValueKey('ka')),
           ],
         ),
       );
@@ -105,15 +105,17 @@ void main() {
                 Node(
                   'root',
                   children: [
-                    const Leaf('a', key: 'ka'),
-                    const Leaf('b', key: 'kb'),
+                    const Leaf('a', key: ValueKey('ka')),
+                    const Leaf('b', key: ValueKey('kb')),
                   ],
                 ),
               )
               as NodeBranch;
 
       final removed = branch.children[1];
-      branch.update(Node('root', children: [const Leaf('a', key: 'ka')]));
+      branch.update(
+        Node('root', children: [const Leaf('a', key: ValueKey('ka'))]),
+      );
 
       expect(branch.children.length, equals(1));
       expect(removed.mounted, isFalse);
@@ -123,15 +125,17 @@ void main() {
       final owner = TreeOwner();
       addTearDown(owner.dispose);
       final branch =
-          owner.mountRoot(Node('root', children: [const Leaf('a', key: 'ka')]))
+          owner.mountRoot(
+                Node('root', children: [const Leaf('a', key: ValueKey('ka'))]),
+              )
               as NodeBranch;
 
       branch.update(
         Node(
           'root',
           children: [
-            const Leaf('a', key: 'ka'),
-            const Leaf('b', key: 'kb'),
+            const Leaf('a', key: ValueKey('ka')),
+            const Leaf('b', key: ValueKey('kb')),
           ],
         ),
       );
@@ -186,8 +190,8 @@ void main() {
                 Node(
                   'root',
                   children: [
-                    const Leaf('a', key: 'ka'),
-                    const Leaf('b', key: 'kb'),
+                    const Leaf('a', key: ValueKey('ka')),
+                    const Leaf('b', key: ValueKey('kb')),
                   ],
                 ),
               )
