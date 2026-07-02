@@ -22,6 +22,15 @@ here with the code.
 |---|---|
 | `packages/tree` · `genesis_tree` | the engine: `Seed` → `Branch`, `TreeContext` (separate handle), `TreeOwner`, keyed reconcile |
 | `packages/perception` · `genesis_perception` | the measurement domain, rebuilt on the tree spine by subclassing |
+| `packages/taxonomy` · `genesis_taxonomy` | schema-first node catalog → a Dart factory registry **and** an LLM tool schema (codegen, one source of truth) |
+| `packages/typesetting` · `genesis_typesetting` | a bare-VM cell/ANSI render backend — render-bearing tree vocabulary for a terminal A2UI renderer |
+| `packages/dialogue` · `genesis_dialogue` | the A2UI v0.9 wire: the `updateComponents` codec, a receive-side surface that reconciles re-emissions by key, `action`-message parsing |
+| `packages/consent` · `genesis_consent` | the enforce/reject action substrate: hit-tests an action against the live tree + catalog affordances, returns a structured outcome |
+| `packages/tmux` · `genesis_tmux` | a zero-dependency, injection-safe tmux client for supervising long-lived agent panes (off-spine; depends only on `meta`) |
+
+Plus `apps/console` · `genesis_console` (`publish_to: none`) — the terminal
+driver app that renders an A2UI surface to a character grid and drives it from
+natural language.
 
 Naming scheme (register A16): pubspec names carry a `genesis_` prefix so we
 never squat generic pub names; directories stay short; **no `Genesis*` type
@@ -78,6 +87,17 @@ Melos config is embedded in the root `pubspec.yaml` (no separate
 in beside `test:dart` when Flutter packages join the workspace; today the
 workspace is pure Dart.
 
+## Publishing
+
+**`docs/publishing.md` is the law** — people consume these packages now. In
+short: pre-publish gates (workspace green; the internal-refs scrub over
+everything the archive ships — README, CHANGELOG, `lib/` dartdoc, `example/`;
+no working docs inside `packages/<p>/`; committed bump + CHANGELOG; clean
+`--dry-run`), pre-1.0 version discipline (**breaking → minor bump**, additive/
+fix/docs → patch; interface-member additions are breaking), dependency-order
+publishing under the `memento.engineering` verified publisher, then tag
+`<pub-name>-v<version>` and push.
+
 ## Conventions (ADR-0001 Decision 7 — the memento house set)
 
 - **Lints:** the shared `analysis_options.yaml` shape — `strict-casts` /
@@ -112,7 +132,10 @@ workspace is pure Dart.
 
 - `docs/adr/` — ADR-0000 (the AI decision register) plus the ratified ADRs:
   0001 foundations, 0002 schema-first codegen, 0003 A2UI wire format,
-  0004 render backends, 0005 projection/action substrate. Read ADR-0000 and
-  ADR-0001 before changing anything structural.
+  0004 render backends, 0005 projection/action substrate, 0006 pull-free build.
+  Read ADR-0000 and ADR-0001 before changing anything structural.
+- `packages/` — the seven published members (`tree`, `perception`, `taxonomy`,
+  `typesetting`, `dialogue`, `consent`, `tmux`); `apps/` holds the `console`
+  driver app (`genesis_console`, `publish_to: none`).
 - `docs/evidence/` — durable evidence artifacts (spike results, conformance
   ledgers) backing register entries and ADRs.
