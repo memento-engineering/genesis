@@ -145,6 +145,10 @@ void main() {
         () => handle.dependOnInheritedSeedOfExactType<String>(),
         throwsStateError,
       );
+      expect(
+        () => handle.getInheritedSeedOfExactType<String>(),
+        throwsStateError,
+      );
     });
 
     test('State.context is the handle, and dies with the branch', () {

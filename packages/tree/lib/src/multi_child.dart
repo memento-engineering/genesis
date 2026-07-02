@@ -51,9 +51,8 @@ abstract class MultiChildSeed extends Seed {
 ///
 /// It carries no build contract of its own; its rebuild hook simply reconciles
 /// the live child list against the seed's children through
-/// [Branch.updateChildren], so a config update (the A9 rebuild rule)
-/// re-reconciles in place, preserving the branch identity of every matched
-/// child. Concrete and reusable across container kinds (like `StatelessBranch`
+/// [Branch.updateChildren], so a config update re-reconciles in place,
+/// preserving the branch identity of every matched child. Concrete and reusable across container kinds (like `StatelessBranch`
 /// across stateless seeds): a domain that needs no extra behaviour reuses it
 /// verbatim; one that needs an artifact response may subclass it and extend
 /// [performRebuild] after `super` (the RenderObjectElement pattern).
