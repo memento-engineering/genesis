@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.5
+
+- Docs only, no API changes. The README gains **"The artifact layer —
+  deliberately not shipped"**: `genesis_tree` reconciles desired state into
+  live identity and stops there — what that identity spawns and owns is the
+  consumer's, unbundled into four pieces (artifacts / owner / protocol /
+  affordance scopes), with `genesis_typesetting` and `genesis_perception` as
+  the worked examples. The composition-layer list also catches up to 0.1.4
+  (`MultiChildSeed`, the `SingleChildSeed`/`Nest` chain).
+
 ## 0.1.4
 
 - Add the single-child *chain* vocabulary. `SingleChildStatelessSeed` and
