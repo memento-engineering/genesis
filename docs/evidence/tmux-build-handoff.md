@@ -1,6 +1,12 @@
 # genesis_tmux — build handoff
 
-**Status:** spec **READY** · build **not started**. Reference survey complete (libtmux · tmux control-mode · iTerm2 · tmux(1) man + CHANGES · tmux-interface-rs/gotmux/tmuxp), output/event-model fork RESOLVED (hybrid), gotcha catalog + version matrix baked in below. A future build agent can execute this without re-researching.
+> **Executed handoff, retained as evidence.** This spec was fully executed —
+> `genesis_tmux` is built and shipped (see `packages/tmux`). It lives here as
+> the durable record behind the package (reference survey, gotcha catalog,
+> version policy, the resolved output-model fork), relocated out of
+> `packages/tmux/` so pub archives ship only user-facing docs.
+
+**Status:** **BUILT / SHIPPED 0.1.0** (~75 tests). Reference survey complete (libtmux · tmux control-mode · iTerm2 · tmux(1) man + CHANGES · tmux-interface-rs/gotmux/tmuxp), output/event-model fork RESOLVED (hybrid), gotcha catalog + version matrix baked in below. A future build agent can execute this without re-researching.
 **Home:** `genesis/packages/tmux` (package name `genesis_tmux`), genesis pub workspace.
 **Origin:** relocated from the_grid's planned standalone `tmux` package (the_grid ADR-0002) → genesis, per Nico (2026-06-15). the_grid's `grid_runtime` `TmuxProvider` consumes it as a sibling-checkout **path dependency** (the same pattern the_grid uses for lenny's `exploration_contract`). Recorded as the_grid **ADR-0000 A34** (pending). genesis's ratified **A4** already names tmux the terminal-real-estate primitive ("grid's tmux owns the real estate; a genesis backend draws into it"), so a zero-dep tmux client is a natural genesis substrate package.
 
