@@ -2,6 +2,18 @@
 
 ## 0.1.4
 
+- Add the single-child *chain* vocabulary. `SingleChildStatelessSeed` and
+  `SingleChildStatefulSeed` (with `SingleChildState`) are the single-child
+  analogues of `StatelessSeed`/`StatefulSeed`: their build receives the
+  downstream child to embed (`buildWithChild`). `Nest` stacks a list of them
+  into a vertical spine, each wrapping the next down to one leaf `child` — the
+  `Nested`/`MultiProvider` shape, generic (no inherited-value semantics baked
+  in). `MultiChildSeed` fans out horizontally; `Nest` composes vertically.
+  Fully `const`-constructible: the children are referenced as authored and never
+  reconstructed — each link's downstream is supplied at the branch layer — so an
+  unchanged `Nest` prunes its whole chain on reconcile, while a change to the
+  leaf or any link propagates through it. EXPERIMENTAL.
+
 - Add `getInheritedSeedOfExactType<T>()` — the dependency-free counterpart of
   `dependOnInheritedSeedOfExactType<T>()`. Same nearest-ancestor lookup, same
   value result, but the caller is **not** registered as a dependent: the
