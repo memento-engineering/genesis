@@ -43,9 +43,13 @@ living document — never Accepted, never closed):
 Entry format: `A<n> (date) — title` · Decision · Why · Affects · **Status:**
 pending | promoted → ⟨where⟩ | rejected.
 
-If you (an AI agent) make an API, naming, or semantic call that is not already
-covered by a ratified ADR, record it as the next `A<n>` amendment in ADR-0000
-with Status: pending. Only Nico flips statuses or edits ADR-0001+.
+The register captures decisions an AI makes **autonomously** — with no human in
+the loop (an unattended agent run). If you (an AI agent) make such an API,
+naming, or semantic call that is not already covered by a ratified ADR, record
+it as the next `A<n>` amendment in ADR-0000 with Status: pending. A decision
+reached collaboratively with Nico is already human-ratified: **do not** log it
+here, and **never write to ADR-0000 during an interactive session** — just
+carry it out. Only Nico flips statuses or edits ADR-0001+.
 
 ## Build & test
 
