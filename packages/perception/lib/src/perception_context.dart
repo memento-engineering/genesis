@@ -63,6 +63,10 @@ class _PerceptionHandle implements PerceptionContext {
       _inner.dependOnInheritedSeedOfExactType<T>();
 
   @override
+  T? getInheritedSeedOfExactType<T extends Object>() =>
+      _inner.getInheritedSeedOfExactType<T>();
+
+  @override
   void markNeedsRebuild() => _inner.markNeedsRebuild();
 
   @override

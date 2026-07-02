@@ -140,14 +140,20 @@ void main() {
     test('a new keyed child mounts; a vanished keyed child unmounts', () {
       final root =
           owner.mountRoot(
-                const _Container([Leaf('a', key: ValueKey('ka')), Leaf('b', key: ValueKey('kb'))]),
+                const _Container([
+                  Leaf('a', key: ValueKey('ka')),
+                  Leaf('b', key: ValueKey('kb')),
+                ]),
               )
               as MultiChildBranch;
       final a = root.children[0];
       final b = root.children[1];
 
       root.update(
-        const _Container([Leaf('a', key: ValueKey('ka')), Leaf('c', key: ValueKey('kc'))]),
+        const _Container([
+          Leaf('a', key: ValueKey('ka')),
+          Leaf('c', key: ValueKey('kc')),
+        ]),
       );
 
       expect(identical(root.children[0], a), isTrue, reason: 'ka preserved');
@@ -179,7 +185,9 @@ void main() {
       // _OtherContainer never update into one another even at the same key —
       // the reason MultiChildSeed is abstract (one subclass per container kind).
       final root =
-          owner.mountRoot(const _Container([_Container([], key: ValueKey('k'))]))
+          owner.mountRoot(
+                const _Container([_Container([], key: ValueKey('k'))]),
+              )
               as MultiChildBranch;
       final original = root.children.single;
       expect(original, isA<MultiChildBranch>());
@@ -251,7 +259,10 @@ void main() {
     test('unmounting the container unmounts every child', () {
       final root =
           owner.mountRoot(
-                const _Container([Leaf('a', key: ValueKey('ka')), Leaf('b', key: ValueKey('kb'))]),
+                const _Container([
+                  Leaf('a', key: ValueKey('ka')),
+                  Leaf('b', key: ValueKey('kb')),
+                ]),
               )
               as MultiChildBranch;
       final children = List<Branch>.of(root.children);
@@ -340,7 +351,10 @@ void main() {
       () {
         final root =
             owner.mountRoot(
-                  const _Container([Leaf('a', key: ValueKey('ka')), _Bump(key: ValueKey('kb'))]),
+                  const _Container([
+                    Leaf('a', key: ValueKey('ka')),
+                    _Bump(key: ValueKey('kb')),
+                  ]),
                 )
                 as MultiChildBranch;
         final sibling = root.children[0];
@@ -366,7 +380,10 @@ void main() {
     test('duplicate sibling keys trip the debug guard, naming the key', () {
       expect(
         () => owner.mountRoot(
-          const _Container([Leaf('a', key: ValueKey('dup')), Leaf('b', key: ValueKey('dup'))]),
+          const _Container([
+            Leaf('a', key: ValueKey('dup')),
+            Leaf('b', key: ValueKey('dup')),
+          ]),
         ),
         throwsA(
           isA<StateError>().having(

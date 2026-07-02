@@ -64,6 +64,74 @@ class _ReaderState extends State<_ReaderSeed> {
   }
 }
 
+class _InitGetSeed extends StatefulSeed {
+  const _InitGetSeed();
+  @override
+  _InitGetState createState() => _InitGetState();
+}
+
+class _InitGetState extends State<_InitGetSeed> {
+  int? initValue;
+
+  @override
+  void initState() {
+    initValue = context.getInheritedSeedOfExactType<int>();
+  }
+
+  @override
+  Seed build(TreeContext context) => const _Leaf();
+}
+
+class _InitDependSeed extends StatefulSeed {
+  const _InitDependSeed();
+  @override
+  _InitDependState createState() => _InitDependState();
+}
+
+class _InitDependState extends State<_InitDependSeed> {
+  @override
+  void initState() {
+    context.dependOnInheritedSeedOfExactType<int>();
+  }
+
+  @override
+  Seed build(TreeContext context) => const _Leaf();
+}
+
+class _DisposeDependSeed extends StatefulSeed {
+  const _DisposeDependSeed();
+  @override
+  _DisposeDependState createState() => _DisposeDependState();
+}
+
+class _DisposeDependState extends State<_DisposeDependSeed> {
+  @override
+  Seed build(TreeContext context) => const _Leaf();
+
+  @override
+  void dispose() {
+    context.dependOnInheritedSeedOfExactType<int>();
+  }
+}
+
+class _DisposeGetSeed extends StatefulSeed {
+  const _DisposeGetSeed();
+  @override
+  _DisposeGetState createState() => _DisposeGetState();
+}
+
+class _DisposeGetState extends State<_DisposeGetSeed> {
+  int? disposeValue;
+
+  @override
+  Seed build(TreeContext context) => const _Leaf();
+
+  @override
+  void dispose() {
+    disposeValue = context.getInheritedSeedOfExactType<int>();
+  }
+}
+
 // --- tests ---
 
 void main() {
@@ -203,6 +271,72 @@ void main() {
 
       expect(state.calls, equals(['build']));
       expect(state.calls.contains('dcd'), isFalse);
+    });
+  });
+
+  group('inherited lookups across the State lifecycle', () {
+    test('getInheritedSeedOfExactType works in initState, dependency-free', () {
+      final owner = TreeOwner();
+      addTearDown(owner.dispose);
+
+      final root =
+          owner.mountRoot(
+                InheritedSeed<int>(value: 7, child: const _InitGetSeed()),
+              )
+              as InheritedBranch<int>;
+
+      final branch = root.childBranch as StatefulBranch;
+      expect((branch.state as _InitGetState).initValue, equals(7));
+      // A snapshot read: no dependent was registered on the provider.
+      expect(root.dependents, isEmpty);
+      expect(branch.dependencies, isEmpty);
+    });
+
+    test('dependOnInheritedSeedOfExactType in initState asserts', () {
+      final owner = TreeOwner();
+      expect(
+        () => owner.mountRoot(
+          InheritedSeed<int>(value: 7, child: const _InitDependSeed()),
+        ),
+        throwsA(
+          isA<AssertionError>().having(
+            (e) => e.message,
+            'message',
+            contains('called from initState'),
+          ),
+        ),
+      );
+    });
+
+    test('dependOnInheritedSeedOfExactType in dispose asserts', () {
+      final owner = TreeOwner();
+      owner.mountRoot(
+        InheritedSeed<int>(value: 7, child: const _DisposeDependSeed()),
+      );
+      expect(
+        owner.unmountRoot,
+        throwsA(
+          isA<AssertionError>().having(
+            (e) => e.message,
+            'message',
+            contains('called from dispose'),
+          ),
+        ),
+      );
+    });
+
+    test('getInheritedSeedOfExactType works in dispose (last read)', () {
+      final owner = TreeOwner();
+      final root =
+          owner.mountRoot(
+                InheritedSeed<int>(value: 9, child: const _DisposeGetSeed()),
+              )
+              as InheritedBranch<int>;
+      final state =
+          (root.childBranch as StatefulBranch).state as _DisposeGetState;
+
+      owner.dispose();
+      expect(state.disposeValue, equals(9));
     });
   });
 }

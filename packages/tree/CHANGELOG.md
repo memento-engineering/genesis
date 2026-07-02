@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.4
+
+- Add `getInheritedSeedOfExactType<T>()` — the dependency-free counterpart of
+  `dependOnInheritedSeedOfExactType<T>()`. Same nearest-ancestor lookup, same
+  value result, but the caller is **not** registered as a dependent: the
+  returned value is a snapshot, and a later change to the provided value does
+  not rebuild the reader. Use it for one-shot reads — grabbing an ambient
+  service in `State.initState`, inside an effect, during teardown — and keep
+  the depend variant wherever the branch must rebuild on change. Available on
+  `Branch`, `TreeContext`, and `SproutContext`. **Breaking for external
+  `TreeContext` implementers** (a new interface member); handles that wrap
+  the canonical handle just delegate it.
+- `StatefulBranch` now asserts (debug-only) when
+  `dependOnInheritedSeedOfExactType` is called during `initState` or
+  `dispose`. In `initState` the natural cache-the-result pattern goes stale
+  when the provider changes (initState never re-runs) — read dependency-free
+  with the new variant, or cache-and-track in `didChangeDependencies`. In
+  `dispose` the branch is unmounting and can never observe a change.
+- There is deliberately no "get the provider element" lookup (Flutter's
+  `getElementForInheritedWidgetOfExactType`): the capability handle never
+  exposes a `Branch`.
+
 ## 0.1.3
 
 - **Breaking:** a first-class `Key` value-type. `Seed.key` (and `Branch.key`,

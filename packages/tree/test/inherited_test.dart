@@ -85,6 +85,53 @@ void main() {
     });
   });
 
+  group('getInheritedSeedOfExactType — dependency-free lookup', () {
+    late TreeOwner testOwner;
+    late _B root;
+    late InheritedBranch<String> ip;
+    late _B leaf;
+
+    setUp(() {
+      testOwner = TreeOwner();
+      root = testOwner.mountRoot(_S()) as _B;
+      ip = _mountInherited(root, 'snap');
+      leaf = _B(_S())..mount(ip, 0);
+    });
+    tearDown(() => testOwner.dispose());
+
+    test('returns the nearest ancestor value', () {
+      expect(leaf.getInheritedSeedOfExactType<String>(), 'snap');
+    });
+
+    test('returns value through intermediate branches (same walk)', () {
+      final deep = _B(_S())..mount(leaf, 0);
+      expect(deep.getInheritedSeedOfExactType<String>(), 'snap');
+    });
+
+    test('returns null when no ancestor of type T exists', () {
+      expect(leaf.getInheritedSeedOfExactType<int>(), isNull);
+    });
+
+    test('does NOT register the caller as a dependent (either side)', () {
+      leaf.getInheritedSeedOfExactType<String>();
+      expect(ip.dependents, isEmpty);
+      expect(leaf.dependencies, isEmpty);
+    });
+
+    test('value change does NOT mark a get-only reader', () {
+      leaf.getInheritedSeedOfExactType<String>();
+      ip.update(InheritedSeed<String>(value: 'changed', child: _S()));
+      expect(leaf.marked, isFalse);
+    });
+
+    test('get after dependOn leaves the existing dependency intact', () {
+      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.getInheritedSeedOfExactType<String>();
+      expect(ip.dependents, contains(leaf));
+      expect(leaf.dependencies, contains(ip));
+    });
+  });
+
   group('dependency registration', () {
     late TreeOwner testOwner;
     late _B root;

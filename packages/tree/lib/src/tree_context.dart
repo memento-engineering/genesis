@@ -33,6 +33,20 @@ abstract class TreeContext {
   /// Throws [StateError] after the bound branch unmounts.
   T? dependOnInheritedSeedOfExactType<T extends Object>();
 
+  /// Returns the nearest ancestor value provided via `InheritedSeed<T>` of
+  /// exact type [T] **without registering a dependency**; null when no such
+  /// ancestor exists.
+  ///
+  /// The non-subscribing counterpart of [dependOnInheritedSeedOfExactType]:
+  /// the returned value is a snapshot — a later change to the provided value
+  /// does not rebuild the bound branch. This is the lookup to use from
+  /// `State.initState` (which never re-runs, so a subscription registered
+  /// there invites a stale cached read) and from effects and teardown; use
+  /// the depend variant wherever the branch must rebuild on change.
+  ///
+  /// Throws [StateError] after the bound branch unmounts.
+  T? getInheritedSeedOfExactType<T extends Object>();
+
   /// Marks the bound branch dirty for the next `TreeOwner.flush`.
   ///
   /// Throws [StateError] after the bound branch unmounts.
@@ -81,6 +95,12 @@ class _BranchContext implements TreeContext {
   T? dependOnInheritedSeedOfExactType<T extends Object>() {
     _checkMounted('dependOnInheritedSeedOfExactType');
     return _branch.dependOnInheritedSeedOfExactType<T>();
+  }
+
+  @override
+  T? getInheritedSeedOfExactType<T extends Object>() {
+    _checkMounted('getInheritedSeedOfExactType');
+    return _branch.getInheritedSeedOfExactType<T>();
   }
 
   @override

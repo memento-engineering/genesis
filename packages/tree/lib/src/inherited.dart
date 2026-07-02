@@ -11,8 +11,10 @@ import 'seed.dart';
 /// Usage:
 ///   `InheritedSeed<String>(value: 'hello', child: MySeed())`
 ///
-/// Descendants call:
+/// Descendants subscribe with
 ///   `context.dependOnInheritedSeedOfExactType<String>()`
+/// or take a dependency-free snapshot with
+///   `context.getInheritedSeedOfExactType<String>()`.
 class InheritedSeed<T extends Object> extends Seed {
   /// Creates a provider of [value] over [child].
   const InheritedSeed({required this.value, required this.child, super.key});

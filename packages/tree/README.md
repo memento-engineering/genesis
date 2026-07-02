@@ -43,7 +43,10 @@ A thin composition layer on the spine, **experimental** and subject to change
 before 1.0:
 
 - `StatelessSeed` / `StatefulSeed` + `State` — the build-a-child-Seed elements;
-- `InheritedSeed` — ambient values down the tree (`dependOnInheritedSeedOfExactType`);
+- `InheritedSeed` — ambient values down the tree
+  (`dependOnInheritedSeedOfExactType` to subscribe,
+  `getInheritedSeedOfExactType` for a dependency-free snapshot — the
+  `initState` read);
 - `Watch<T>` — a stream → rebuild builder;
 - `Sprout` — a **hooks-style** stateful primitive (`useState` → `StateCell`,
   `useStream`, `useEffect`, `useMemo`): one class, state declared inline in

@@ -519,6 +519,21 @@ void main() {
       owner.unmountRoot();
       expect(ctx.markNeedsRebuild, throwsStateError);
     });
+
+    test('SproutContext delegates getInheritedSeedOfExactType (no dep)', () {
+      final owner = TreeOwner();
+      addTearDown(owner.dispose);
+      final root =
+          owner.mountRoot(
+                InheritedSeed<String>(
+                  value: 'ambient',
+                  child: const _Capture(),
+                ),
+              )
+              as InheritedBranch<String>;
+      expect(capturedCtx!.getInheritedSeedOfExactType<String>(), 'ambient');
+      expect(root.dependents, isEmpty);
+    });
   });
 
   group('TreeOwner integration (ADR-0005 test b2)', () {

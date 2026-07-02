@@ -55,15 +55,33 @@ abstract class Branch {
   /// exact type [T], registering this branch as a dependent; null when no
   /// such ancestor exists.
   T? dependOnInheritedSeedOfExactType<T extends Object>() {
+    final provider = _findInheritedProviderOfExactType<T>();
+    if (provider == null) return null;
+    provider.addDependent(this);
+    (_dependencies ??= {}).add(provider);
+    return provider.getValueAs<T>();
+  }
+
+  /// Returns the nearest ancestor value provided via `InheritedSeed<T>` of
+  /// exact type [T] **without registering a dependency**; null when no such
+  /// ancestor exists.
+  ///
+  /// The non-subscribing counterpart of [dependOnInheritedSeedOfExactType]:
+  /// the returned value is a snapshot — a later change to the provided value
+  /// does not rebuild this branch. Use it for one-shot reads (grabbing an
+  /// ambient service in `State.initState`, inside an effect, during
+  /// teardown); use the depend variant wherever this branch must rebuild
+  /// when the value changes.
+  T? getInheritedSeedOfExactType<T extends Object>() =>
+      _findInheritedProviderOfExactType<T>()?.getValueAs<T>();
+
+  // The single provider-lookup site shared by the depend/get pair: walks the
+  // parent chain for the nearest provider whose exact value-type is T.
+  InheritedBranchBase? _findInheritedProviderOfExactType<T extends Object>() {
     Branch? ancestor = _parent;
     while (ancestor != null) {
-      if (ancestor is InheritedBranchBase) {
-        final value = ancestor.getValueAs<T>();
-        if (value != null) {
-          ancestor.addDependent(this);
-          (_dependencies ??= {}).add(ancestor);
-          return value;
-        }
+      if (ancestor is InheritedBranchBase && ancestor.getValueAs<T>() != null) {
+        return ancestor;
       }
       ancestor = ancestor._parent;
     }

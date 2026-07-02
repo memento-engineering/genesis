@@ -38,6 +38,13 @@ abstract class State<T extends StatefulSeed> {
   StatefulBranch? _branch;
 
   /// Called exactly once, before the first build.
+  ///
+  /// Inherited lookups here must be dependency-free — use
+  /// `context.getInheritedSeedOfExactType<T>()`. Registering a dependency
+  /// (`dependOnInheritedSeedOfExactType`) asserts in debug mode: initState
+  /// never re-runs, so the natural move of caching the returned value goes
+  /// stale when the provider changes. Cache-and-track belongs in
+  /// [didChangeDependencies], which re-runs on every change.
   @protected
   void initState() {}
 
@@ -73,6 +80,8 @@ class StatefulBranch extends ComponentBranch {
   late final State<StatefulSeed> _state;
   bool _firstBuild = true;
   bool _needsDidChangeDependencies = false;
+  bool _debugInInitState = false;
+  bool _debugInDispose = false;
 
   /// The mutable state owned by this branch.
   ///
@@ -88,6 +97,26 @@ class StatefulBranch extends ComponentBranch {
   Seed build(TreeContext context) => _state.build(context);
 
   @override
+  T? dependOnInheritedSeedOfExactType<T extends Object>() {
+    assert(
+      !_debugInInitState,
+      'dependOnInheritedSeedOfExactType<$T>() called from initState. '
+      'initState never re-runs, so caching the value read here goes stale '
+      'when the provider changes. For a one-shot read use '
+      'getInheritedSeedOfExactType<$T>(); to cache and track the value, move '
+      'the lookup to didChangeDependencies(), which re-runs on every change.',
+    );
+    assert(
+      !_debugInDispose,
+      'dependOnInheritedSeedOfExactType<$T>() called from dispose. The '
+      'branch is unmounting — a dependency registered now can never observe '
+      'a change. Use getInheritedSeedOfExactType<$T>() for a last read '
+      'during teardown.',
+    );
+    return super.dependOnInheritedSeedOfExactType<T>();
+  }
+
+  @override
   void dependencyChanged() {
     _needsDidChangeDependencies = true;
     markNeedsRebuild();
@@ -97,7 +126,15 @@ class StatefulBranch extends ComponentBranch {
   void performRebuild() {
     if (_firstBuild) {
       _firstBuild = false;
+      assert(() {
+        _debugInInitState = true;
+        return true;
+      }());
       _state.initState();
+      assert(() {
+        _debugInInitState = false;
+        return true;
+      }());
       _needsDidChangeDependencies = true;
     }
     if (_needsDidChangeDependencies) {
@@ -109,7 +146,15 @@ class StatefulBranch extends ComponentBranch {
 
   @override
   void unmount() {
+    assert(() {
+      _debugInDispose = true;
+      return true;
+    }());
     _state.dispose();
+    assert(() {
+      _debugInDispose = false;
+      return true;
+    }());
     super.unmount();
   }
 }

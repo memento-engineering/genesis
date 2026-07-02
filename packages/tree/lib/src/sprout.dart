@@ -342,6 +342,10 @@ class _SproutContext implements SproutContext {
       _delegate.dependOnInheritedSeedOfExactType<T>();
 
   @override
+  T? getInheritedSeedOfExactType<T extends Object>() =>
+      _delegate.getInheritedSeedOfExactType<T>();
+
+  @override
   void markNeedsRebuild() => _delegate.markNeedsRebuild();
 
   // Hook surface — forwarded to the branch's private dispatch.
