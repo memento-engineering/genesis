@@ -50,6 +50,51 @@ class _Consumer extends StatelessSeed {
 // The live state of the most recently mounted _Counter.
 _CounterState? _capturedCounter;
 
+// initState hits recorded by the shared `_Tracks` mixin, per tag.
+final Map<String, int> _trackedInits = {};
+
+/// Behaviour shared between a plain [State] and a [SingleChildState] through a
+/// `mixin on State`. This only compiles because [SingleChildState] *extends*
+/// [State] (rather than being a `mixin on State`), which keeps this
+/// composition slot open — the design point the layering guarantees.
+mixin _Tracks<T extends StatefulSeed> on State<T> {
+  String get trackTag;
+  @override
+  void initState() {
+    super.initState();
+    _trackedInits.update(trackTag, (n) => n + 1, ifAbsent: () => 1);
+  }
+}
+
+/// A plain stateful leaf that mixes in the shared [_Tracks] behaviour.
+class _PlainTracked extends StatefulSeed {
+  const _PlainTracked();
+  @override
+  _PlainTrackedState createState() => _PlainTrackedState();
+}
+
+class _PlainTrackedState extends State<_PlainTracked> with _Tracks {
+  @override
+  String get trackTag => 'plain';
+  @override
+  Seed build(TreeContext context) => const Leaf('plain');
+}
+
+/// A single-child link that mixes in the same shared [_Tracks] behaviour.
+class _WrapTracked extends SingleChildStatefulSeed {
+  const _WrapTracked();
+  @override
+  _WrapTrackedState createState() => _WrapTrackedState();
+}
+
+class _WrapTrackedState extends SingleChildState<_WrapTracked> with _Tracks {
+  @override
+  String get trackTag => 'wrap';
+  @override
+  Seed buildWithChild(TreeContext context, Seed child) =>
+      Node('tracked', children: [child]);
+}
+
 /// A stateful single-child link whose count a test can drive, wrapping its
 /// downstream in a `Node` tagged with the current count.
 class _Counter extends SingleChildStatefulSeed {
@@ -103,6 +148,7 @@ void main() {
     _wrapBuilds = 0;
     _seenValue = null;
     _capturedCounter = null;
+    _trackedInits.clear();
   });
   tearDown(() => owner.dispose());
 
@@ -240,5 +286,116 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+  });
+
+  group('Nest — a Nest is itself a SingleChildSeed', () {
+    test('a Nest slots into another Nest as a link and flattens', () {
+      final root =
+          owner.mountRoot(
+                const Nest(
+                  children: [
+                    _Wrap('outer'),
+                    // A leaf-less inner Nest: the outer chain supplies its leaf.
+                    Nest(children: [_Wrap('inner1'), _Wrap('inner2')]),
+                    _Wrap('tail'),
+                  ],
+                  child: Leaf('z'),
+                ),
+              )
+              as NestBranch;
+      expect(_labels(root), [
+        'node:outer',
+        'node:inner1',
+        'node:inner2',
+        'node:tail',
+        'leaf:z',
+      ]);
+    });
+
+    test('a leaf change propagates through a nested Nest link', () {
+      const inner = Nest(children: [_Wrap('inner')]);
+      final root =
+          owner.mountRoot(
+                const Nest(
+                  children: [_Wrap('outer'), inner],
+                  child: Leaf('first'),
+                ),
+              )
+              as NestBranch;
+      expect(_labels(root), ['node:outer', 'node:inner', 'leaf:first']);
+
+      // Same links (incl. the inner Nest instance), new leaf: the change has to
+      // travel through the outer link, into the inner Nest, and out to its leaf.
+      root.update(
+        const Nest(children: [_Wrap('outer'), inner], child: Leaf('second')),
+      );
+      expect(_labels(root), ['node:outer', 'node:inner', 'leaf:second']);
+    });
+
+    test(
+      'an ambient value from an outer link is visible inside a nested Nest',
+      () {
+        owner.mountRoot(
+          const Nest(
+            children: [
+              _Provide('deep'),
+              Nest(children: [_Wrap('mid')]),
+            ],
+            child: _Consumer(),
+          ),
+        );
+        expect(_seenValue, 'deep');
+      },
+    );
+
+    test('stateful state inside a nested Nest survives an outer rebuild', () {
+      const inner = Nest(children: [_Counter()]);
+      final root =
+          owner.mountRoot(
+                const Nest(children: [_Wrap('a'), inner], child: Leaf('x')),
+              )
+              as NestBranch;
+      _capturedCounter!.bump();
+      owner.flush();
+      final state = _capturedCounter!;
+
+      root.update(const Nest(children: [_Wrap('a'), inner], child: Leaf('y')));
+      expect(identical(_capturedCounter, state), isTrue);
+      expect(_labels(root), ['node:a', 'node:counter:1', 'leaf:y']);
+    });
+  });
+
+  group('SingleChildState builds on State', () {
+    test('a `mixin on State` composes onto both a plain and a single-child '
+        'state', () {
+      // The mixin runs its initState for both flavours — the same behaviour,
+      // shared, because SingleChildState extends State.
+      owner.mountRoot(const _PlainTracked());
+      expect(_trackedInits['plain'], 1);
+
+      final owner2 = TreeOwner();
+      addTearDown(owner2.dispose);
+      owner2.mountRoot(
+        const Nest(children: [_WrapTracked()], child: Leaf('x')),
+      );
+      expect(_trackedInits['wrap'], 1);
+    });
+
+    test(
+      'the single-child state lifecycle (initState/dispose) still fires',
+      () {
+        final root =
+            owner.mountRoot(
+                  const Nest(children: [_Counter()], child: Leaf('x')),
+                )
+                as NestBranch;
+        final state = _capturedCounter!;
+        expect(state.disposed, isFalse);
+        // initState ran (captured the state); dispose fires on unmount.
+        owner.unmountRoot();
+        expect(state.disposed, isTrue);
+        expect(root.mounted, isFalse);
+      },
+    );
   });
 }
