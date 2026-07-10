@@ -1,33 +1,31 @@
 import 'dart:convert';
 
+import 'package:genai_primitives/genai_primitives.dart';
 import 'package:genesis_console/genesis_console.dart';
-// The ChatMessage wire family is intentionally not re-exported by the barrel
-// (it is internal); the fake client and assertions reach it directly.
-import 'package:genesis_console/src/agent/llm_client.dart'
-    show ChatMessage, ToolCallMessage, ToolResultMessage;
 import 'package:test/test.dart';
 
-/// A canned [LlmClient]: returns queued results in order (clamping to the last)
+/// A canned [LlmClient]: returns queued replies in order (clamping to the last)
 /// and records every message list it received, so tests can assert the
-/// self-correction loop fed an error back.
+/// self-correction loop fed an error back. The conversation/tool vocabulary is
+/// genai_primitives' [ChatMessage]/[ToolPart]/[ToolDefinition] (register A42).
 class FakeLlmClient implements LlmClient {
-  FakeLlmClient(this._results);
+  FakeLlmClient(this._replies);
 
-  final List<LlmResult> _results;
+  final List<ChatMessage> _replies;
   int _index = 0;
 
   /// The messages passed to each [chat] call, in order.
   final List<List<ChatMessage>> received = [];
 
   @override
-  Future<LlmResult> chat(
+  Future<ChatMessage> chat(
     List<ChatMessage> messages, {
-    required Map<String, Object?> tool,
+    required ToolDefinition tool,
   }) async {
     received.add(List.of(messages));
-    final result = _results[_index.clamp(0, _results.length - 1)];
+    final reply = _replies[_index.clamp(0, _replies.length - 1)];
     _index++;
-    return result;
+    return reply;
   }
 }
 
@@ -35,16 +33,26 @@ void main() {
   late _Sink sink;
   late Console console;
 
+  // A minimal render tool; the fake client ignores it (only the loop wiring
+  // needs a ToolDefinition, not a real schema).
+  final renderTool = ToolDefinition(name: 'render', description: 'render tool');
+
   setUp(() async {
     sink = _Sink();
     console = await Console.create(sink: sink);
   });
 
-  // A render tool-call whose arguments wrap [components] (a List or a String).
-  LlmToolCall render(Object components) => LlmToolCall(
-    id: 'call_0',
-    name: 'render',
-    arguments: jsonEncode({'components': components}),
+  // A model turn calling `render` with arguments wrapping [components] (a List
+  // or a stringified array — the coercer reparses the latter).
+  ChatMessage render(Object components) => ChatMessage.model(
+    '',
+    parts: [
+      ToolPart.call(
+        callId: 'call_0',
+        toolName: 'render',
+        arguments: {'components': components},
+      ),
+    ],
   );
 
   List<Object?> tree({Object start = 3}) => [
@@ -57,11 +65,8 @@ void main() {
     {'id': 'c1', 'component': 'counter', 'label': 'Apples', 'start': start},
   ];
 
-  Agent agentWith(List<LlmResult> results) => Agent(
-    console: console,
-    llm: FakeLlmClient(results),
-    tool: const {'type': 'function'},
-  );
+  Agent agentWith(List<ChatMessage> replies) =>
+      Agent(console: console, llm: FakeLlmClient(replies), tool: renderTool);
 
   test('a clean tool call renders the surface', () async {
     final outcome = await agentWith([render(tree())]).ask('show apples');
@@ -90,11 +95,7 @@ void main() {
       ]),
       render(tree()),
     ]);
-    final agent = Agent(
-      console: console,
-      llm: fake,
-      tool: const {'type': 'function'},
-    );
+    final agent = Agent(console: console, llm: fake, tool: renderTool);
 
     final outcome = await agent.ask('show apples');
     expect(outcome, isA<AgentRendered>());
@@ -103,11 +104,15 @@ void main() {
     expect(fake.received.length, 2);
     // The fed-back round must replay the assistant tool_call BEFORE its tool
     // result — an orphan tool result is an invalid sequence swift-infer rejects.
-    final call = fake.received[1].whereType<ToolCallMessage>().single;
-    expect(call.id, 'call_0');
+    final replay = fake.received[1];
+    final callMsg = replay.where((m) => m.hasToolCalls).single;
+    final resultMsg = replay.where((m) => m.hasToolResults).single;
+    expect(callMsg.toolCalls.single.callId, 'call_0');
+    expect(resultMsg.toolResults.single.result.toString(), contains('content'));
     expect(
-      fake.received[1].whereType<ToolResultMessage>().single.content,
-      contains('content'),
+      replay.indexOf(callMsg),
+      lessThan(replay.indexOf(resultMsg)),
+      reason: 'the assistant tool call must precede its tool result',
     );
   });
 
@@ -118,11 +123,7 @@ void main() {
         {'id': 'oops', 'component': 'box', 'title': 'never has content'},
       ]);
       final fake = FakeLlmClient([bad, bad, bad]);
-      final agent = Agent(
-        console: console,
-        llm: fake,
-        tool: const {'type': 'function'},
-      );
+      final agent = Agent(console: console, llm: fake, tool: renderTool);
       final outcome = await agent.ask('show');
       expect(outcome, isA<AgentFailed>());
       expect((outcome as AgentFailed).attempts, 3);
@@ -135,7 +136,7 @@ void main() {
 
   test('a text-only reply surfaces as AgentSaid', () async {
     final outcome = await agentWith([
-      const LlmText('I cannot do that.'),
+      ChatMessage.model('I cannot do that.'),
     ]).ask('hello');
     expect(outcome, isA<AgentSaid>());
     expect((outcome as AgentSaid).text, contains('cannot'));

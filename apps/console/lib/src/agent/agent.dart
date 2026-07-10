@@ -1,3 +1,5 @@
+import 'package:genai_primitives/genai_primitives.dart';
+
 import '../console.dart';
 import 'coerce.dart';
 import 'llm_client.dart';
@@ -48,7 +50,7 @@ class Agent {
   Agent({
     required Console console,
     required LlmClient llm,
-    required Map<String, Object?> tool,
+    required ToolDefinition tool,
     int maxRounds = 3,
   }) : _console = console,
        _llm = llm,
@@ -57,73 +59,76 @@ class Agent {
 
   final Console _console;
   final LlmClient _llm;
-  final Map<String, Object?> _tool;
+  final ToolDefinition _tool;
   final int _maxRounds;
 
   /// Asks the model to render/update the screen for [prompt].
   Future<AgentOutcome> ask(String prompt) async {
-    final messages = <ChatMessage>[SystemMessage(_systemPrompt)];
+    final messages = <ChatMessage>[ChatMessage.system(_systemPrompt)];
     final mounted = _console.surfaceId != null;
     messages.add(
-      UserMessage(
+      ChatMessage.user(
         mounted ? '$prompt\n\nCurrent screen:\n${_console.snapshot()}' : prompt,
       ),
     );
 
     var lastError = 'the model did not produce a valid render';
     for (var round = 0; round < _maxRounds; round++) {
-      final result = await _llm.chat(messages, tool: _tool);
-      switch (result) {
-        case LlmText(:final content):
-          return AgentSaid(content);
-        case LlmToolCall(:final id, :final name, :final arguments):
-          if (name != 'render') {
-            // Only one tool is offered; an off-name call is a model error.
-            lastError = 'unknown tool "$name" — call the "render" tool';
-            _feedBack(messages, id, name, arguments, lastError);
-          } else {
-            try {
-              final message = toUpdateComponents(arguments);
-              await _console.loadOrApply(message);
-              final components =
-                  (message['updateComponents']!
-                          as Map<String, Object?>)['components']!
-                      as List<Object?>;
-              // Subtract the synthesised screen root from the count.
-              final n = components.length - 1;
-              return AgentRendered('rendered $n component${n == 1 ? '' : 's'}');
-            } on Object catch (error) {
-              lastError = error is FormatException
-                  ? error.message
-                  : error.toString();
-              _feedBack(
-                messages,
-                id,
-                name,
-                arguments,
-                'ERROR: $lastError\nFix the arguments and call render again. '
-                'Remember: a flat array; integers are JSON numbers; the top '
-                'container is a box with id "content".',
-              );
-            }
-          }
+      final reply = await _llm.chat(messages, tool: _tool);
+      if (!reply.hasToolCalls) {
+        return AgentSaid(reply.text);
+      }
+      final call = reply.toolCalls.first;
+      if (call.toolName != 'render') {
+        // Only one tool is offered; an off-name call is a model error.
+        lastError = 'unknown tool "${call.toolName}" — call the "render" tool';
+        _feedBack(messages, call, lastError);
+      } else {
+        try {
+          final message = toUpdateComponents(call.arguments ?? const {});
+          await _console.loadOrApply(message);
+          final components =
+              (message['updateComponents']!
+                      as Map<String, Object?>)['components']!
+                  as List<Object?>;
+          // Subtract the synthesised screen root from the count.
+          final n = components.length - 1;
+          return AgentRendered('rendered $n component${n == 1 ? '' : 's'}');
+        } on Object catch (error) {
+          lastError = error is FormatException
+              ? error.message
+              : error.toString();
+          _feedBack(
+            messages,
+            call,
+            'ERROR: $lastError\nFix the arguments and call render again. '
+            'Remember: a flat array; integers are JSON numbers; the top '
+            'container is a box with id "content".',
+          );
+        }
       }
     }
     return AgentFailed(lastError, _maxRounds);
   }
 
-  /// Replays the assistant's tool call and appends a tool result carrying
-  /// [content] — a valid OpenAI tool-result sequence the model can act on.
-  void _feedBack(
-    List<ChatMessage> messages,
-    String id,
-    String name,
-    String arguments,
-    String content,
-  ) {
+  /// Replays the assistant's tool [call] and appends a tool result carrying
+  /// [content] — a valid tool-call/tool-result sequence the model can act on
+  /// (the assistant call MUST precede its result; an orphan result is invalid).
+  void _feedBack(List<ChatMessage> messages, ToolPart call, String content) {
     messages
-      ..add(ToolCallMessage(id: id, name: name, arguments: arguments))
-      ..add(ToolResultMessage(id: id, content: content));
+      ..add(ChatMessage.model('', parts: [call]))
+      ..add(
+        ChatMessage.user(
+          '',
+          parts: [
+            ToolPart.result(
+              callId: call.callId,
+              toolName: call.toolName,
+              result: content,
+            ),
+          ],
+        ),
+      );
   }
 
   static const String _systemPrompt = '''
