@@ -1,103 +1,24 @@
 import 'dart:convert';
 
+import 'package:genai_primitives/genai_primitives.dart';
 import 'package:http/http.dart' as http;
 
 import 'config.dart';
 
-/// One message in a chat exchange — the subset the agent loop needs.
-sealed class ChatMessage {
-  const ChatMessage();
-}
-
-/// The system prompt steering the model.
-class SystemMessage extends ChatMessage {
-  /// Creates a system message with [content].
-  const SystemMessage(this.content);
-
-  /// The system prompt text.
-  final String content;
-}
-
-/// A user turn.
-class UserMessage extends ChatMessage {
-  /// Creates a user message with [content].
-  const UserMessage(this.content);
-
-  /// The user text.
-  final String content;
-}
-
-/// An assistant turn that called a tool — replayed so the model sees its own
-/// prior (rejected) call when an error is fed back.
-class ToolCallMessage extends ChatMessage {
-  /// Creates a replayed assistant tool call.
-  const ToolCallMessage({
-    required this.id,
-    required this.name,
-    required this.arguments,
-  });
-
-  /// The tool call id (correlates with a [ToolResultMessage]).
-  final String id;
-
-  /// The tool name.
-  final String name;
-
-  /// The raw arguments JSON string the model produced.
-  final String arguments;
-}
-
-/// The result of a tool call fed back to the model (e.g. a validation error).
-class ToolResultMessage extends ChatMessage {
-  /// Creates a tool result for the call [id].
-  const ToolResultMessage({required this.id, required this.content});
-
-  /// The id of the tool call this answers.
-  final String id;
-
-  /// The result content (an error string, in the self-correction loop).
-  final String content;
-}
-
-/// The model's reply: a tool call or plain text.
-sealed class LlmResult {
-  const LlmResult();
-}
-
-/// The model called a tool.
-class LlmToolCall extends LlmResult {
-  /// Creates a tool-call result.
-  const LlmToolCall({
-    required this.id,
-    required this.name,
-    required this.arguments,
-  });
-
-  /// The tool call id.
-  final String id;
-
-  /// The tool name.
-  final String name;
-
-  /// The raw arguments JSON string (may be malformed — the caller coerces it).
-  final String arguments;
-}
-
-/// The model replied with text instead of calling a tool.
-class LlmText extends LlmResult {
-  /// Creates a text result.
-  const LlmText(this.content);
-
-  /// The reply text.
-  final String content;
-}
-
-/// Sends a chat exchange to an LLM and returns its reply.
+/// Sends a chat exchange to an LLM and returns the model's reply.
+///
+/// The conversation and tool vocabulary is flutter/genui's `genai_primitives`
+/// ([ChatMessage] / [StandardPart] / [ToolDefinition]) — adopted, not invented
+/// (register A26/A42). That package is the *in-memory* model only; the OpenAI
+/// `/v1/chat/completions` wire encoding (roles, `tool_calls`, tool results)
+/// stays a [SwiftInferClient] concern — `genai_primitives`' own `toJson` is a
+/// different interchange format, not the OpenAI wire.
 abstract interface class LlmClient {
-  /// Sends [messages] with a single [tool] available and returns the reply.
-  Future<LlmResult> chat(
+  /// Sends [messages] with a single [tool] available and returns the model's
+  /// reply message — a tool call ([ChatMessage.hasToolCalls]) and/or text.
+  Future<ChatMessage> chat(
     List<ChatMessage> messages, {
-    required Map<String, Object?> tool,
+    required ToolDefinition tool,
   });
 }
 
@@ -123,16 +44,16 @@ class SwiftInferClient implements LlmClient {
   final http.Client _http;
 
   @override
-  Future<LlmResult> chat(
+  Future<ChatMessage> chat(
     List<ChatMessage> messages, {
-    required Map<String, Object?> tool,
+    required ToolDefinition tool,
   }) async {
     final body = <String, Object?>{
       'model': _config.model,
       'temperature': 0.2,
       'max_tokens': 1536,
       'messages': [for (final m in messages) _encode(m)],
-      'tools': [tool],
+      'tools': [_toolWire(tool)],
       'tool_choice': 'auto',
     };
     final response = await _http.post(
@@ -156,35 +77,103 @@ class SwiftInferClient implements LlmClient {
             as Map<String, Object?>;
     final toolCalls = message['tool_calls'] as List<Object?>?;
     if (toolCalls != null && toolCalls.isNotEmpty) {
-      final call = toolCalls.first as Map<String, Object?>;
-      final fn = call['function'] as Map<String, Object?>;
-      return LlmToolCall(
-        id: (call['id'] as String?) ?? 'call_0',
-        name: (fn['name'] as String?) ?? '',
-        arguments: (fn['arguments'] as String?) ?? '',
+      // The model turn is a genai `ChatMessage` (role model) whose parts are the
+      // tool calls it requested.
+      return ChatMessage.model(
+        '',
+        parts: [
+          for (final call in toolCalls)
+            _toolPartFromWire(call as Map<String, Object?>),
+        ],
       );
     }
-    return LlmText((message['content'] as String?) ?? '');
+    return ChatMessage.model((message['content'] as String?) ?? '');
   }
 
-  Map<String, Object?> _encode(ChatMessage m) => switch (m) {
-    SystemMessage(:final content) => {'role': 'system', 'content': content},
-    UserMessage(:final content) => {'role': 'user', 'content': content},
-    ToolCallMessage(:final id, :final name, :final arguments) => {
-      'role': 'assistant',
-      'tool_calls': [
-        {
-          'id': id,
-          'type': 'function',
-          'function': {'name': name, 'arguments': arguments},
-        },
-      ],
+  /// A genai [ToolDefinition] rendered as an OpenAI `function` tool. The tool's
+  /// JSON-Schema `inputSchema` becomes the function `parameters`.
+  Map<String, Object?> _toolWire(ToolDefinition tool) => {
+    'type': 'function',
+    'function': {
+      'name': tool.name,
+      'description': tool.description,
+      'parameters': tool.inputSchema.value,
     },
-    ToolResultMessage(:final id, :final content) => {
-      'role': 'tool',
-      'tool_call_id': id,
-      'content': content,
-    },
+  };
+
+  /// A wire `tool_call` → a genai [ToolPart] call, decoding its arguments.
+  ToolPart _toolPartFromWire(Map<String, Object?> call) {
+    final fn = call['function'] as Map<String, Object?>;
+    return ToolPart.call(
+      callId: (call['id'] as String?) ?? 'call_0',
+      toolName: (fn['name'] as String?) ?? '',
+      arguments: _decodeArgs((fn['arguments'] as String?) ?? ''),
+    );
+  }
+
+  /// OpenAI delivers tool arguments as a JSON string. Decode leniently — a
+  /// local model without constrained decoding may double-encode the blob — so
+  /// that malformed-but-recoverable calls still reach the agent's
+  /// self-correction loop as a map rather than throwing here (register A39).
+  /// Inner-value quirks (a stringified `components` array, numeric-string ints)
+  /// are left to `coerce`; unrecoverable garbage decodes to `{}`, which the
+  /// coercer rejects with a fed-back "missing components" error.
+  Map<String, Object?> _decodeArgs(String raw) {
+    Object? value;
+    try {
+      value = jsonDecode(raw);
+    } on FormatException {
+      return {};
+    }
+    if (value is String) {
+      // A doubly-encoded arguments blob: the outer decode yields a JSON string.
+      try {
+        value = jsonDecode(value);
+      } on FormatException {
+        return {};
+      }
+    }
+    return value is Map ? value.cast<String, Object?>() : {};
+  }
+
+  /// A genai [ChatMessage] → one OpenAI wire message.
+  ///
+  /// genai's own `toJson` is a different interchange format (roles
+  /// system/user/model, parts tagged `Text`/`Tool`), so the OpenAI shape is
+  /// translated by role + part kind. The agent constructs single-purpose
+  /// messages (one tool call, or one tool result, or plain text), so a 1:1
+  /// mapping is exact; the first tool result wins if a message carried several.
+  Map<String, Object?> _encode(ChatMessage m) {
+    if (m.hasToolCalls) {
+      return {
+        'role': 'assistant',
+        'tool_calls': [
+          for (final t in m.toolCalls)
+            {
+              'id': t.callId,
+              'type': 'function',
+              'function': {'name': t.toolName, 'arguments': t.argumentsRaw},
+            },
+        ],
+      };
+    }
+    if (m.hasToolResults) {
+      // genai has no `tool` role; a result rides a user-role message carrying a
+      // `ToolPart.result`, and encodes to OpenAI's dedicated `tool` message.
+      final t = m.toolResults.first;
+      return {
+        'role': 'tool',
+        'tool_call_id': t.callId,
+        'content': t.result?.toString() ?? '',
+      };
+    }
+    return {'role': _wireRole(m.role), 'content': m.text};
+  }
+
+  String _wireRole(ChatMessageRole role) => switch (role) {
+    ChatMessageRole.system => 'system',
+    ChatMessageRole.user => 'user',
+    ChatMessageRole.model => 'assistant',
   };
 
   /// Closes the underlying HTTP client.

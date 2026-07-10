@@ -11,12 +11,19 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  # The agent-loop conversation/tool vocabulary is flutter/genui's
+  # genai_primitives (ChatMessage / Part / ToolDefinition) — adopted, not
+  # invented (register A26/A42). Pre-1.0/-wip; safe to depend on here because
+  # console is publish_to: none. json_schema_builder backs the
+  # ToolDefinition.inputSchema type.
+  genai_primitives: ^0.2.3
   genesis_consent: ^0.1.0
   genesis_dialogue: ^0.1.0
   genesis_taxonomy: ^0.1.0
   genesis_tree: ^0.1.0
   genesis_typesetting: ^0.1.0
   http: ^1.2.0
+  json_schema_builder: ^0.1.5
 
 dev_dependencies:
   build_runner: ^2.15.0

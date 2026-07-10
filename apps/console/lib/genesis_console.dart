@@ -11,16 +11,11 @@ export 'package:genesis_dialogue/genesis_dialogue.dart' show ActionEvent;
 export 'src/agent/agent.dart';
 export 'src/agent/coerce.dart' show toUpdateComponents;
 export 'src/agent/config.dart';
-// The ChatMessage wire family is internal to the SwiftInferClient<->LlmClient
-// contract; consumers driving the Agent need only the interface + result types.
+// The conversation/tool vocabulary on the LlmClient contract is genai_primitives'
+// ChatMessage/Part/ToolDefinition (register A26/A42) — a consumer implementing a
+// custom LlmClient imports that package directly rather than through this barrel.
 export 'src/agent/llm_client.dart'
-    show
-        LlmClient,
-        LlmResult,
-        LlmToolCall,
-        LlmText,
-        SwiftInferClient,
-        LlmException;
+    show LlmClient, SwiftInferClient, LlmException;
 export 'src/agent/tool_schema.dart';
 export 'src/console.dart';
 export 'src/counter.dart';
