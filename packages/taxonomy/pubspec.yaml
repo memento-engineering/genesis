@@ -17,6 +17,6 @@ dependencies:
 
 dev_dependencies:
   build_runner: ^2.15.0
-  json_schema: ^5.2.2
+  json_schema_builder: ^0.1.5
   lints: ^5.1.0
   test: ^1.25.0

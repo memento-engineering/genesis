@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:json_schema/json_schema.dart';
+import 'package:json_schema_builder/json_schema_builder.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -91,10 +91,15 @@ void main() {
   });
 
   group('validator-executed conformance (draft 2020-12)', () {
-    final schema = JsonSchema.create(
-      schemaMap,
-      schemaVersion: SchemaVersion.draft2020_12,
-    );
+    // The oracle is the genui ecosystem's own draft-2020-12 validator
+    // (json_schema_builder, the lib a2ui_core + genai_primitives build on):
+    // if it accepts our hand-emitted schema and the documents below, an A2UI
+    // client built on the same stack agrees. validate() is async and returns
+    // the list of errors — empty means valid.
+    final schema = Schema.fromMap(schemaMap);
+
+    Future<List<ValidationError>> errorsFor(Object? doc) =>
+        schema.validate(doc);
 
     Map<String, Object?> message(List<Map<String, Object?>> components) => {
       'version': 'v0.9',
@@ -120,15 +125,15 @@ void main() {
       'value': 3.5,
     };
 
-    test('a known-good document validates', () {
-      final results = schema.validate(
+    test('a known-good document validates', () async {
+      final errors = await errorsFor(
         message([goodPanel, goodLabel, goodGauge]),
       );
-      expect(results.isValid, isTrue, reason: '${results.errors}');
+      expect(errors, isEmpty, reason: '$errors');
     });
 
-    test('optional props with defaults validate when present', () {
-      final results = schema.validate(
+    test('optional props with defaults validate when present', () async {
+      final errors = await errorsFor(
         message([
           {
             ...goodGauge,
@@ -139,49 +144,49 @@ void main() {
           },
         ]),
       );
-      expect(results.isValid, isTrue, reason: '${results.errors}');
+      expect(errors, isEmpty, reason: '$errors');
     });
 
-    test('missing required prop fails validation', () {
+    test('missing required prop fails validation', () async {
       final bad = {...goodLabel, 'id': 'root'}..remove('value');
-      expect(schema.validate(message([bad])).isValid, isFalse);
+      expect(await errorsFor(message([bad])), isNotEmpty);
     });
 
-    test('children on a leaf fail validation', () {
+    test('children on a leaf fail validation', () async {
       final bad = {
         ...goodLabel,
         'id': 'root',
         'children': ['x'],
       };
-      expect(schema.validate(message([bad])).isValid, isFalse);
+      expect(await errorsFor(message([bad])), isNotEmpty);
     });
 
-    test('unknown prop fails validation', () {
+    test('unknown prop fails validation', () async {
       final bad = {...goodGauge, 'id': 'root', 'color': 'red'};
-      expect(schema.validate(message([bad])).isValid, isFalse);
+      expect(await errorsFor(message([bad])), isNotEmpty);
     });
 
-    test('wrong prop type fails validation', () {
+    test('wrong prop type fails validation', () async {
       final bad = {...goodGauge, 'id': 'root', 'value': 'high'};
-      expect(schema.validate(message([bad])).isValid, isFalse);
+      expect(await errorsFor(message([bad])), isNotEmpty);
     });
 
-    test('non-integer where integer required fails validation', () {
+    test('non-integer where integer required fails validation', () async {
       final bad = {...goodGauge, 'id': 'root', 'scale': 2.5};
-      expect(schema.validate(message([bad])).isValid, isFalse);
+      expect(await errorsFor(message([bad])), isNotEmpty);
     });
 
-    test('enum value outside the declared set fails validation', () {
+    test('enum value outside the declared set fails validation', () async {
       final bad = {...goodGauge, 'id': 'root', 'align': 'left'};
-      expect(schema.validate(message([bad])).isValid, isFalse);
+      expect(await errorsFor(message([bad])), isNotEmpty);
     });
 
-    test('unknown component type fails validation', () {
+    test('unknown component type fails validation', () async {
       final bad = {'id': 'root', 'component': 'toggle'};
-      expect(schema.validate(message([bad])).isValid, isFalse);
+      expect(await errorsFor(message([bad])), isNotEmpty);
     });
 
-    test('wrong envelope version fails validation', () {
+    test('wrong envelope version fails validation', () async {
       final bad = {
         'version': 'v0.8',
         'updateComponents': {
@@ -191,7 +196,7 @@ void main() {
           ],
         },
       };
-      expect(schema.validate(bad).isValid, isFalse);
+      expect(await errorsFor(bad), isNotEmpty);
     });
   });
 }
