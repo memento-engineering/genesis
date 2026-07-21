@@ -1,0 +1,205 @@
+# The artifact layer — the four pieces every genesis consumer defines
+
+**Author:** AI (drafted from the tree, unattended) — an explanatory doc, not a decision
+**Date:** 2026-07-20
+**Governs:** no `lib/` code. This is the long-form companion to `packages/tree/README.md`
+§"The artifact layer — deliberately not shipped", which carries the shipped summary; the
+worked examples live here because a published archive may not carry internal references
+(`docs/publishing.md`, the scrub gate).
+**Reads against:** `docs/adr/ADR-0001-foundations.md` (Decisions 2, 3, 4, 5, 6) and
+`docs/adr/ADR-0004-render-backends.md` (Decisions 1-2).
+**Worked examples:** `packages/typesetting`, `packages/perception`, and — outside this repo —
+the_grid's Allocation Tree.
+
+---
+
+## 1. Why the spine stops at `Seed` → `Branch`
+
+Flutter's stack is three layers: `Widget` (immutable config) → `Element` (persistent
+lifecycle + keyed reconcile) → `RenderObject` (the persistent artifacts that do the real
+work). `genesis_tree` ports the first two and stops there on purpose. It reconciles desired
+state into live identity; **what that identity spawns and owns — the artifact layer — is the
+consumer's.**
+
+The stop is a ratified constraint, not an omission. ADR-0001 Decision 3
+(`docs/adr/ADR-0001-foundations.md`):
+
+> **`Branch` core is artifact-agnostic** — identity, lifecycle, keyed reconcile, dirtiness,
+> and **one abstract rebuild hook** (the `performRebuild` analog). It carries **no build
+> contract**.
+
+and its Branch-purity amendment, folded into the same Decision:
+
+> `Branch` stays exactly **identity + keyed reconciliation + dirtiness**, plus the one
+> abstract `performRebuild` hook with no build contract. It **refuses** the accretion that
+> bloated Flutter's `Element`.
+
+Flutter *bundles* its artifact layer and fixes its shape: `RenderObject` nodes, a
+`PipelineOwner`, the layout/paint/hit-test protocol, and `Theme`/`MediaQuery` ambient scopes
+are all framework. genesis **unbundles** those four pieces. This document names them and
+walks the consumers that define them differently, so the next consumer does not rediscover
+the pattern from scratch.
+
+The four pieces at a glance:
+
+| Piece | Flutter bundles | `genesis_typesetting` defines | `genesis_perception` defines |
+|---|---|---|---|
+| **Artifacts** | `RenderObject` | `RenderBranch` — the branch *is* the artifact (owns `rect`, paints cells) | the mounted element itself — `NodeElement` / `FieldElement` |
+| **Owner** | `PipelineOwner` | `StageBinding` — the dirty-paint set and the frame pass | none; the harvest is pulled, so `PerceptionOwner` only renames `TreeOwner` |
+| **Protocol** | layout / paint / hit-test | `flowHeight` → `layout(Rect)` → `paint(CellGrid)` | `serializePerceptionFragment(Branch)` — a read over the live tree |
+| **Affordance scopes** | `Theme` / `MediaQuery` | `InheritedSeed<RenderParentLink>` — render-parent threading | `InheritedPerception<T>` — ambient measurement values |
+
+Note the asymmetry. Perception defines two of the four pieces trivially: its artifacts *are*
+its branches, and it needs no second scheduler. That is the point of unbundling — a consumer
+pays only for the pieces its domain actually uses.
+
+## 2. The four pieces
+
+### 2.1 Artifacts — what desired state spawns
+
+An artifact is the persistent, live thing a mounted branch owns: a painted region, a
+harvestable datum, a spawned process, a held lease. The question that finds it is **"what
+does this branch own that outlives a single rebuild?"**
+
+Two shapes are both correct:
+
+- **The branch *is* the artifact.** `RenderBranch` collapses Flutter's `RenderObjectElement`
+  and `RenderObject` into one type — ADR-0004 Decision 2
+  (`docs/adr/ADR-0004-render-backends.md`): "A cell grid is a single immediate surface, so
+  there is no separate retained render node to keep: the branch *is* the render object."
+  Cheapest; use it when the artifact's lifetime is exactly the branch's.
+- **The branch *holds* the artifact.** The branch creates a separate object at mount and
+  disposes it at unmount. Use it when the artifact must outlive, or be handed across, branch
+  identity — the_grid's `Allocation` is this shape (§5).
+
+Either way: mount creates, unmount disposes. `Branch.mount` and `Branch.unmount`
+(`packages/tree/lib/src/branch.dart`) are the only lifecycle hooks the spine offers, and they
+are enough.
+
+### 2.2 Owner — the pass scheduler beside `TreeOwner`
+
+`TreeOwner` (`packages/tree/lib/src/tree_owner.dart`) schedules exactly one pass: the
+**build** pass. It holds the dirty set, fires `onNeedsFlush` on the empty→non-empty edge, and
+`flush()` drains depth-ordered and **returns the branches it rebuilt** — ADR-0001 Decision 5:
+"A flush must hand the backend *what rebuilt*." Your artifact pass is a second scheduler that
+consumes that return value.
+
+The shape typesetting uses (`StageBinding`, `packages/typesetting/lib/src/stage.dart`):
+
+```dart
+// The binding claims the tree's flush edge at mount, then owns the frame:
+//   owner.onNeedsFlush -> scheduleMicrotask(_framePass)
+void _framePass() {
+  final rebuilt = _owner.flush();   // the build pass runs FIRST
+  _renderFrame(rebuilt);            // then the artifact pass, over what rebuilt
+}
+```
+
+Three rules earned the hard way:
+
+1. **The build pass runs first.** Flush, then run your pass over the drained list — never
+   interleave the two.
+2. **`onNeedsFlush` is single-listener.** The binding asserts-and-claims it at mount
+   (ADR-0004 Decision 2: "a `Stage` must be the only consumer of that hook"). Two artifact
+   owners on one `TreeOwner` is not a supported shape today; it would need a multi-listener
+   edge on `TreeOwner`, a request the tree has deliberately not been asked for.
+3. **You may not need an owner at all.** If your artifacts are *pulled* rather than pushed —
+   perception's harvest — skip it. `PerceptionOwner`
+   (`packages/perception/lib/src/perception_owner.dart`) adds no scheduling whatsoever: it
+   renames `flush()` to `flushHarvest()` and `onNeedsFlush` to `onNeedsHarvest`, and inherits
+   the rest.
+
+### 2.3 Protocol — the pass your artifacts run
+
+The protocol is what the pass *does* to the artifacts. `Branch` gives you exactly one hook to
+respond to a config change — `performRebuild()` — and ADR-0001 Decision 4 fixes when it
+fires: a keyed in-place update "**invokes the Branch's rebuild hook** — *unless the new seed
+is `identical()` to the mounted one*". Everything past that hook is yours.
+
+Typesetting's protocol is three-phase (ADR-0004 Decision 2): a child reports the rows it
+occupies via `flowHeight`, the parent assigns geometry top-down via `layout(Rect)`, then
+`paint(CellGrid)` writes cells. Its artifact response to a rebuild is *registration*, not
+work:
+
+```dart
+// packages/typesetting/lib/src/render_branch.dart
+@override
+@mustCallSuper
+void performRebuild() {
+  markNeedsLayout();
+  markNeedsPaint();
+}
+```
+
+Perception's protocol is a **read**: `serializePerceptionFragment(Branch)`
+(`packages/perception/lib/src/serialize.dart`) walks the live tree with the spine's shallow
+`visitChildren` and folds `NodeElement`/`FieldElement` into a JSON map. No dirty set, no pass
+scheduling — the measurement is harvested when someone asks for it.
+
+Two protocol invariants worth copying:
+
+- **Traverse with `visitChildren`, not a private child list.** It is shallow, tree-ordered,
+  and the caller recurses (ADR-0001 Decision 5). Typesetting derives its render adjacency
+  that way, which is what makes component branches between two render branches transparent:
+  `RenderBranch.renderChildren` descends until it hits the nearest `RenderBranch`.
+- **Keep the pass out of `Branch`.** Both examples put every scheduling primitive
+  (`markNeedsPaint`, `markNeedsLayout`, the frame microtask) on the *subclass*, never on the
+  spine — the purity invariant, made literal.
+
+### 2.4 Affordance scopes — the ambient values your layer reads
+
+An affordance scope is a value a branch reads from its ancestors instead of being handed it
+explicitly: Flutter's `Theme`, `MediaQuery`. In genesis it is `InheritedSeed<T>` +
+`dependOnInheritedSeedOfExactType<T>()` — the one Element-bloat category the spine
+deliberately carries, ratified in ADR-0001 Decision 3 as "a pure structural tree-query (not a
+growing callback registry), load-bearing for providers and render-parent threading", with the
+dependent set allocated lazily so a branch with no dependencies pays nothing.
+
+Typesetting's use is structural rather than thematic — it threads the render parent, which
+ADR-0004 Decision 2 calls the mechanism's "**second structural consumer**":
+
+```dart
+// packages/typesetting/lib/src/render_branch.dart — the container side
+@protected
+Seed renderScopeFor(Seed child) {
+  final childKey = child.key;
+  return InheritedSeed<RenderParentLink>(
+    value: _link,                                    // identity-stable: never notifies
+    child: child,
+    key: childKey == null ? null : _RenderScopeKey(childKey),
+  );
+}
+
+// …and the mounting-child side
+@protected
+void attachRenderParent() {
+  final link = dependOnInheritedSeedOfExactType<RenderParentLink>();
+  link?.branch.adoptRenderChild(this);
+}
+```
+
+Two details there are load-bearing, not incidental:
+
+- **The wrapper's key is namespaced** (`_RenderScopeKey`), never the child's own key.
+  Reusing the bare child key would mint a second branch answering to that key, and any
+  key-based lookup — an action router resolving a component id, say — would find two.
+- **The provided value is identity-stable**, so re-providing it on every rebuild never
+  notifies dependents.
+
+**When a scope must carry domain *capabilities* rather than ambient values, layer them onto
+the context handle — never make the branch its own context.** ADR-0001 Decision 2
+(`docs/adr/ADR-0001-foundations.md`, "The tree spine: `Seed` → `Branch`; `TreeContext` is a
+separate handle") is the constraint:
+
+> **The fork — shed Flutter's Element≡BuildContext "original sin":** `Branch` does **not**
+> implement `TreeContext`. The context is a *distinct capability handle* passed to `build()`,
+> never the mounted node itself.
+
+Decision 2's reason is agent-shaped: "agents routinely hold handles across async gaps: an
+agent reads a projection, deliberates for seconds, then acts." The separate handle throws
+after unmount; a branch-as-context would silently act on a dead node. So the sanctioned move
+is *wrapping*: `PerceptionContext implements TreeContext` over a private handle that
+delegates every base member and adds `markNeedsHarvest` / `perceptionId`
+(`packages/perception/lib/src/perception_context.dart`) — what ADR-0001 Decision 6 calls "a
+capability extension of `TreeContext` — the domain layers budget/harvest capabilities onto
+the handle, which is exactly what Decision 2's separate-handle architecture is for."
