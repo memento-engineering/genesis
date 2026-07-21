@@ -15,7 +15,10 @@ into live identity, and **what that identity spawns and owns — the artifact
 layer — is each consumer's to define** (a character grid, a serialized
 observation, live processes). See ["The artifact layer — deliberately not
 shipped"](packages/tree/README.md#the-artifact-layer--deliberately-not-shipped)
-in the `tree` README.
+in the `tree` README, and
+[`docs/design/artifact-layer-extension-pattern.md`](docs/design/artifact-layer-extension-pattern.md)
+for the four pieces a consumer defines, with `typesetting`, `perception`, and
+the_grid's Allocation Tree walked end to end.
 
 > **Status: pre-1.0.** The engine and domains are well-tested and ADR-grounded,
 > but the composition layer is still **experimental** (see *Stability*) and some
