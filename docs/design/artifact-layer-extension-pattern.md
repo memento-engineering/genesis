@@ -7,7 +7,7 @@
 worked examples live here because a published archive may not carry internal references
 (`docs/publishing.md`, the scrub gate).
 **Reads against:** `docs/adr/ADR-0001-foundations.md` (Decisions 2, 3, 4, 5, 6) and
-`docs/adr/ADR-0004-render-backends.md` (Decisions 1-2).
+`docs/adr/ADR-0004-render-backends.md` (Decision 2).
 **Worked examples:** `packages/typesetting`, `packages/perception`, and — outside this repo —
 the_grid's Allocation Tree.
 
@@ -203,3 +203,76 @@ delegates every base member and adds `markNeedsHarvest` / `perceptionId`
 (`packages/perception/lib/src/perception_context.dart`) — what ADR-0001 Decision 6 calls "a
 capability extension of `TreeContext` — the domain layers budget/harvest capabilities onto
 the handle, which is exactly what Decision 2's separate-handle architecture is for."
+
+## 3. Worked example — `genesis_typesetting`, a character grid
+
+| Piece | What it is | Where |
+|---|---|---|
+| Artifacts | `RenderBranch` and its subclasses `StageBranch` / `BoxBranch` / `TextBranch` — each owns a `Rect` and paints cells | `packages/typesetting/lib/src/render_branch.dart` |
+| Owner | `StageBinding` — the `PipelineOwner` analog: a depth-sorted dirty-paint set, one microtask frame pass, a `FrameRecord` per pass | `packages/typesetting/lib/src/stage.dart` |
+| Protocol | `flowHeight` → `layout(Rect)` → `paint(CellGrid)`, drained parent-first by `paintSubtree` | `packages/typesetting/lib/src/render_branch.dart` |
+| Affordance scope | `InheritedSeed<RenderParentLink>`, provided by `renderScopeFor` and resolved by `attachRenderParent` | `packages/typesetting/lib/src/render_branch.dart` |
+
+The mount path, end to end:
+
+1. `owner.mountRoot(Stage(...))` mounts a `StageBranch`, which creates the one `StageBinding`
+   and claims `TreeOwner.onNeedsFlush`. Frame 0 paints synchronously at mount, so mounting
+   the stage *is* the entry shape.
+2. Every render container wraps each child seed in `renderScopeFor(child)` before reconciling
+   it, so the child mounts inside that container's render scope.
+3. `RenderBranch.mount` calls `attachRenderParent()`, which resolves the nearest
+   `RenderParentLink` and lets that branch `adoptRenderChild(this)` — setting the parent
+   pointer and propagating the binding downward.
+4. A rebuild runs `performRebuild()` → `markNeedsLayout()` + `markNeedsPaint()`, the binding
+   schedules a microtask frame pass, and the pass runs `owner.flush()` → flow relayout →
+   repaint of the dirty rects → `grid.swap()` → ANSI to the sink.
+
+What makes this *not* a second tree in the Flutter sense: no retained render node exists
+beside the branch, and downward adjacency (`renderChildren`) is derived from `visitChildren`
+on demand rather than stored. Only the upward pointer (`renderParent`) and the binding are
+retained, because attach and detach need them.
+
+## 4. Worked example — `genesis_perception`, a measurement
+
+| Piece | What it is | Where |
+|---|---|---|
+| Artifacts | the mounted element itself — `PerceptionElement` subclasses: `NodeElement` (container; its rebuild hook reconciles children) and `FieldElement` (leaf; the inherited empty hook) | `packages/perception/lib/src/perception_element.dart`, `node.dart`, `field.dart` |
+| Owner | none beyond the spine — `PerceptionOwner extends TreeOwner`, renaming `flush()` → `flushHarvest()` and `onNeedsFlush` → `onNeedsHarvest` | `packages/perception/lib/src/perception_owner.dart` |
+| Protocol | harvest-on-read: `serializePerceptionFragment(Branch)` folds the live subtree into a JSON map | `packages/perception/lib/src/serialize.dart` |
+| Affordance scope | `InheritedPerception<T>` — the domain face of `InheritedSeed<T>` | `packages/perception/lib/src/inherited_perception.dart` |
+
+Two moves specific to a domain that wants its own vocabulary (ADR-0001 Decision 6):
+
+- **Rename, do not re-implement.** `markNeedsHarvest` is the single domain override point:
+  `PerceptionElement.markNeedsRebuild()` funnels into `markNeedsHarvest()`, which super-calls
+  the tree path. Every invalidation route — direct marking and provider dependency changes
+  alike — passes through the domain name, with no second dirty mechanism beside the spine's.
+- **Composition stays tree-owned.** `PerceptionElement extends Branch` is reserved for
+  *artifact* elements. The stateless / stateful / inherited perception classes subclass the
+  tree's composition branches and only upgrade the handle — Flutter's `ComponentElement` vs
+  `RenderObjectElement` split, made literal in the type hierarchy.
+
+Perception is the proof that the four pieces are not four classes: it *is* its artifacts,
+aliases its owner, pulls its protocol, and re-exports its scopes.
+
+## 5. Worked example outside genesis — the_grid's Allocation Tree
+
+the_grid runs its orchestrator on the spine and defines an artifact layer for *live effects*:
+a spawned `claude` process, a tmux session, a federation lease, a running app
+(`the_grid/docs/adr/ADR-0009-the-allocation-tree.md`, Accepted 2026-07-01).
+
+- **Artifacts:** an `Allocation` — a persistent, addressable managed object holding one live
+  effect. Held *by* a branch rather than equal to it, because the effect must survive
+  re-adoption across identity.
+- **Owner and protocol:** lifecycle as type properties — `startOrAdopt` / `update` /
+  `dispose` / `detach` — driven by a thin synchronous host over an async effect owner.
+- **Affordance scopes:** scope branches (`SessionScope`, `SubstationScope`) that create
+  allocations for their subtrees.
+
+Terminology stays per-repo: the_grid's ADR-0009 names the shape a *third tree* (the
+RenderObject-analogue) and names its instance the Allocation Tree; genesis's word for the
+piece is the **artifact layer**. The fact that matters to a genesis reader is the negative
+one — that ADR exists *because* genesis ships none of this, and building it in the_grid left
+genesis the clean substrate. The symptom it cured was live effects smeared into the branch
+layer (an `initState` that fires an unawaited run loop, an `Expando` keyed by a context,
+hand-managed cancel-token identity), which is anti-pattern 1 below.
