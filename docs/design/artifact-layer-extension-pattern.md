@@ -276,3 +276,58 @@ one — that ADR exists *because* genesis ships none of this, and building it in
 genesis the clean substrate. The symptom it cured was live effects smeared into the branch
 layer (an `initState` that fires an unawaited run loop, an `Expando` keyed by a context,
 hand-managed cancel-token identity), which is anti-pattern 1 below.
+
+## 6. The layer has no required shape
+
+From `Branch`'s perspective the artifact layer is not a tree, or anything else in particular.
+Artifacts can hang off branches individually, with every relationship carried by the branch
+tree and its inherited values; or they can form their own linked structure, up to and
+including a full second tree (`RenderObject`'s choice).
+
+**Earn structure from a concrete problem.** Build a linked layer only when you can name a
+relationship the branch tree cannot carry — a parent that must enumerate, meter, or re-parent
+its artifacts directly. Typesetting earned exactly one retained link (`renderParent`, plus
+the binding pointer) because attach and detach need it, and derives everything else on
+demand. Perception earned none. Do not contort to avoid the structure, and do not build it
+for Flutter-symmetry either.
+
+## 7. Anti-patterns
+
+1. **Putting the pass on `Branch`.** Timers, listeners, post-frame-style callbacks, and
+   effect loops on the spine are exactly the accretion the purity invariant refuses
+   (ADR-0001 Decision 3: "if the proposed addition is *a callback the framework calls back
+   into*, it belongs in a subclass, not the spine"). The tell is state that has nowhere to
+   live: an `initState` firing an unawaited run loop, an `Expando` keyed by a context, a
+   hand-managed cancel token. That is an artifact layer asking to exist.
+2. **A second dirty mechanism.** Your pass consumes `TreeOwner.flush()`'s return value; do
+   not maintain a parallel "needs rebuild" set beside the spine's. Register your own
+   *artifact* dirty set (paint, effect, resource) keyed off the flush, the way `StageBinding`
+   does with its depth-sorted paint set.
+3. **Making the element its own context.** That re-commits Flutter's Element≡BuildContext
+   sin, which ADR-0001 Decision 2 sheds: "`Branch` does **not** implement `TreeContext`. The
+   context is a *distinct capability handle* passed to `build()`, never the mounted node
+   itself." Layer a handle over `TreeContext` instead (§2.4); `PerceptionContext` is the
+   worked shape, and `packages/perception/lib/src/perception_element.dart` documents the
+   refusal in place — "This element deliberately does NOT implement `PerceptionContext`."
+4. **Reusing a child's key on a scope wrapper.** Two branches then answer to one key, and
+   every key-based lookup finds both. Namespace the wrapper's key, as `_RenderScopeKey` does.
+5. **Reaching into a branch's `State` from the artifact layer.** `StatefulBranch.state` is
+   `@protected` — subclass-only, not public API (ADR-0001 Decision 3). Expose a narrow seam
+   interface on the element and test `branch is YourSeam`, the way the action substrate does.
+
+## 8. Checklist for a new consumer
+
+1. **What does a branch own that outlives a rebuild?** That is your artifact set (§2.1). If
+   the honest answer is "nothing", you do not need an artifact layer.
+2. **Is the artifact the branch, or held by it?** Equal lifetime → be the branch; must
+   survive re-adoption → hold it.
+3. **Push or pull?** A pushed pass needs an owner over `TreeOwner.flush()` (§2.2); a pulled
+   one needs no owner at all.
+4. **What runs in the pass, in what order?** Name the phases out loud — typesetting's are
+   measure, place, paint (§2.3).
+5. **What must a branch read from its ancestors?** Ambient values → `InheritedSeed<T>`;
+   domain capabilities → wrap `TreeContext`, never subclass a branch into one (§2.4).
+6. **Can every relationship ride the branch tree?** If yes, retain no links. If no, name the
+   relationship before adding one (§6).
+7. **Does anything you added belong on `Branch`?** If it is a callback the framework calls
+   back into, it belongs in your subclass, not the spine.
