@@ -17,6 +17,12 @@ pubspec.lock
 # Claude Code workflow worktrees (transient)
 .claude/worktrees/
 
+# the_grid live-arm scratch (the station cuts per-bead worktrees here when THIS
+# checkout is the substation root: .grid/worktrees/<substation>/<bead>, and each
+# driven bead drops its critique/, discovery/, telemetry/ and pr-body.md here).
+# Never tracked — throwaway per-run working state, not source.
+.grid/
+
 # Local credentials — NEVER commit secrets. Tokens live in the shell env
 # (e.g. SWIFT_INFER_AGENT_TOKEN) or in a local, gitignored secrets file.
 # A committed `*.secrets.example.json` documents the shape without values.
