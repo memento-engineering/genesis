@@ -1,8 +1,7 @@
 name: genesis_tmux
 description: >-
-  A zero-dependency, injection-safe tmux client for supervising long-lived
-  panes: one-shot acts plus a poll-backed or control-mode-backed observation
-  stream, behind a single fakeable executor seam.
+  Zero-dependency, injection-safe tmux client: one-shot acts plus a poll- or
+  control-mode-backed observation stream, behind a single fakeable executor seam.
 version: 0.1.0
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace

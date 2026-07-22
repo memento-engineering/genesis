@@ -15,6 +15,7 @@ records what ships and what is explicitly *not yet*.
 | Wire (`dialogue`) | A2UI v0.9 `updateComponents` codec, the receive-side `DialogueSurface` (reconcile re-emissions by key), `action`-message parsing |
 | Render (`typesetting`) | bare-VM cell/ANSI render-branch backend (`Stage`/`Box`/`Text`), double-buffered diff emission |
 | Action substrate (`consent`) | enforce/reject hit-test against the live tree + catalog affordances, the four-kind rejection taxonomy, enforce via the target state |
+| tmux client (`tmux`) | zero-dependency (only `meta`), injection-safe tmux client for supervising long-lived agent panes — one-shot acts + a poll/control-mode observation stream behind a fakeable executor seam; off-spine, depended on by no other member (pending A44) |
 
 ## Deferred — post-1.0 (intentionally not built)
 
@@ -25,7 +26,7 @@ records what ships and what is explicitly *not yet*.
 | **`createSurface` / `deleteSurface` lifecycle, streaming** | single-surface, whole-message v1 is enough for 1.0 (A25) |
 | **`genesis_expression`** (Flutter design system / windowed backend) | not a 1.0 ship target; the `expression` branch is a standalone Flutter design language that does not yet consume the genesis spine — reconciling it with a genesis-tree Flutter render backend is post-1.0 (A29 context) |
 | **The agent loop** | the model↔genesis driver (author → receive → render → enforce); will adopt `genai_primitives` for the chat/tool vocabulary rather than invent it (A26 item 4) |
-| **`tree` first-class action-dispatch hook** | `consent` reaches the target state via `StatefulBranch.state` (a flagged known wart that works); a blessed branch-level dispatch seam is the proper successor (A28 flag 1 / A29 — `Sprout`'s `useAction` could subsume it) |
+| **`tree` first-class action-dispatch hook** | `consent` dispatches via the element `Actionable` seam (actions live on the element, not in `tree`; A30 made `StatefulBranch.state` `@protected`, so the earlier `state`-reach wart is resolved). A blessed branch-level dispatch convenience remains a possible successor (A28 flag 1 / A29 — `Sprout`'s `useAction` could subsume it) |
 | **`tree` optimization** | inherited-lookup cache (O(depth)→O(1)) + lazy `_dependencies`; measure-gated, not a release blocker |
 | **`taxonomy` generated affordance map** | `consent` reads affordances from a runtime `Catalog.parse(...)` lookup; a generated `componentActions` projection is an optional optimization (A28 flag 3) |
 | **`Sprout` extras** | `useReducer`, a synchronous `useLayoutEffect`, a `PerceptionSprout` domain face — deferred until a real second consumer (A29) |
@@ -45,13 +46,14 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
    (2026-06-14)** — A25–A31 promoted; A7 closed; register is clean.
 2. ~~**Flip dependencies** + drop `publish_to: none`.~~ **Done (2026-06-14,
    A32)** — inter-package deps pinned to hosted `^0.1.0`; `publish_to: none`
-   dropped from the six members (the root workspace pubspec keeps it).
-   `dart pub publish --dry-run` on `genesis_tree` validates; `resolution:
-   workspace` stays for local dev resolution.
+   dropped from the seven members (the root workspace pubspec keeps it, as does
+   the `apps/console` driver app). `dart pub publish --dry-run` on `genesis_tree`
+   validates; `resolution: workspace` stays for local dev resolution.
 3. ~~Per-package `README.md` + `CHANGELOG.md` (the dry-run's standing
    warnings).~~ **Done (2026-06-14)** — added READMEs for `tree` / `perception`
    (the other four already had them) and an initial `0.1.0` `CHANGELOG.md` for
-   all six; `dart pub publish --dry-run` on `genesis_tree` is now clean.
+   all seven (`genesis_tmux` shipped with its own); `dart pub publish --dry-run`
+   on `genesis_tree` is now clean.
 4. ~~**Refine the public docs** — strip internal references from everything
    pub.dev renders.~~ **Done (2026-06-14)** — descriptions (commit `863380b`)
    plus all six **READMEs**, every **lib docblock**, and the **CHANGELOGs**
@@ -74,8 +76,18 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
    Inter-package deps stay `^0.1.0` (`0.1.1` satisfies it). Future bumps:
    `melos version` (Conventional Commits) once there are release tags.
 6. ~~**Assign each package to the `memento.engineering` verified publisher.**~~
-   **Done** — all six transferred to the `memento.engineering` publisher via each
-   package's **Admin → Transfer to Publisher** (once per package, irreversible).
-   New versions auto-inherit the publisher, so `0.1.1` shipped under it with no
+   **Done for the six launch members** — transferred via each package's
+   **Admin → Transfer to Publisher** (once per package, irreversible). New
+   versions auto-inherit the publisher, so `0.1.1` shipped under it with no
    re-transfer. (No repo change — package names stay `genesis_*`; the publisher
-   is the verified owner identity, not a name prefix.)
+   is the verified owner identity, not a name prefix.) **`genesis_tmux` is the
+   exception — see item 7.**
+7. ~~**Publish + verified-publisher transfer for `genesis_tmux`** — the seventh
+   member.~~ **Done** — off-spine, zero-dependency (only `meta`), depended on by
+   no other member; built and shipped at `0.1.0` (~75 tests) and **on the
+   `memento.engineering` verified publisher** (pub.dev `publisherId` verified
+   2026-07-21). This item read "not yet transferred" only because it was drafted
+   2026-06-23 and then sat unlanded in a stash while the transfer happened.
+   Recorded genesis-side as **pending A44** (the genesis decision record for
+   adopting `genesis_tmux` as a substrate package, relocated from the_grid's
+   planned standalone `tmux`).
