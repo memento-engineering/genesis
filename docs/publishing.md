@@ -42,7 +42,7 @@ the 1.0 boundary; this doc governs the releases in between.)
    doc comments, and `example/`. Check from the package dir:
 
    ```bash
-   grep -rniE "ADR-?[0-9]|register|\bA[0-9]{1,2}\b|spike" \
+   grep -rniE "ADR-?[0-9]|\b(the[[:space:]]+register|decision(-|[[:space:]]+)register)\b|\bA[0-9]{1,2}\b|spike" \
      README.md CHANGELOG.md lib example 2>/dev/null | grep -viE "A2UI"
    ```
 
