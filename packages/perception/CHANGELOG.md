@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- **Breaking:** `debugFillProperties` now receives a `DiagnosticsBuilder` — replace `properties.add(...)` list calls with the builder `add()`; wire format unchanged.
+
 ## 0.1.4
 
 - Retarget typed tree projection to `genesis_foundation ^0.1.1` and require

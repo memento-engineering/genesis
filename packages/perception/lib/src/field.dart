@@ -21,7 +21,7 @@ class Field extends Perception {
   final Object? value;
 
   @override
-  void debugFillProperties(List<DiagnosticsProperty> properties) {
+  void debugFillProperties(DiagnosticsBuilder properties) {
     const level = DiagnosticsLevel.info;
     final value = this.value;
     properties.add(switch (value) {

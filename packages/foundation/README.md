@@ -26,7 +26,7 @@ class Widget with Diagnosticable {
   final bool enabled;
 
   @override
-  void debugFillProperties(List<DiagnosticsProperty> properties) {
+  void debugFillProperties(DiagnosticsBuilder properties) {
     properties
       ..add(DiagnosticsProperty.string(name: 'label', value: label))
       ..add(DiagnosticsProperty.flag(name: 'enabled', value: enabled));

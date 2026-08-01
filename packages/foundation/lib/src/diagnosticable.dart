@@ -1,9 +1,10 @@
+import 'diagnostics_builder.dart';
 import 'diagnostics_property.dart';
 
 /// An object that describes its diagnostic properties.
 mixin Diagnosticable {
   /// Adds this object's diagnostic properties to [properties].
-  void debugFillProperties(List<DiagnosticsProperty> properties) {}
+  void debugFillProperties(DiagnosticsBuilder properties) {}
 
   /// Returns a deterministic multiline description of this object.
   String toStringDeep() {
@@ -26,9 +27,9 @@ void _writeDiagnosticable(
 ) {
   final indent = '  ' * depth;
   buffer.writeln('$indent${value.runtimeType}');
-  final properties = <DiagnosticsProperty>[];
+  final properties = DiagnosticsBuilder();
   value.debugFillProperties(properties);
-  for (final property in properties) {
+  for (final property in properties.properties) {
     buffer.writeln(
       '$indent  ${property.name}: ${_propertyValue(property)} '
       '(${property.level.name})',

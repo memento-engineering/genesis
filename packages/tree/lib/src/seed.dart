@@ -22,7 +22,7 @@ abstract class Seed with Diagnosticable {
   final Key? key;
 
   @override
-  void debugFillProperties(List<DiagnosticsProperty> properties) {
+  void debugFillProperties(DiagnosticsBuilder properties) {
     properties.add(
       DiagnosticsProperty.string(
         name: 'seedType',

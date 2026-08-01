@@ -408,3 +408,9 @@ Rejected this round: `grammar`/`koine`/`covenant` (first float), `nomenclature`/
 **Decision:** `genesis_foundation` and the `genesis_tree` spine permanently use hand-written immutable value types, equality, `copyWith`, and codecs where needed, while retaining compiler-checked exhaustive switches. Freezed sealed unions with json_serializable remain the convention outside these two layers. This is a settled scope rule, not a temporary deviation. Independently, stable Freezed through 3.2.5 requires `build ^2/^3`, which cannot co-resolve with `genesis_taxonomy`'s direct `build ^4.0.6`.
 **Affects:** `packages/foundation` and `packages/tree`.
 **Status:** PROMOTED (Nico, 2026-08-01) into ADR-0001 Decision 7's Types convention.
+
+## A48 (2026-08-01) — Diagnosticable hooks take a DiagnosticsBuilder · decider: Nico
+
+**Decision:** `Diagnosticable.debugFillProperties` and `DiagnosticableTree` implementations take a `DiagnosticsBuilder`, superseding the bare `List<DiagnosticsProperty>` signature. The builder is Flutter-faithful in mechanism and leaves evolution room for context such as style hints, filtering, and deduplication without another hook signature break. The `TreeSnapshot`/`DiagnosticsProperty` version-1 wire contract is unchanged, and ADR-0001 Decision 9's foundation-below-tree layering is unchanged.
+**Affects:** `packages/foundation`, `packages/tree`, and `packages/perception`; breaking package releases `0.2.0`.
+**Status:** Ratified (Nico, 2026-08-01, live ruling; governor relayed).

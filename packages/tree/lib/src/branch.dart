@@ -140,7 +140,7 @@ abstract class Branch with Diagnosticable, DiagnosticableTree {
   bool get dirty => _dirty;
 
   @override
-  void debugFillProperties(List<DiagnosticsProperty> properties) {
+  void debugFillProperties(DiagnosticsBuilder properties) {
     seed.debugFillProperties(properties);
     properties
       ..add(
