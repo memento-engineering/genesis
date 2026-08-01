@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:genesis_diagnostics/genesis_diagnostics.dart';
 import 'package:test/test.dart';
 
@@ -122,6 +121,63 @@ void main() {
     expect(
       DiagnosticsProperty.fromJson(properties.last.toJson()),
       properties.last,
+    );
+  });
+
+  test('copyWith and value equality preserve the deployed immutable API', () {
+    final original = TreeNode(
+      seedType: 'Station',
+      id: 'root',
+      properties: properties,
+      children: const [],
+    );
+    expect(original.copyWith(), original);
+    expect(original.copyWith(key: 'diagnostics').key, 'diagnostics');
+    expect(original.copyWith(key: null).key, isNull);
+
+    final property = properties.first as DiagnosticsStringProperty;
+    expect(property.copyWith(), property);
+    expect(property.copyWith(value: 'deploy').value, 'deploy');
+  });
+
+  test('duration and timestamps retain version-1 encodings', () {
+    expect(
+      const DiagnosticsProperty.duration(
+        name: 'elapsed',
+        level: DiagnosticsLevel.fine,
+        value: Duration(microseconds: 42),
+      ).toJson()['value'],
+      42,
+    );
+    expect(
+      DiagnosticsProperty.timestamp(
+        name: 'startedAt',
+        level: DiagnosticsLevel.info,
+        value: DateTime.parse('2026-07-23T07:29:59-05:00'),
+      ).toJson()['value'],
+      '2026-07-23T12:29:59.000Z',
+    );
+  });
+
+  test('malformed values and enum names fail loudly', () {
+    expect(
+      () => DiagnosticsProperty.fromJson(const {
+        'kind': 'int',
+        'name': 'attempt',
+        'level': 'info',
+        'value': 'two',
+      }),
+      throwsA(isA<CheckedFromJsonException>()),
+    );
+    expect(
+      () => DiagnosticsProperty.fromJson(const {
+        'kind': 'reference',
+        'name': 'work',
+        'level': 'info',
+        'referenceKind': 'stationLock',
+        'value': 'x',
+      }),
+      throwsA(isA<CheckedFromJsonException>()),
     );
   });
 
