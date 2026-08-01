@@ -1,7 +1,9 @@
 /// Harvest a mounted perception fragment into plain or typed diagnostics data.
 library;
 
-import 'package:genesis_diagnostics/genesis_diagnostics.dart';
+// Direct dependency: the projector consumes the foundation wire contract.
+// ignore: unnecessary_import
+import 'package:genesis_foundation/genesis_foundation.dart';
 import 'package:genesis_tree/genesis_tree.dart';
 
 import 'field.dart';

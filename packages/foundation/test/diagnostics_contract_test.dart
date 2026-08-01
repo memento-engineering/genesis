@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:genesis_diagnostics/genesis_diagnostics.dart';
+import 'package:genesis_foundation/genesis_foundation.dart';
 import 'package:test/test.dart';
 
 void main() {

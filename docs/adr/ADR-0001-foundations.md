@@ -1,7 +1,7 @@
 # ADR-0001 — Foundations for genesis
 
-**Status:** Accepted 2026-06-11 (Nico) — ratified from register A1, A6, A8, A9, A10, A11, A12; *amended 2026-06-13 — as-built/placement records A13, A14, A15, A16, A18 promoted from the register; amended 2026-06-14 — `Sprout` (A29) and `StatefulBranch.state` `@protected` (A30) promoted into Decision 3.*
-**Date:** 2026-06-11 (amended 2026-06-13)
+**Status:** Accepted 2026-06-11 (Nico) — ratified from register A1, A6, A8, A9, A10, A11, A12; *amended 2026-06-13 — as-built/placement records A13, A14, A15, A16, A18 promoted from the register; amended 2026-06-14 — `Sprout` (A29) and `StatefulBranch.state` `@protected` (A30) promoted into Decision 3; amended 2026-08-01 — first-class `Key` (A40) promoted into Decision 2 and Decision 7 scoped for foundation/spine value semantics.*
+**Date:** 2026-06-11 (amended 2026-08-01)
 **Deciders:** Nico Spencer
 **Context:** genesis is the shared substrate extracted from lenny's `perception` work — the Seed/Branch/keyed-reconcile engine Flutter proved, minus Flutter. Its consumers are `com.nicospencer/lenny` (the testing harness, via `perception`) and `engineering.memento/the_grid` (the platform SDK). The design lineage is lenny ADR 0001 (`com.nicospencer/lenny/docs/adrs/0001-declarative-perception-framework.md`), which migrates here with the code; this ADR records where genesis deliberately diverges from it. Every decision below was de-risked by the five 2026-06-11 spikes (lenny beads `lenny-dtcv/17qo/f5zn/vu1j/78r1`), all green with adversarial verification. **Spike evidence is working-tree-only**: the consolidated ledger lives untracked at `com.nicospencer/lenny/spikes/RESULTS.md` with per-spike `NOTES.md` — cited here as fact, but not durable. Companion ADRs planned from the same register: ADR-0002 Schema-first codegen (A2), ADR-0003 A2UI wire format (A3), ADR-0004 Render backends (A4), ADR-0005 Projection/action substrate (A5). Register entry A7 (grid snapshot-diff vs genesis keyed reconcile) remains open and is **not** promoted by any of them.
 
@@ -36,6 +36,8 @@ The axes dissolve the apparent conflicts in A3 and A4: each is a different cell 
 ## Decision 2 — The tree spine: `Seed` → `Branch`; `TreeContext` is a separate handle *(promotes A8)*
 
 **Naming:** **`Seed`** = immutable config (the Widget analogue — planted, describes what grows) → **`Branch`** = mounted, persistent node (the Element analogue) · **`TreeContext`** = the build-time capability handle · **`TreeOwner`** = the scheduler (dirty set + flush) · package **`tree`**.
+
+**Key is a first-class spine type** *(amended 2026-08-01 — promotes A40):* `Key` is an open, immutable value type owned by `genesis_tree`, not foundation. `ValueKey<T>` uses value and type identity; `ObjectKey` uses object identity; and `Seed.key` is `Key?`.
 
 **The fork — shed Flutter's Element≡BuildContext "original sin":** `Branch` does **not** implement `TreeContext`. The context is a *distinct capability handle* passed to `build()`, never the mounted node itself. Flutter's `Element implements BuildContext` makes every build context a live tree node that can be held past validity or used across an async gap — a bug class Flutter mitigates with `mounted` checks and lints. It matters *more* here than in Flutter, because agents routinely hold handles across async gaps: an agent reads a projection, deliberates for seconds, then acts. lenny ADR 0001 re-committed the sin (`PerceptionElement implements PerceptionContext` — visible today at `packages/perception/lib/src/perception_element.dart`, line 10); genesis deliberately diverges.
 
@@ -112,7 +114,7 @@ Two API holes were hit by building real backends against perception; both are ob
 genesis adopts the shared memento conventions (dragged from the_grid ADR-0001 D1/D2/D7) so code reads identically across genesis/lenny/the_grid:
 
 - **Workspace:** Dart pub workspace + melos; `build_runner` wired into the melos scripts (consistent with ADR-0002's codegen).
-- **Types:** **freezed sealed unions** with `json_serializable` codecs; **exhaustive `switch` expressions as house style**, compiler-checked.
+- **Types:** `genesis_foundation` and the `genesis_tree` spine use permanent hand-written immutable value semantics and codecs; elsewhere, use **freezed sealed unions** with `json_serializable` codecs. Compiler-checked exhaustive `switch` expressions remain house style in every package.
 - **Lints:** the shared `analysis_options.yaml` shape — `strict-casts`/`strict-inference`/`strict-raw-types`, `prefer_single_quotes`, `sort_pub_dependencies`, `unawaited_futures`, `avoid_print`.
 - **Architecture:** predictable-flutter layering (Services → Repositories → Interactors/Selectors → View) and its testing discipline — **Fakes, not mocks**; state-transition assertions; offline unit tests.
 

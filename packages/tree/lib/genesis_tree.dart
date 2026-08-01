@@ -9,6 +9,8 @@
 /// EXPERIMENTAL and may change before 1.0.
 library;
 
+export 'package:genesis_foundation/genesis_foundation.dart';
+
 export 'src/branch.dart' hide InheritedBranchBase;
 export 'src/component_branch.dart';
 export 'src/inherited.dart';

@@ -1,5 +1,5 @@
-name: genesis_diagnostics
-description: Versioned, typed diagnostics projections of genesis trees.
+name: genesis_foundation
+description: Dependency-free diagnostics protocols and typed, versioned tree snapshots.
 version: 0.1.1
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
