@@ -1,3 +1,5 @@
+import 'package:genesis_foundation/genesis_foundation.dart';
+
 import 'branch.dart';
 import 'key.dart';
 
@@ -5,7 +7,7 @@ import 'key.dart';
 /// what grows.
 ///
 /// Pure Dart; zero Flutter imports.
-abstract class Seed {
+abstract class Seed with Diagnosticable {
   /// Creates a seed, optionally [key]ed for keyed reconciliation.
   const Seed({this.key});
 
@@ -18,6 +20,27 @@ abstract class Seed {
   /// identity matching explicitly. There is deliberately no `GlobalKey` — see
   /// [Key].
   final Key? key;
+
+  @override
+  void debugFillProperties(List<DiagnosticsProperty> properties) {
+    properties.add(
+      DiagnosticsProperty.string(
+        name: 'seedType',
+        level: DiagnosticsLevel.info,
+        value: runtimeType.toString(),
+      ),
+    );
+    final key = this.key;
+    if (key != null) {
+      properties.add(
+        DiagnosticsProperty.string(
+          name: 'key',
+          level: DiagnosticsLevel.info,
+          value: key.toString(),
+        ),
+      );
+    }
+  }
 
   /// Creates the mounted [Branch] for this configuration.
   Branch createBranch();

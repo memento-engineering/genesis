@@ -1,3 +1,4 @@
+import 'package:genesis_foundation/genesis_foundation.dart';
 import 'package:meta/meta.dart';
 
 import 'key.dart';
@@ -18,7 +19,7 @@ import 'tree_owner.dart';
 /// obtained via [context]; it throws [StateError] on use after this branch
 /// unmounts, so a handle held across an async gap fails loudly instead of
 /// silently acting on a stale node.
-abstract class Branch {
+abstract class Branch with Diagnosticable, DiagnosticableTree {
   /// Creates a branch configured by [seed].
   Branch(Seed seed) : _seed = seed;
 
@@ -137,6 +138,42 @@ abstract class Branch {
 
   /// Whether this branch is currently marked as needing rebuild.
   bool get dirty => _dirty;
+
+  @override
+  void debugFillProperties(List<DiagnosticsProperty> properties) {
+    seed.debugFillProperties(properties);
+    properties
+      ..add(
+        DiagnosticsProperty.flag(
+          name: 'mounted',
+          level: DiagnosticsLevel.info,
+          value: mounted,
+        ),
+      )
+      ..add(
+        DiagnosticsProperty.flag(
+          name: 'dirty',
+          level: DiagnosticsLevel.info,
+          value: dirty,
+        ),
+      );
+    if (mounted) {
+      properties.add(
+        DiagnosticsProperty.string(
+          name: 'branchId',
+          level: DiagnosticsLevel.info,
+          value: branchId,
+        ),
+      );
+    }
+  }
+
+  @override
+  List<Diagnosticable> debugDescribeChildren() {
+    final children = <Diagnosticable>[];
+    visitChildren(children.add);
+    return children;
+  }
 
   /// Providers this branch depends on. Exposed for testing.
   /// Do not use in production code.
