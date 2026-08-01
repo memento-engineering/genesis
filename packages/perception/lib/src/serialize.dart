@@ -8,6 +8,7 @@ import 'package:genesis_tree/genesis_tree.dart';
 
 import 'field.dart';
 import 'node.dart';
+import 'perception_element.dart';
 
 /// Serializes the perception subtree rooted at [root] into a JSON-able map.
 ///
@@ -35,7 +36,7 @@ TreeSnapshot projectPerceptionTree(Branch root, {DateTime? projectedAt}) {
   return TreeSnapshot(
     contractVersion: 1,
     projectedAt: (projectedAt ?? DateTime.now()).toUtc(),
-    root: _projectNode(node),
+    root: _snapshotNode(node),
   );
 }
 
@@ -51,87 +52,42 @@ Map<String, Object?> _serializeNode(NodeElement element) {
   return result;
 }
 
-TreeNode _projectNode(NodeElement element) {
+TreeNode _snapshotNode(PerceptionElement element) {
+  final described = <DiagnosticsProperty>[];
+  element.debugFillProperties(described);
+
+  String? seedType;
+  String? id;
+  String? key;
   final properties = <DiagnosticsProperty>[];
-  final children = <TreeNode>[];
-  element.visitChildren((child) {
-    if (child is FieldElement) {
-      properties.add(_projectField(child.field));
-    } else if (child is NodeElement) {
-      children.add(_projectNode(child));
+
+  for (final property in described) {
+    switch (property) {
+      case DiagnosticsStringProperty(name: 'seedType', :final value):
+        seedType = value;
+      case DiagnosticsStringProperty(name: 'branchId', :final value):
+        id = value;
+      case DiagnosticsStringProperty(name: 'key', :final value):
+        key = value;
+      case DiagnosticsFlagProperty(name: 'mounted' || 'dirty'):
+        break;
+      default:
+        properties.add(property);
     }
-  });
+  }
+
+  final children = <TreeNode>[];
+  for (final child in element.debugDescribeChildren()) {
+    if (child is PerceptionElement) {
+      children.add(_snapshotNode(child));
+    }
+  }
+
   return TreeNode(
-    seedType: element.seed.runtimeType.toString(),
-    id: element.branchId,
-    key: element.key?.toString(),
+    seedType: seedType ?? element.seed.runtimeType.toString(),
+    id: id ?? element.branchId,
+    key: key,
     properties: properties,
     children: children,
-  );
-}
-
-DiagnosticsProperty _projectField(Field field) {
-  const level = DiagnosticsLevel.info;
-  final value = field.value;
-  if (value is String) {
-    return DiagnosticsProperty.string(
-      name: field.name,
-      level: level,
-      value: value,
-    );
-  }
-  if (value is int) {
-    return DiagnosticsProperty.int(
-      name: field.name,
-      level: level,
-      value: value,
-    );
-  }
-  if (value is double) {
-    return DiagnosticsProperty.double(
-      name: field.name,
-      level: level,
-      value: value,
-    );
-  }
-  if (value is bool) {
-    return DiagnosticsProperty.flag(
-      name: field.name,
-      level: level,
-      value: value,
-    );
-  }
-  if (value is Enum) {
-    return DiagnosticsProperty.enumValue(
-      name: field.name,
-      level: level,
-      value: value.name,
-      enumType: value.runtimeType.toString(),
-    );
-  }
-  if (value is Duration) {
-    return DiagnosticsProperty.duration(
-      name: field.name,
-      level: level,
-      value: value,
-    );
-  }
-  if (value is DateTime) {
-    return DiagnosticsProperty.timestamp(
-      name: field.name,
-      level: level,
-      value: value,
-    );
-  }
-  return DiagnosticsProperty.object(
-    name: field.name,
-    level: level,
-    properties: [
-      DiagnosticsProperty.string(
-        name: 'value',
-        level: level,
-        value: value.toString(),
-      ),
-    ],
   );
 }
