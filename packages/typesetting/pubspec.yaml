@@ -10,10 +10,10 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
-  genesis_tree: ^0.1.0
+  genesis_tree: ^0.2.0
   meta: ^1.15.0
 
 dev_dependencies:
-  genesis_perception: ^0.1.0
+  genesis_perception: ^0.2.0
   lints: ^5.1.0
   test: ^1.25.0

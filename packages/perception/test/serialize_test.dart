@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 // Exercises the projector against its direct foundation dependency.
@@ -237,7 +238,9 @@ void main() {
       ),
       projectedAt: projectedAt,
     );
-    expect(TreeSnapshot.fromJson(snapshot.toJson()), snapshot);
+    final json = snapshot.toJson();
+    expect(TreeSnapshot.fromJson(json), snapshot);
+    expect(jsonEncode(TreeSnapshot.fromJson(json).toJson()), jsonEncode(json));
   });
 
   test('typed projection unwraps a component root', () {

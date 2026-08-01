@@ -135,9 +135,9 @@ void main() {
       ];
 
       for (final (field, expected) in cases) {
-        final properties = <DiagnosticsProperty>[];
+        final properties = DiagnosticsBuilder();
         field.debugFillProperties(properties);
-        expect(properties, [expected], reason: field.name);
+        expect(properties.properties, [expected], reason: field.name);
       }
     });
   });

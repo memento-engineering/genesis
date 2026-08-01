@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- **Breaking:** `debugFillProperties` now receives a `DiagnosticsBuilder` — replace `properties.add(...)` list calls with the builder `add()`; wire format unchanged.
+
 ## 0.1.6
 
 - Add `genesis_foundation ^0.1.1` below the tree spine and re-export its

@@ -6,7 +6,7 @@ final class _DiagnosticLeaf extends Seed {
   final String label;
 
   @override
-  void debugFillProperties(List<DiagnosticsProperty> properties) {
+  void debugFillProperties(DiagnosticsBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(
       DiagnosticsProperty.string(
@@ -30,7 +30,7 @@ final class _DiagnosticNode extends MultiChildSeed {
   final String name;
 
   @override
-  void debugFillProperties(List<DiagnosticsProperty> properties) {
+  void debugFillProperties(DiagnosticsBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(
       DiagnosticsProperty.string(

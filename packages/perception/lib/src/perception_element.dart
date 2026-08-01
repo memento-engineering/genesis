@@ -54,7 +54,7 @@ abstract class PerceptionElement extends Branch {
   void markNeedsHarvest() => super.markNeedsRebuild();
 
   @override
-  void debugFillProperties(List<DiagnosticsProperty> properties) {
+  void debugFillProperties(DiagnosticsBuilder properties) {
     super.debugFillProperties(properties);
     visitChildren((child) {
       if (child is FieldElement) {

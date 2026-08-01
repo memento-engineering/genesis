@@ -53,7 +53,7 @@ Map<String, Object?> _serializeNode(NodeElement element) {
 }
 
 TreeNode _snapshotNode(PerceptionElement element) {
-  final described = <DiagnosticsProperty>[];
+  final described = DiagnosticsBuilder();
   element.debugFillProperties(described);
 
   String? seedType;
@@ -61,7 +61,7 @@ TreeNode _snapshotNode(PerceptionElement element) {
   String? key;
   final properties = <DiagnosticsProperty>[];
 
-  for (final property in described) {
+  for (final property in described.properties) {
     switch (property) {
       case DiagnosticsStringProperty(name: 'seedType', :final value):
         seedType = value;

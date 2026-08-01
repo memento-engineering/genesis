@@ -86,6 +86,7 @@ void main() {
     expect(json['contractVersion'], 1);
     expect(json['projectedAt'], '2026-07-23T12:30:00.000Z');
     expect(TreeSnapshot.fromJson(json), snapshot);
+    expect(jsonEncode(TreeSnapshot.fromJson(json).toJson()), jsonEncode(json));
   });
 
   test('all nine property kinds round-trip with exhaustive consumption', () {

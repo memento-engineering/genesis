@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- **Breaking:** `debugFillProperties` now receives a `DiagnosticsBuilder` — replace `properties.add(...)` list calls with the builder `add()`; wire format unchanged.
+
 ## 0.1.2
 
 - Docs only, no API changes: ship the LICENSE, CHANGELOG, and README that

@@ -20,7 +20,7 @@ dependencies:
   genesis_consent: ^0.1.0
   genesis_dialogue: ^0.1.0
   genesis_taxonomy: ^0.1.0
-  genesis_tree: ^0.1.0
+  genesis_tree: ^0.2.0
   genesis_typesetting: ^0.1.0
   http: ^1.2.0
   json_schema_builder: ^0.1.5

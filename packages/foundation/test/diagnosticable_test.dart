@@ -11,7 +11,7 @@ final class _Leaf with Diagnosticable {
   final String label;
 
   @override
-  void debugFillProperties(List<DiagnosticsProperty> properties) {
+  void debugFillProperties(DiagnosticsBuilder properties) {
     properties.add(
       DiagnosticsProperty.string(
         name: 'label',
@@ -24,8 +24,8 @@ final class _Leaf with Diagnosticable {
 
 final class _AllProperties with Diagnosticable {
   @override
-  void debugFillProperties(List<DiagnosticsProperty> properties) {
-    properties.addAll([
+  void debugFillProperties(DiagnosticsBuilder properties) {
+    for (final property in <DiagnosticsProperty>[
       const DiagnosticsProperty.string(
         name: 'string',
         level: DiagnosticsLevel.fine,
@@ -79,7 +79,9 @@ final class _AllProperties with Diagnosticable {
           ),
         ],
       ),
-    ]);
+    ]) {
+      properties.add(property);
+    }
   }
 }
 
@@ -93,6 +95,31 @@ final class _Root with Diagnosticable, DiagnosticableTree {
 }
 
 void main() {
+  test('builder exposes immutable point-in-time snapshots', () {
+    final builder = DiagnosticsBuilder();
+    builder.add(
+      const DiagnosticsProperty.string(
+        name: 'first',
+        level: DiagnosticsLevel.info,
+        value: 'one',
+      ),
+    );
+    final snapshot = builder.properties;
+    expect(() => snapshot.add(snapshot.single), throwsUnsupportedError);
+    builder.add(
+      const DiagnosticsProperty.int(
+        name: 'second',
+        level: DiagnosticsLevel.info,
+        value: 2,
+      ),
+    );
+    expect(snapshot.map((property) => property.name), ['first']);
+    expect(builder.properties.map((property) => property.name), [
+      'first',
+      'second',
+    ]);
+  });
+
   test('default hooks render only the runtime type', () {
     expect(_Empty().toStringDeep(), '_Empty\n');
   });
