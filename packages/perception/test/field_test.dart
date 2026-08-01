@@ -4,6 +4,15 @@
 import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 
+enum _Status { ready }
+
+final class _Unsupported {
+  const _Unsupported();
+
+  @override
+  String toString() => 'unsupported';
+}
+
 void main() {
   group('Field construction', () {
     test('createElement returns FieldElement', () {
@@ -19,6 +28,117 @@ void main() {
     test('null is a legal measurement value', () {
       const f = Field('absent', null);
       expect(f.value, isNull);
+    });
+
+    test('describes every pinned value variant as one domain property', () {
+      final timestamp = DateTime.parse('2026-08-01T03:00:00-05:00');
+      final cases = <(Field, DiagnosticsProperty)>[
+        (
+          const Field('string', 'value'),
+          const DiagnosticsProperty.string(
+            name: 'string',
+            level: DiagnosticsLevel.info,
+            value: 'value',
+          ),
+        ),
+        (
+          const Field('int', 7),
+          const DiagnosticsProperty.int(
+            name: 'int',
+            level: DiagnosticsLevel.info,
+            value: 7,
+          ),
+        ),
+        (
+          const Field('double', 2.5),
+          const DiagnosticsProperty.double(
+            name: 'double',
+            level: DiagnosticsLevel.info,
+            value: 2.5,
+          ),
+        ),
+        (
+          const Field('flag', true),
+          const DiagnosticsProperty.flag(
+            name: 'flag',
+            level: DiagnosticsLevel.info,
+            value: true,
+          ),
+        ),
+        (
+          const Field('enum', _Status.ready),
+          const DiagnosticsProperty.enumValue(
+            name: 'enum',
+            level: DiagnosticsLevel.info,
+            value: 'ready',
+            enumType: '_Status',
+          ),
+        ),
+        (
+          const Field('duration', Duration(microseconds: 42)),
+          const DiagnosticsProperty.duration(
+            name: 'duration',
+            level: DiagnosticsLevel.info,
+            value: Duration(microseconds: 42),
+          ),
+        ),
+        (
+          Field('timestamp', timestamp),
+          DiagnosticsProperty.timestamp(
+            name: 'timestamp',
+            level: DiagnosticsLevel.info,
+            value: timestamp,
+          ),
+        ),
+        (
+          const Field('null', null),
+          const DiagnosticsProperty.object(
+            name: 'null',
+            level: DiagnosticsLevel.info,
+            properties: [
+              DiagnosticsProperty.string(
+                name: 'value',
+                level: DiagnosticsLevel.info,
+                value: 'null',
+              ),
+            ],
+          ),
+        ),
+        (
+          const Field('collection', <int>[1, 2]),
+          const DiagnosticsProperty.object(
+            name: 'collection',
+            level: DiagnosticsLevel.info,
+            properties: [
+              DiagnosticsProperty.string(
+                name: 'value',
+                level: DiagnosticsLevel.info,
+                value: '[1, 2]',
+              ),
+            ],
+          ),
+        ),
+        (
+          const Field('unsupported', _Unsupported()),
+          const DiagnosticsProperty.object(
+            name: 'unsupported',
+            level: DiagnosticsLevel.info,
+            properties: [
+              DiagnosticsProperty.string(
+                name: 'value',
+                level: DiagnosticsLevel.info,
+                value: 'unsupported',
+              ),
+            ],
+          ),
+        ),
+      ];
+
+      for (final (field, expected) in cases) {
+        final properties = <DiagnosticsProperty>[];
+        field.debugFillProperties(properties);
+        expect(properties, [expected], reason: field.name);
+      }
     });
   });
 

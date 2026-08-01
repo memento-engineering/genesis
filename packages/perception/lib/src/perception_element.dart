@@ -1,5 +1,6 @@
 import 'package:genesis_tree/genesis_tree.dart';
 
+import 'field.dart';
 import 'perception.dart';
 import 'perception_context.dart';
 
@@ -51,4 +52,25 @@ abstract class PerceptionElement extends Branch {
   /// re-runs its rebuild hook — delegates to the tree rebuild-marking
   /// ([Branch.markNeedsRebuild]).
   void markNeedsHarvest() => super.markNeedsRebuild();
+
+  @override
+  void debugFillProperties(List<DiagnosticsProperty> properties) {
+    super.debugFillProperties(properties);
+    visitChildren((child) {
+      if (child is FieldElement) {
+        child.field.debugFillProperties(properties);
+      }
+    });
+  }
+
+  @override
+  List<Diagnosticable> debugDescribeChildren() {
+    final children = <Diagnosticable>[];
+    visitChildren((child) {
+      if (child is! FieldElement) {
+        children.add(child);
+      }
+    });
+    return children;
+  }
 }

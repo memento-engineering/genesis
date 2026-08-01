@@ -1,3 +1,5 @@
+import 'dart:io';
+
 // Exercises the projector against its direct foundation dependency.
 // ignore: unnecessary_import
 import 'package:genesis_foundation/genesis_foundation.dart';
@@ -76,6 +78,44 @@ void main() {
       ),
     );
     expect(map.keys.toList(), ['first', 'second', 'third']);
+  });
+
+  test('mounted perception tree describes fields on parent', () {
+    final root = owner.mountRoot(
+      const Node(
+        'root',
+        children: [
+          Field('first', 1),
+          Node('nested', children: [Field('deep', 'yes')]),
+        ],
+      ),
+    );
+
+    final description = root.toStringDeep();
+    expect(
+      description,
+      'NodeElement\n'
+      '  seedType: Node (info)\n'
+      '  mounted: true (info)\n'
+      '  dirty: false (info)\n'
+      '  branchId: 0 (info)\n'
+      '  first: 1 (info)\n'
+      '  NodeElement\n'
+      '    seedType: Node (info)\n'
+      '    mounted: true (info)\n'
+      '    dirty: false (info)\n'
+      '    branchId: 2 (info)\n'
+      '    deep: yes (info)\n',
+    );
+    expect(description, isNot(contains('FieldElement')));
+  });
+
+  test('typed projection is a protocol adapter, not a field projector', () {
+    final source = File('lib/src/serialize.dart').readAsStringSync();
+    expect(source, isNot(contains('_projectField')));
+    expect(source, isNot(contains('value is ')));
+    expect(source, contains('debugFillProperties'));
+    expect(source, contains('debugDescribeChildren'));
   });
 
   test('projects every pinned field variant at info severity', () {
