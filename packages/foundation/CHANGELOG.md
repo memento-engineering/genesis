@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Docs only, no API changes: ship the LICENSE, CHANGELOG, and README that
+  the 0.1.1 archive was published without.
+
 ## 0.1.1
 
 Initial release.
