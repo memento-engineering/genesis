@@ -6,8 +6,10 @@
 
 ## 0.1.2
 
-- Docs only, no API changes: ship the LICENSE, CHANGELOG, and README that
-  the 0.1.1 archive was published without.
+- Docs only, no API changes. The LICENSE, README and CHANGELOG were already
+  present in the 0.1.1 archive — `pub` publishes the working tree, and they
+  were added there before that upload — but they were untracked in git. This
+  release reconciles the repository with what shipped.
 
 ## 0.1.1
 
