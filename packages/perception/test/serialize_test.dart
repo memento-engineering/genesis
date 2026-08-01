@@ -1,4 +1,6 @@
-import 'package:genesis_diagnostics/genesis_diagnostics.dart';
+// Exercises the projector against its direct foundation dependency.
+// ignore: unnecessary_import
+import 'package:genesis_foundation/genesis_foundation.dart';
 import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 

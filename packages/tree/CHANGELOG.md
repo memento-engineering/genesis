@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+- Add `genesis_foundation ^0.1.1` below the tree spine and re-export its
+  dependency-free diagnostics protocol and typed snapshot contract. The
+  first-class `Key` types remain owned by `genesis_tree`.
+
 ## 0.1.5
 
 - Docs only, no API changes. The README gains **"The artifact layer —

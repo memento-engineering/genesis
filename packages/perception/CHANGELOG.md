@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- Retarget typed tree projection to `genesis_foundation ^0.1.1` and require
+  `genesis_tree ^0.1.6`; foundation diagnostics remain available through
+  perception's full tree re-export.
+
 ## 0.1.3
 
 - `PerceptionContext` gains `getInheritedSeedOfExactType<T>()` via its

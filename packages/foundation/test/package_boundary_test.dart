@@ -3,13 +3,17 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 void main() {
-  test('grid-only station lock state is absent from genesis_diagnostics', () {
+  test('foundation has a strict downward dependency boundary', () {
     final library = Directory('lib');
     final dartFiles = library
         .listSync(recursive: true)
         .whereType<File>()
         .where((file) => file.path.endsWith('.dart'));
     final source = dartFiles.map((file) => file.readAsStringSync()).join('\n');
+    expect(Directory('../diagnostics').existsSync(), isFalse);
+    expect(source, isNot(contains('package:genesis_tree/')));
+    expect(source, isNot(contains('package:genesis_perception/')));
+    expect(source, isNot(contains('genesis_${'diagnostics'}')));
     expect(File('lib/src/station_lock_record.dart').existsSync(), isFalse);
     expect(source, isNot(contains('class StationLockRecord')));
     expect(source, isNot(contains('stationTreeBearerProtocolPrefix')));

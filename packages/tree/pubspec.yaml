@@ -2,7 +2,7 @@ name: genesis_tree
 description: >-
   A framework-agnostic Seed/Branch keyed-reconcile tree engine — Flutter's
   element/reconciliation model extracted to pure, bare-VM Dart.
-version: 0.1.5
+version: 0.1.6
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 
@@ -10,6 +10,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  genesis_foundation: ^0.1.1
   meta: ^1.15.0
 
 dev_dependencies:
