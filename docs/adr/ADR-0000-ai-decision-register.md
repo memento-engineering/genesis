@@ -401,10 +401,10 @@ Rejected this round: `grammar`/`koine`/`covenant` (first float), `nomenclature`/
 
 **Decision:** `genesis_foundation` is the dependency-free diagnostics protocol layer below `genesis_tree`; tree depends on and re-exports it, while foundation imports neither tree nor perception. `TreeSnapshot` remains the typed, versioned wire contract in foundation, so out-of-process clients need foundation alone.
 **Affects:** `packages/foundation`, `packages/tree`, and diagnostics consumers.
-**Status:** pending — Nico to promote or reject.
+**Status:** PROMOTED (Nico, 2026-08-01) as ADR-0001 Decision 9.
 
 ## A47 (2026-08-01) — foundation and spine permanently use hand-written value semantics · AI
 
 **Decision:** `genesis_foundation` and the `genesis_tree` spine permanently use hand-written immutable value types, equality, `copyWith`, and codecs where needed, while retaining compiler-checked exhaustive switches. Freezed sealed unions with json_serializable remain the convention outside these two layers. This is a settled scope rule, not a temporary deviation. Independently, stable Freezed through 3.2.5 requires `build ^2/^3`, which cannot co-resolve with `genesis_taxonomy`'s direct `build ^4.0.6`.
 **Affects:** `packages/foundation` and `packages/tree`.
-**Status:** pending — Nico to promote or reject.
+**Status:** PROMOTED (Nico, 2026-08-01) into ADR-0001 Decision 7's Types convention.
