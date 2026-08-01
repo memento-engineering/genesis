@@ -1,0 +1,19 @@
+name: genesis_diagnostics
+description: Versioned, typed diagnostics projections of genesis trees.
+version: 0.1.1
+repository: https://github.com/memento-engineering/genesis
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  build_runner: ^2.4.0
+  freezed: ^3.0.0
+  json_serializable: ^6.9.0
+  lints: ^5.1.0
+  test: ^1.25.0
