@@ -10,6 +10,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  genesis_diagnostics: ^0.1.1
   genesis_tree: ^0.1.4
   meta: ^1.15.0
 
