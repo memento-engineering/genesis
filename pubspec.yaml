@@ -5,6 +5,7 @@ environment:
 workspace:
   - packages/tree
   - packages/perception
+  - packages/diagnostics
   - packages/taxonomy
   - packages/typesetting
   - packages/dialogue

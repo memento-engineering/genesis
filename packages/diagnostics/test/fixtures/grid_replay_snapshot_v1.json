@@ -1,0 +1,33 @@
+{
+  "contractVersion": 1,
+  "projectedAt": "2026-07-24T00:00:00.000Z",
+  "root": {
+    "seedType": "Grid",
+    "id": "root",
+    "key": null,
+    "properties": [],
+    "children": [
+      {
+        "seedType": "Substation",
+        "id": "substation-alpha",
+        "key": null,
+        "properties": [
+          {"name": "substationId", "level": "info", "referenceKind": "substation", "value": "alpha", "kind": "reference"}
+        ],
+        "children": [
+          {
+            "seedType": "WorkBead",
+            "id": "work-tg-demo",
+            "key": null,
+            "properties": [
+              {"name": "beadId", "level": "info", "referenceKind": "bead", "value": "tg-demo", "kind": "reference"},
+              {"name": "sessionId", "level": "info", "referenceKind": "session", "value": "session-demo", "kind": "reference"},
+              {"name": "stepState", "level": "info", "value": "running", "enumType": "StepState", "kind": "enumValue"}
+            ],
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}
