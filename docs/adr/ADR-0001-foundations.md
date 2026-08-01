@@ -114,13 +114,17 @@ Two API holes were hit by building real backends against perception; both are ob
 genesis adopts the shared memento conventions (dragged from the_grid ADR-0001 D1/D2/D7) so code reads identically across genesis/lenny/the_grid:
 
 - **Workspace:** Dart pub workspace + melos; `build_runner` wired into the melos scripts (consistent with ADR-0002's codegen).
-- **Types:** `genesis_foundation` and the `genesis_tree` spine use permanent hand-written immutable value semantics and codecs; elsewhere, use **freezed sealed unions** with `json_serializable` codecs. Compiler-checked exhaustive `switch` expressions remain house style in every package.
+- **Types:** **freezed sealed unions** with `json_serializable` codecs remain the shared convention outside the tree spine and foundation *(amended per ADR-0000 A47, ratified by Nico 2026-08-01)*. `genesis_foundation` and the `genesis_tree` spine are the precise exemption: they permanently use hand-written const constructors, value equality, `hashCode`, `copyWith`, and version-1 JSON codecs, with no Freezed/json_serializable dependency — a settled scope rule, not a temporary workaround. **Exhaustive `switch` expressions remain house style**, compiler-checked, on both sides of the exemption. `genesis_taxonomy` continues to use its `build ^4` code-generation path.
 - **Lints:** the shared `analysis_options.yaml` shape — `strict-casts`/`strict-inference`/`strict-raw-types`, `prefer_single_quotes`, `sort_pub_dependencies`, `unawaited_futures`, `avoid_print`.
 - **Architecture:** predictable-flutter layering (Services → Repositories → Interactors/Selectors → View) and its testing discipline — **Fakes, not mocks**; state-transition assertions; offline unit tests.
 
 **Not dragged** (domain-specific, stay grid-local): the bd-CLI/Dolt substrate, the convergence reconciler (grid ADR-0003), domain projections over beads (grid ADR-0002), the exploration-protocol observability surface.
 
 **Caveat — Riverpod stays consumer-side:** lenny is on `flutter_riverpod 2.6`, grid on `riverpod 3.0`. genesis's `tree` core is a reconciler **engine** with its own owner/sink — not Riverpod-based — so Riverpod remains a *consumer* choice; any future genesis-level reactive helper must pick a lane or stay Riverpod-agnostic.
+
+## Decision 9 — `genesis_foundation`: the diagnostics layer below the spine *(promotes A46, ratified by Nico 2026-08-01)*
+
+`genesis_foundation` is the dependency-free diagnostics protocol layer BELOW `genesis_tree` — Flutter's own layering (foundation's `Diagnosticable` below widgets). `tree` depends on and re-exports foundation in full; foundation imports neither tree nor perception. `TreeSnapshot` remains the typed, versioned wire contract in foundation, so out-of-process clients (viewers, recorders) need foundation alone. The spine (`Seed`/`Branch`) and perception's elements self-describe via foundation's `Diagnosticable`/`debugFillProperties` — diagnostics never depend on an external type-switch projector.
 
 ## Decision 8 — Bootstrap plan: ADR-first, one campaign, path deps now *(promotes A10)*
 
