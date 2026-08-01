@@ -1,4 +1,3 @@
-import 'package:genesis_diagnostics/genesis_diagnostics.dart';
 import 'package:genesis_perception/genesis_perception.dart';
 import 'package:test/test.dart';
 

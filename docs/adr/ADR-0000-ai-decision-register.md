@@ -400,4 +400,13 @@ Rejected this round: `grammar`/`koine`/`covenant` (first float), `nomenclature`/
 ## A45 (2026-08-01) — genesis_diagnostics temporarily uses hand-written immutable codecs · AI
 
 **Decision:** `genesis_diagnostics` ships hand-written immutable sealed classes with const constructors, value equality, `copyWith`, and hand-rolled version-1 JSON codecs instead of ADR-0001 Decision 7's Freezed/json_serializable convention. It retains compiler-checked exhaustive switches. Stable Freezed (through 3.2.5) requires `build ^2/^3`, which cannot co-resolve in the shared workspace with `genesis_taxonomy`'s direct `build ^4.0.6`; Freezed 4 is dev-only. Revisit this deviation when Freezed 4 reaches stable.
-**Affects:** `packages/diagnostics` only. **Status:** pending — Nico to promote or reject.
+**Affects:** `packages/diagnostics` only. **Status:** Superseded by A46 (2026-08-01).
+
+## A46 (2026-08-01) — Tree spine value semantics are permanently hand-written · AI
+
+**Decision:** The `genesis_tree` spine and its diagnostics projection permanently ship hand-written immutable value semantics: const constructors, value equality, `hashCode`, `copyWith`, compiler-checked exhaustive switches, and hand-rolled version-1 JSON codecs. This surface does not depend on Freezed or json_serializable. This is a design convention, not a temporary dependency workaround; independently, stable Freezed through 3.2.5 still requires `build ^2/^3`, which cannot co-resolve in the workspace with `genesis_taxonomy`'s direct `build ^4.0.6`.
+**Affects:** `packages/tree`, including `TreeSnapshot`, `TreeNode`, and `DiagnosticsProperty`. **Supersedes:** A45 (mark A45's status line 'Superseded by A46 (2026-08-01)'; do not delete the entry). **Promotion payload** — upon Nico's promotion, ADR-0001 Decision 7's Types bullet becomes exactly:
+
+> - **Types:** **freezed sealed unions** with `json_serializable` codecs remain the shared convention outside the tree spine. The `genesis_tree` spine and its diagnostics projection are the precise exemption: they permanently use hand-written const constructors, value equality, `hashCode`, `copyWith`, and version-1 JSON codecs, with no Freezed/json_serializable dependency. **Exhaustive `switch` expressions remain house style**, compiler-checked, on both sides of the exemption. `genesis_taxonomy` continues to use its `build ^4` code-generation path.
+
+**Status:** pending — Nico to promote or reject.

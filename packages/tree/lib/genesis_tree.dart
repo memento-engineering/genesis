@@ -11,6 +11,7 @@ library;
 
 export 'src/branch.dart' hide InheritedBranchBase;
 export 'src/component_branch.dart';
+export 'src/diagnostics_property.dart';
 export 'src/inherited.dart';
 export 'src/key.dart';
 export 'src/multi_child.dart';
@@ -21,4 +22,5 @@ export 'src/stateful.dart';
 export 'src/stateless.dart';
 export 'src/tree_context.dart' show TreeContext;
 export 'src/tree_owner.dart';
+export 'src/tree_snapshot.dart';
 export 'src/watch.dart';

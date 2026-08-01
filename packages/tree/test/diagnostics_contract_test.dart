@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:genesis_diagnostics/genesis_diagnostics.dart';
+import 'package:genesis_tree/genesis_tree.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -62,6 +62,21 @@ void main() {
       ],
     ),
   ];
+
+  test('equal diagnostics values have equal hash codes', () {
+    const left = DiagnosticsProperty.string(
+      name: 'label',
+      level: DiagnosticsLevel.info,
+      value: 'build',
+    );
+    const right = DiagnosticsProperty.string(
+      name: 'label',
+      level: DiagnosticsLevel.info,
+      value: 'build',
+    );
+    expect(left, right);
+    expect(left.hashCode, right.hashCode);
+  });
 
   test('version-1 snapshot round-trips the recursive tree', () {
     final snapshot = TreeSnapshot(

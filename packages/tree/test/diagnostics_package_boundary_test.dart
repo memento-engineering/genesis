@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 void main() {
-  test('grid-only station lock state is absent from genesis_diagnostics', () {
+  test('grid-only station lock state is absent from genesis_tree', () {
     final library = Directory('lib');
     final dartFiles = library
         .listSync(recursive: true)
@@ -40,8 +40,12 @@ void main() {
         .map((file) => file.readAsStringSync())
         .join('\n');
     expect(source, isNot(contains('package:freezed_annotation')));
-    expect(source, isNot(contains('part ')));
+    expect(source, isNot(matches(RegExp(r'^part\s', multiLine: true))));
     expect(source, isNot(contains('@freezed')));
     expect(source, isNot(contains('@Freezed')));
+  });
+
+  test('the standalone diagnostics package is retired', () {
+    expect(Directory('../diagnostics').existsSync(), isFalse);
   });
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6
+
+- Add the version-1 typed diagnostics projection to the tree spine: `TreeSnapshot`, `TreeNode`, and severity-bearing `DiagnosticsProperty` variants, with hand-written immutable value semantics and JSON codecs.
+
 ## 0.1.5
 
 - Docs only, no API changes. The README gains **"The artifact layer —

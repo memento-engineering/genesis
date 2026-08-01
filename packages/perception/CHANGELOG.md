@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Add the typed version-1 perception-tree projection and surface its diagnostics value types through the existing full `genesis_tree` re-export. Requires `genesis_tree` `^0.1.6`.
+
 ## 0.1.3
 
 - `PerceptionContext` gains `getInheritedSeedOfExactType<T>()` via its
