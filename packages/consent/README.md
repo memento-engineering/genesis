@@ -143,7 +143,7 @@ merge semantics) is a separate, explicitly-funded requirement.
   (the component is not on this surface).
 - **Dispatch seam.** consent dispatches through the `Actionable` interface a
   component's element implements (`branch is Actionable`), so the tree core
-  carries no action vocabulary. A blessed action-dispatch hook in the tree core
+  carries no action vocabulary. A sanctioned action-dispatch hook in the tree core
   is a possible future refinement (deferred).
 - Tests consume `genesis_perception`'s `Node`/`Field` plus a stateful `Counter`
   fixture — no reinvented vocabulary.
