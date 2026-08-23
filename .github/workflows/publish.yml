@@ -1,0 +1,42 @@
+name: Publish to pub.dev
+
+# Per-package release tags: `<pub-name>-v<version>` (power_station ADR-0003 D1
+# naming, pointed at pub.dev). Pushing e.g. `genesis_tree-v0.2.1` publishes
+# packages/tree via pub.dev's GitHub-Actions trusted publishing (OIDC — no
+# long-lived credential in CI). Genesis dirs drop the `genesis_` prefix:
+# pub name `genesis_<dir>` lives at `packages/<dir>`.
+#
+# Each package needs automated publishing enabled once on its pub.dev admin
+# page (repository memento-engineering/genesis, tag pattern
+# `<pub-name>-v{{version}}`).
+#
+# Push ONE tag per `git push` — GitHub fires no workflows for a push
+# containing more than three tags, and dependency ordering needs per-tag
+# pushes anyway.
+
+on:
+  push:
+    tags:
+      - 'genesis_*-v[0-9]+.[0-9]+.[0-9]+'
+      - 'genesis_*-v[0-9]+.[0-9]+.[0-9]+-*'
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    outputs:
+      directory: ${{ steps.parse.outputs.directory }}
+    steps:
+      - id: parse
+        run: |
+          pkg="${GITHUB_REF_NAME%-v*}"
+          dir="${pkg#genesis_}"
+          echo "directory=$dir" >> "$GITHUB_OUTPUT"
+          echo "Publishing package: $pkg from packages/$dir (tag $GITHUB_REF_NAME)"
+
+  publish:
+    needs: parse
+    permissions:
+      id-token: write # pub.dev OIDC trusted publishing
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      working-directory: packages/${{ needs.parse.outputs.directory }}
