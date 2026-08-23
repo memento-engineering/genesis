@@ -11,6 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
+        with:
+          # Pin to the org's dev SDK: the 3.13 formatter reformats files the
+          # 3.12 formatter accepts, so a floating SDK turns the format gate
+          # red on untouched code (main red since 2026-08-12).
+          sdk: 3.12.2
 
       - name: Resolve workspace
         run: dart pub get
