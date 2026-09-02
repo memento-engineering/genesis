@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- **Breaking:** aspect-scoped inherited dependencies. `InheritedBranch.addDependent` is now `addDependent(Branch branch, {Object? aspect})`, and `dependOnInheritedSeedOfExactType<T>()` gained an optional `{Object? aspect}` on `Branch`, `TreeContext`, and `SproutContext`. Migration for a subclass that overrides `addDependent`: add the named parameter and forward it — `void addDependent(Branch branch, {Object? aspect}) => super.addDependent(branch, aspect: aspect);` — which preserves the base provider's rejection of an aspect it has no vocabulary for. An external `TreeContext` implementation adds `{Object? aspect}` to its `dependOnInheritedSeedOfExactType` and passes it straight through to the handle it wraps. Call sites that pass no aspect are unchanged.
+- Add `InheritedModelSeed<T, A>` and `InheritedModelBranch<T, A>`: an ambient value whose dependents may subscribe to a single ASPECT of it. A dependent that passes `aspect:` is invalidated only when `updateShouldNotifyDependent` reports the change as touching one of the aspects it asked for; omitting the aspect keeps the whole-value dependency `InheritedSeed` always gave. Lookup is unchanged — still the nearest provider of exact value-type `T` — so a plain `InheritedSeed<T>` provider throws `ArgumentError` for a non-null aspect, and a model provider throws for an aspect of the wrong type. Experimental, like the rest of the composition layer.
+
 ## 0.2.0
 
 - **Breaking:** `debugFillProperties` now receives a `DiagnosticsBuilder` — replace `properties.add(...)` list calls with the builder `add()`; wire format unchanged.
