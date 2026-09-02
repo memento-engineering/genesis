@@ -30,8 +30,13 @@ abstract class TreeContext {
   /// exact type [T], registering the bound branch as a dependent; null when
   /// no such ancestor exists.
   ///
+  /// Pass [aspect] to scope the dependency to one aspect of an
+  /// `InheritedModelSeed<T, A>` provider; omitting it depends on the whole
+  /// value. A non-null [aspect] against a plain `InheritedSeed` provider
+  /// throws [ArgumentError].
+  ///
   /// Throws [StateError] after the bound branch unmounts.
-  T? dependOnInheritedSeedOfExactType<T extends Object>();
+  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect});
 
   /// Returns the nearest ancestor value provided via `InheritedSeed<T>` of
   /// exact type [T] **without registering a dependency**; null when no such
@@ -92,9 +97,9 @@ class _BranchContext implements TreeContext {
   }
 
   @override
-  T? dependOnInheritedSeedOfExactType<T extends Object>() {
+  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) {
     _checkMounted('dependOnInheritedSeedOfExactType');
-    return _branch.dependOnInheritedSeedOfExactType<T>();
+    return _branch.dependOnInheritedSeedOfExactType<T>(aspect: aspect);
   }
 
   @override

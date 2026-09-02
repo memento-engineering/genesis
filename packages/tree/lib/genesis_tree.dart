@@ -5,8 +5,8 @@
 /// with `TreeContext` as a separate capability handle — never the `Branch`
 /// itself — and `TreeOwner` as the scheduler. The composition layer
 /// (`ComponentBranch`, `StatelessSeed`/`StatefulSeed` + `State`,
-/// `MultiChildSeed`, `SingleChildSeed` + `Nest`, `InheritedSeed`, `Watch`) is
-/// EXPERIMENTAL and may change before 1.0.
+/// `MultiChildSeed`, `SingleChildSeed` + `Nest`, `InheritedSeed`/
+/// `InheritedModelSeed`, `Watch`) is EXPERIMENTAL and may change before 1.0.
 library;
 
 export 'package:genesis_foundation/genesis_foundation.dart';

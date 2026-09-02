@@ -47,6 +47,10 @@ before 1.0:
   (`dependOnInheritedSeedOfExactType` to subscribe,
   `getInheritedSeedOfExactType` for a dependency-free snapshot — the
   `initState` read);
+- `InheritedModelSeed` — the same, scoped by ASPECT: a dependent subscribes
+  with `dependOnInheritedSeedOfExactType<T>(aspect: a)` and rebuilds only for
+  changes `updateShouldNotifyDependent` reports as touching its aspects; omit
+  the aspect to depend on the whole value;
 - `Watch<T>` — a stream → rebuild builder;
 - `Sprout` — a **hooks-style** stateful primitive (`useState` → `StateCell`,
   `useStream`, `useEffect`, `useMemo`): one class, state declared inline in
