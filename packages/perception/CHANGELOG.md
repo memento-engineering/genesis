@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- **Breaking:** `PerceptionContext` carries the tree handle's aspect-scoped dependency, so `dependOnInheritedSeedOfExactType<T>()` now takes an optional `{Object? aspect}`. Migration: an external `PerceptionContext` implementation adds `{Object? aspect}` to that method and forwards it to the handle it wraps. Call sites that pass no aspect are unchanged.
+- Require `genesis_tree ^0.3.0`: `InheritedModelSeed` and the aspect-scoped dependency reach perception through its full tree re-export, with no perception-side code change.
+
 ## 0.2.0
 
 - **Breaking:** `debugFillProperties` now receives a `DiagnosticsBuilder` — replace `properties.add(...)` list calls with the builder `add()`; wire format unchanged.
