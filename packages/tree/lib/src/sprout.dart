@@ -338,8 +338,8 @@ class _SproutContext implements SproutContext {
   String get branchId => _delegate.branchId;
 
   @override
-  T? dependOnInheritedSeedOfExactType<T extends Object>() =>
-      _delegate.dependOnInheritedSeedOfExactType<T>();
+  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) =>
+      _delegate.dependOnInheritedSeedOfExactType<T>(aspect: aspect);
 
   @override
   T? getInheritedSeedOfExactType<T extends Object>() =>

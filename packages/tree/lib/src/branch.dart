@@ -55,10 +55,18 @@ abstract class Branch with Diagnosticable, DiagnosticableTree {
   /// Returns the nearest ancestor value provided via `InheritedSeed<T>` of
   /// exact type [T], registering this branch as a dependent; null when no
   /// such ancestor exists.
-  T? dependOnInheritedSeedOfExactType<T extends Object>() {
+  ///
+  /// Pass [aspect] to scope the dependency. When the resolved provider is an
+  /// `InheritedModelSeed<T, A>`, this branch is invalidated only for changes
+  /// its `updateShouldNotifyDependent` reports as affecting the aspects this
+  /// branch asked for. Omitting [aspect] depends on the WHOLE value — the
+  /// behaviour of every plain `InheritedSeed<T>` provider, and of this method
+  /// before aspects existed. Passing an [aspect] to a plain provider throws
+  /// [ArgumentError].
+  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) {
     final provider = _findInheritedProviderOfExactType<T>();
     if (provider == null) return null;
-    provider.addDependent(this);
+    provider.addDependent(this, aspect: aspect);
     (_dependencies ??= {}).add(provider);
     return provider.getValueAs<T>();
   }
@@ -387,7 +395,11 @@ abstract class InheritedBranchBase extends Branch {
   T? getValueAs<T extends Object>();
 
   /// Registers [branch] as a dependent. Idempotent (set-add).
-  void addDependent(Branch branch);
+  ///
+  /// [aspect] scopes the dependency for an aspect-aware provider
+  /// (`InheritedModelBranch`). A provider with no aspect vocabulary rejects a
+  /// non-null [aspect] with [ArgumentError].
+  void addDependent(Branch branch, {Object? aspect});
 
   /// Removes [branch] from this branch's dependent set and clears the
   /// corresponding back-link in [branch]'s dependency set.

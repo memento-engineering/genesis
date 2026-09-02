@@ -97,7 +97,7 @@ class StatefulBranch extends ComponentBranch {
   Seed build(TreeContext context) => _state.build(context);
 
   @override
-  T? dependOnInheritedSeedOfExactType<T extends Object>() {
+  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) {
     assert(
       !_debugInInitState,
       'dependOnInheritedSeedOfExactType<$T>() called from initState. '
@@ -113,7 +113,7 @@ class StatefulBranch extends ComponentBranch {
       'a change. Use getInheritedSeedOfExactType<$T>() for a last read '
       'during teardown.',
     );
-    return super.dependOnInheritedSeedOfExactType<T>();
+    return super.dependOnInheritedSeedOfExactType<T>(aspect: aspect);
   }
 
   @override

@@ -59,8 +59,8 @@ class _PerceptionHandle implements PerceptionContext {
   String get perceptionId => _inner.branchId;
 
   @override
-  T? dependOnInheritedSeedOfExactType<T extends Object>() =>
-      _inner.dependOnInheritedSeedOfExactType<T>();
+  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) =>
+      _inner.dependOnInheritedSeedOfExactType<T>(aspect: aspect);
 
   @override
   T? getInheritedSeedOfExactType<T extends Object>() =>
