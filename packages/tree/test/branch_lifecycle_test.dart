@@ -91,18 +91,15 @@ void main() {
       expect(() => branch.update(_S()), throwsA(isA<AssertionError>()));
     });
 
-    test(
-      'update: throws AssertionError when canUpdate=false (key mismatch)',
-      () {
-        final owner = TreeOwner();
-        addTearDown(owner.dispose);
-        final branch = owner.mountRoot(_S(key: ValueKey('a'))) as _B;
-        expect(
-          () => branch.update(_S(key: ValueKey('b'))),
-          throwsA(isA<AssertionError>()),
-        );
-      },
-    );
+    test('update: throws StateError when canUpdate=false (key mismatch)', () {
+      final owner = TreeOwner();
+      addTearDown(owner.dispose);
+      final branch = owner.mountRoot(_S(key: ValueKey('a'))) as _B;
+      expect(
+        () => branch.update(_S(key: ValueKey('b'))),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 
   group('branchId: owner-scoped issuance', () {

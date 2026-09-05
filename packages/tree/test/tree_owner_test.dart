@@ -197,12 +197,12 @@ void main() {
     );
 
     test(
-      'pathological re-dirty: performRebuild re-dirties self throws AssertionError',
+      'pathological re-dirty: performRebuild re-dirties self throws StateError',
       () {
         final owner = TreeOwner();
         final root = owner.mountRoot(_RedirtyS());
         root.markNeedsRebuild();
-        expect(() => owner.flush(), throwsA(isA<AssertionError>()));
+        expect(() => owner.flush(), throwsA(isA<StateError>()));
         owner.dispose();
       },
     );

@@ -176,7 +176,7 @@ void main() {
       expect(el.field.value, equals(2));
     });
 
-    test('update throws AssertionError when canUpdate=false (key change)', () {
+    test('update throws StateError when canUpdate=false (key change)', () {
       final owner = PerceptionOwner();
       addTearDown(owner.dispose);
       final el =
@@ -184,7 +184,7 @@ void main() {
               as FieldElement;
       expect(
         () => el.update(const Field('n', 1, key: ValueKey('b'))),
-        throwsA(isA<AssertionError>()),
+        throwsA(isA<StateError>()),
       );
     });
   });

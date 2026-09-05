@@ -92,18 +92,15 @@ void main() {
       expect(() => el.update(_P()), throwsA(isA<AssertionError>()));
     });
 
-    test(
-      'update: throws AssertionError when canUpdate=false (key mismatch)',
-      () {
-        final owner = PerceptionOwner();
-        addTearDown(owner.dispose);
-        final el = owner.mountRoot(_P(key: ValueKey('a'))) as _E;
-        expect(
-          () => el.update(_P(key: ValueKey('b'))),
-          throwsA(isA<AssertionError>()),
-        );
-      },
-    );
+    test('update: throws StateError when canUpdate=false (key mismatch)', () {
+      final owner = PerceptionOwner();
+      addTearDown(owner.dispose);
+      final el = owner.mountRoot(_P(key: ValueKey('a'))) as _E;
+      expect(
+        () => el.update(_P(key: ValueKey('b'))),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 
   group('perceptionId: owner-scoped issuance', () {

@@ -197,12 +197,12 @@ void main() {
     );
 
     test(
-      'pathological re-dirty: performRebuild re-dirties self throws AssertionError',
+      'pathological re-dirty: performRebuild re-dirties self throws StateError',
       () {
         final owner = PerceptionOwner();
         final root = owner.mountRoot(_RedirtyP()) as _RedirtyE;
         root.markNeedsHarvest();
-        expect(() => owner.flushHarvest(), throwsA(isA<AssertionError>()));
+        expect(() => owner.flushHarvest(), throwsA(isA<StateError>()));
         owner.dispose();
       },
     );

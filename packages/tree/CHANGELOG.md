@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Three tree invariants were debug-only assertions and vanished from release builds; **release builds now enforce** all three, throwing `StateError` with the message the assertion carried. (1) `TreeOwner.flush` rejects a branch re-dirtied after it was already built in the pass — a branch that calls `setState` from inside its own `build` used to drain forever in release; the pass is bounded at one build per branch. (2) `Branch.updateChildren` rejects duplicate non-null sibling keys before it touches the old child list, so a rejected reconcile leaves the mounted tree unchanged. (3) `Branch.update` rejects a seed that fails `canUpdate` instead of swapping in an incompatible config. No API change; code that relied on catching `AssertionError` from these three paths now catches `StateError`.
+
 ## 0.3.0
 
 - **Breaking:** aspect-scoped inherited dependencies. `InheritedBranch.addDependent` is now `addDependent(Branch branch, {Object? aspect})`, and `dependOnInheritedSeedOfExactType<T>()` gained an optional `{Object? aspect}` on `Branch`, `TreeContext`, and `SproutContext`. Migration for a subclass that overrides `addDependent`: add the named parameter and forward it — `void addDependent(Branch branch, {Object? aspect}) => super.addDependent(branch, aspect: aspect);` — which preserves the base provider's rejection of an aspect it has no vocabulary for. An external `TreeContext` implementation adds `{Object? aspect}` to its `dependOnInheritedSeedOfExactType` and passes it straight through to the handle it wraps. Call sites that pass no aspect are unchanged.
