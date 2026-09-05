@@ -224,14 +224,21 @@ abstract class Branch with Diagnosticable, DiagnosticableTree {
   /// [seed] already in place. What the hook does is layered — components
   /// re-run `build()`; non-component branches respond with their own
   /// rebuild semantics.
+  ///
+  /// Throws [StateError] when [Seed.canUpdate] is false — in release builds
+  /// too, because swapping in an incompatible config silently corrupts the
+  /// branch's identity.
   @mustCallSuper
   void update(Seed newSeed) {
     assert(_mounted, 'update() called on unmounted branch.');
-    assert(
-      Seed.canUpdate(_seed, newSeed),
-      'update() called with a Seed that fails canUpdate; '
-      'use unmount() + mount() for type/key changes.',
-    );
+    if (!Seed.canUpdate(_seed, newSeed)) {
+      throw StateError(
+        'update() called with a Seed that fails canUpdate: mounted '
+        '${_seed.runtimeType} (key ${_seed.key}) cannot be updated with '
+        '${newSeed.runtimeType} (key ${newSeed.key}); use unmount() + mount() '
+        'for type/key changes.',
+      );
+    }
     _seed = newSeed;
     rebuild(force: true);
   }
@@ -315,7 +322,7 @@ abstract class Branch with Diagnosticable, DiagnosticableTree {
   /// old branches left unconsumed (a keyed branch whose key vanished, or
   /// unkeyed branches past the new length) are unmounted after the pass.
   List<Branch> updateChildren(List<Branch> oldChildren, List<Seed> newSeeds) {
-    assert(_debugChildKeysUnique(newSeeds));
+    _childKeysUnique(newSeeds);
     final Map<Key, Branch> keyedOld = {};
     final List<Branch> unkeyedOld = [];
     for (final branch in oldChildren) {
@@ -354,14 +361,14 @@ abstract class Branch with Diagnosticable, DiagnosticableTree {
     return result;
   }
 
-  /// Debug guard (zero release cost — stripped with the [assert] that calls it):
-  /// a key must identify exactly ONE child of a parent. Two siblings sharing a
-  /// key collapse silently here — the keyed-reconcile map keeps only one, and a
-  /// key-based tree lookup (an A2UI id → branch resolve) would find more than
-  /// one. Catch it at build time with the offending key, rather than as a
-  /// downstream ambiguity. Unkeyed children are matched positionally and are
-  /// exempt.
-  bool _debugChildKeysUnique(List<Seed> seeds) {
+  /// Unconditional guard, release included (O(n) in the child count): a key
+  /// must identify exactly ONE child of a parent. Two siblings sharing a key
+  /// collapse silently in keyed reconcile — the map keeps only one, and a
+  /// key-based tree lookup would find more than one. Throws [StateError]
+  /// naming the offending key BEFORE any old branch is touched, so a rejected
+  /// list leaves the mounted tree exactly as it was. Unkeyed children are
+  /// matched positionally and are exempt.
+  void _childKeysUnique(List<Seed> seeds) {
     final seen = <Key>{};
     for (final seed in seeds) {
       final key = seed.key;
@@ -375,7 +382,6 @@ abstract class Branch with Diagnosticable, DiagnosticableTree {
         );
       }
     }
-    return true;
   }
 }
 

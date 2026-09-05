@@ -22,8 +22,9 @@ class TreeOwner {
   Branch? _root;
   int _nextId = 0;
 
-  // null when idle; non-null during a flush pass (debug-only — always null
-  // in release).
+  // Non-null only during a flush pass: every branch this pass has begun
+  // building. Enforced in release, not just debug — the drain loop is
+  // unbounded by design, and one build per branch per pass is what bounds it.
   Set<Branch>? _builtThisPass;
 
   /// Issues the next owner-scoped branch id: a monotonic decimal string
@@ -44,13 +45,22 @@ class TreeOwner {
   }
 
   /// Adds [branch] to the dirty set; called by [Branch.markNeedsRebuild].
+  ///
+  /// Throws [StateError] when [branch] has already been built in the flush
+  /// pass now running: rebuilding it again would drain forever. The common
+  /// cause is a state change made from inside `build()` (setState during
+  /// build) — move it to an event handler or a passive effect.
   void scheduleRebuildFor(Branch branch) {
-    assert(
-      _builtThisPass == null || !_builtThisPass!.contains(branch),
-      'branch ${branch.branchId} re-dirtied after it was already built in '
-      'this flush pass; performRebuild must not re-dirty an already-built '
-      'branch',
-    );
+    final builtThisPass = _builtThisPass;
+    if (builtThisPass != null && builtThisPass.contains(branch)) {
+      throw StateError(
+        'branch ${branch.branchId} was re-dirtied after it had already been '
+        'built in this flush pass. A branch that rebuilt itself during its '
+        'own build (setState during build), or that a later build re-dirties, '
+        'would loop the drain forever. Move the state change to an event '
+        'handler or a passive effect.',
+      );
+    }
     final wasEmpty = _dirtyBranches.isEmpty;
     _dirtyBranches.add(branch);
     if (wasEmpty) onNeedsFlush?.call();
@@ -65,30 +75,26 @@ class TreeOwner {
   /// drained. A branch that was force-rebuilt earlier by an update cascade
   /// (the update cascade clears its dirty flag) or unmounted after being
   /// scheduled is drained but excluded — it was not rebuilt by this call.
-  /// Branches dirtied mid-flush are rebuilt in the same pass and included.
+  /// Branches dirtied mid-flush are rebuilt in the same pass and included —
+  /// but a branch already built in this pass may not be re-dirtied; that
+  /// throws [StateError] (see [scheduleRebuildFor]).
   List<Branch> flush() {
     final rebuilt = <Branch>[];
-    assert(() {
-      _builtThisPass = {};
-      return true;
-    }());
+    final builtThisPass = _builtThisPass = <Branch>{};
     try {
       while (_dirtyBranches.isNotEmpty) {
         final branch = _dirtyBranches.first;
         _dirtyBranches.remove(branch);
+        // Recorded BEFORE the rebuild: a branch that re-dirties itself during
+        // its own build must trip the guard at the call site, not queue a
+        // second build of the same branch.
+        builtThisPass.add(branch);
         final willRebuild = branch.mounted && branch.dirty;
         branch.rebuild();
         if (willRebuild) rebuilt.add(branch);
-        assert(() {
-          _builtThisPass!.add(branch);
-          return true;
-        }());
       }
     } finally {
-      assert(() {
-        _builtThisPass = null;
-        return true;
-      }());
+      _builtThisPass = null;
     }
     return rebuilt;
   }

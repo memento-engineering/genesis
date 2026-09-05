@@ -77,8 +77,9 @@ final class DialogueSurface {
       message.components,
       rootId: rootComponentId,
     );
+    final branch = owner.mountRoot(rootSeed);
     _surfaceId = message.surfaceId;
-    return _rootBranch = owner.mountRoot(rootSeed);
+    return _rootBranch = branch;
   }
 
   /// Reconciles [message] against the mounted tree **by key**, preserving
@@ -86,7 +87,7 @@ final class DialogueSurface {
   ///
   /// Builds the new keyed `Seed` tree from the message and calls
   /// `rootBranch.update(newRootSeed)`: the root id is `"root"` (a stable key)
-  /// and the root type is unchanged, so `canUpdate` holds and the root
+  /// and its component type is immutable across re-emissions, so the root
   /// branch updates in place, reconciling its children by key. Kept ids keep
   /// their `Branch` instances (reordered at their new index, deep into moved
   /// subtrees); a prop-changed id keeps its instance with the new seed;
@@ -99,7 +100,9 @@ final class DialogueSurface {
   /// the reconcile. Keyed identity preservation still holds; only the skip
   /// optimization does not fire on the wire path.
   ///
-  /// Throws [StateError] if called before [mount].
+  /// Throws [StateError] if called before [mount], or if the message changes
+  /// the root component type. The surface performs this compatibility check
+  /// in release mode before it touches the mounted tree.
   void apply(UpdateComponents message) {
     final root = _rootBranch;
     if (root == null) {
@@ -110,7 +113,20 @@ final class DialogueSurface {
       message.components,
       rootId: rootComponentId,
     );
-    _surfaceId = message.surfaceId;
+    if (!Seed.canUpdate(root.seed, newRootSeed)) {
+      throw StateError(
+        'DialogueSurface.apply: incompatible root seed for component id '
+        '"$rootComponentId" — the mounted root is ${root.seed.runtimeType} '
+        'and this message builds a ${newRootSeed.runtimeType}. The root '
+        'component type is immutable across re-emissions: the surface has no '
+        'teardown/remount path, so a root-type change is rejected here rather '
+        'than corrupting the mounted tree. Re-emit the same root component '
+        'type, or build a new surface.',
+      );
+    }
     root.update(newRootSeed);
+    // Committed only after a successful update: a throwing update must not
+    // leave the surface metadata describing a message the tree never took.
+    _surfaceId = message.surfaceId;
   }
 }
