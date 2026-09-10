@@ -1,9 +1,22 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:analyzer_testing/package_config_file_builder.dart';
 import 'package:genesis_lint/src/rules/no_stored_tree_context.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
 import 'support/tree_context_rule_test.dart';
+
+const _holderSource = r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+class Holder {
+  TreeContext? saved;
+
+  void store(TreeContext context) {
+    saved = context;
+  }
+}
+''';
 
 void main() {
   defineReflectiveSuite(() {
@@ -197,6 +210,18 @@ class Holder {
 ''');
   }
 
+  Future<void> test_framework_library_owner() async {
+    writePackageConfig2(testPackageRootPath, packageName: 'genesis_tree');
+    newFile(
+      '$testPackageLibPath/genesis_tree.dart',
+      getFile('/package/genesis_tree/lib/genesis_tree.dart').readAsStringSync(),
+    );
+    final path = '$testPackageLibPath/src/fake_holder.dart';
+    newFile(path, _holderSource);
+
+    await assertNoDiagnosticsInFile(path);
+  }
+
   Future<void> test_managed_branch_owner() async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
@@ -228,6 +253,25 @@ class ContextWrapper implements TreeContext {
   void markNeedsRebuild() => inner.markNeedsRebuild();
 }
 ''');
+  }
+
+  Future<void> test_non_framework_library_owner() async {
+    final config = PackageConfigFileBuilder()
+      ..add(
+        name: 'genesis_tree',
+        rootFolder: getFolder('/package/genesis_tree'),
+      );
+    writePackageConfig2(
+      testPackageRootPath,
+      packageName: 'app',
+      config: config,
+    );
+    final path = '$testPackageLibPath/holder.dart';
+    newFile(path, _holderSource);
+
+    await assertDiagnosticsInFile(path, [
+      lint(_holderSource.indexOf('context;'), 'context'.length),
+    ]);
   }
 
   Future<void> test_subtype() async {

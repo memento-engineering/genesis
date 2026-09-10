@@ -335,6 +335,9 @@ bool _isCoreInterface(DartType? type, Set<String> names) {
 }
 
 bool _isManagedOwner(AstNode node) {
+  final unit = node.thisOrAncestorOfType<CompilationUnit>();
+  if (isTreeFrameworkLibrary(unit?.declaredFragment?.element)) return true;
+
   for (AstNode? ancestor = node; ancestor != null; ancestor = ancestor.parent) {
     final type = switch (ancestor) {
       ClassDeclaration declaration =>

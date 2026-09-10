@@ -1,3 +1,4 @@
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 const _treePackagePrefix = 'package:genesis_tree/';
@@ -16,6 +17,16 @@ bool isTreeContextType(DartType? type) =>
 /// unmanaged object retaining a tree capability.
 bool isTreeManagedType(DartType? type) =>
     _isGenesisInterface(type, const {'Branch', 'TreeContext'});
+
+/// A declaration in a `package:genesis_tree/...` library is framework storage,
+/// even when its owning type is not a `Branch` or `TreeContext`.
+bool isTreeFrameworkLibrary(LibraryElement? library) {
+  final uri = library?.uri;
+  return uri != null &&
+      uri.scheme == 'package' &&
+      uri.pathSegments.isNotEmpty &&
+      uri.pathSegments.first == 'genesis_tree';
+}
 
 bool _isGenesisInterface(DartType? type, Set<String> names) {
   final erasedType = type?.extensionTypeErasure;
