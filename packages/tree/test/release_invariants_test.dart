@@ -1,4 +1,4 @@
-// The three tree guards this file covers throw in RELEASE builds, not only
+// The four tree guards this file covers throw in RELEASE builds, not only
 // under assertions. It is therefore run both ways in validation:
 //   dart test test/release_invariants_test.dart   (assertions ON)
 //   dart run  test/release_invariants_test.dart   (assertions OFF)
@@ -49,6 +49,27 @@ class _ProbeBranch extends Branch {
   }
 
   List<String> get log => (seed as _Probe).log;
+}
+
+class _RetainedContext {
+  TreeContext? value;
+}
+
+class _RetainedContextSeed extends StatefulSeed {
+  const _RetainedContextSeed(this.retainedContext);
+
+  final _RetainedContext retainedContext;
+
+  @override
+  State<_RetainedContextSeed> createState() => _RetainedContextState();
+}
+
+class _RetainedContextState extends State<_RetainedContextSeed> {
+  @override
+  Seed build(TreeContext context) {
+    seed.retainedContext.value = context;
+    return const Leaf('retained-context-child');
+  }
 }
 
 void main() {
@@ -131,4 +152,40 @@ void main() {
       ),
     );
   });
+
+  test(
+    'retained TreeContext rejects dependency registration outside every tree phase',
+    () {
+      final owner = TreeOwner();
+      addTearDown(owner.dispose);
+      final retainedContext = _RetainedContext();
+      final provider =
+          owner.mountRoot(
+                InheritedSeed<int>(
+                  value: 7,
+                  child: _RetainedContextSeed(retainedContext),
+                ),
+              )
+              as InheritedBranch<int>;
+      final branch = provider.childBranch as StatefulBranch;
+
+      expect(provider.dependents, isEmpty);
+      expect(branch.dependencies, isEmpty);
+      expect(
+        () => retainedContext.value!.dependOnInheritedSeedOfExactType<int>(),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'dependOnInheritedSeedOfExactType<int>() called outside a tree '
+                'lifecycle phase (TreeLifecyclePhase.notInTreePhase). '
+                'Register inherited dependencies from '
+                'didChangeDependencies() or build().',
+          ),
+        ),
+      );
+      expect(provider.dependents, isEmpty);
+      expect(branch.dependencies, isEmpty);
+    },
+  );
 }

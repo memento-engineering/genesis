@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'branch.dart';
 import 'seed.dart';
+import 'tree_lifecycle_phase.dart';
 
 /// Signature for argument-free callbacks.
 typedef VoidCallback = void Function();
@@ -9,6 +10,14 @@ typedef VoidCallback = void Function();
 /// Owns the root branch, holds the dirty set, and drives synchronous
 /// depth-ordered flushes — the BuildOwner.buildScope analogue.
 class TreeOwner {
+  /// Creates a tree owner and composes its existing flush marker into the
+  /// shared lifecycle phase guard.
+  TreeOwner() {
+    lifecyclePhaseGuard = TreeLifecyclePhaseGuard(
+      isBuilding: () => _builtThisPass != null,
+    );
+  }
+
   final SplayTreeSet<Branch> _dirtyBranches = SplayTreeSet((a, b) {
     final d = a.depth.compareTo(b.depth);
     return d != 0 ? d : a.branchId.compareTo(b.branchId);
@@ -26,6 +35,9 @@ class TreeOwner {
   // building. Enforced in release, not just debug — the drain loop is
   // unbounded by design, and one build per branch per pass is what bounds it.
   Set<Branch>? _builtThisPass;
+
+  /// The shared lifecycle phase definition for drivers owned by this tree.
+  late final TreeLifecyclePhaseGuard lifecyclePhaseGuard;
 
   /// Issues the next owner-scoped branch id: a monotonic decimal string
   /// starting at '0'. Stable for the branch's lifetime.

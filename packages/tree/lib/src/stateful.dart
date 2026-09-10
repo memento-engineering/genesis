@@ -7,6 +7,7 @@ import 'package:meta/meta.dart';
 import 'component_branch.dart';
 import 'seed.dart';
 import 'tree_context.dart';
+import 'tree_lifecycle_phase.dart';
 import 'tree_owner.dart';
 
 /// A [Seed] whose branch owns mutable [State] — the StatefulWidget analogue.
@@ -80,8 +81,6 @@ class StatefulBranch extends ComponentBranch {
   late final State<StatefulSeed> _state;
   bool _firstBuild = true;
   bool _needsDidChangeDependencies = false;
-  bool _debugInInitState = false;
-  bool _debugInDispose = false;
 
   /// The mutable state owned by this branch.
   ///
@@ -98,21 +97,7 @@ class StatefulBranch extends ComponentBranch {
 
   @override
   T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) {
-    assert(
-      !_debugInInitState,
-      'dependOnInheritedSeedOfExactType<$T>() called from initState. '
-      'initState never re-runs, so caching the value read here goes stale '
-      'when the provider changes. For a one-shot read use '
-      'getInheritedSeedOfExactType<$T>(); to cache and track the value, move '
-      'the lookup to didChangeDependencies(), which re-runs on every change.',
-    );
-    assert(
-      !_debugInDispose,
-      'dependOnInheritedSeedOfExactType<$T>() called from dispose. The '
-      'branch is unmounting — a dependency registered now can never observe '
-      'a change. Use getInheritedSeedOfExactType<$T>() for a last read '
-      'during teardown.',
-    );
+    owner!.lifecyclePhaseGuard.checkCanDependOnInheritedSeedOfExactType<T>();
     return super.dependOnInheritedSeedOfExactType<T>(aspect: aspect);
   }
 
@@ -124,37 +109,33 @@ class StatefulBranch extends ComponentBranch {
 
   @override
   void performRebuild() {
-    if (_firstBuild) {
-      _firstBuild = false;
-      assert(() {
-        _debugInInitState = true;
-        return true;
-      }());
-      _state.initState();
-      assert(() {
-        _debugInInitState = false;
-        return true;
-      }());
-      _needsDidChangeDependencies = true;
-    }
-    if (_needsDidChangeDependencies) {
-      _needsDidChangeDependencies = false;
-      _state.didChangeDependencies();
-    }
-    super.performRebuild();
+    final lifecyclePhaseGuard = owner!.lifecyclePhaseGuard;
+    lifecyclePhaseGuard.runInPhase<void>(TreeLifecyclePhase.building, () {
+      if (_firstBuild) {
+        _firstBuild = false;
+        lifecyclePhaseGuard.runInPhase<void>(
+          TreeLifecyclePhase.initState,
+          _state.initState,
+        );
+        _needsDidChangeDependencies = true;
+      }
+      if (_needsDidChangeDependencies) {
+        _needsDidChangeDependencies = false;
+        lifecyclePhaseGuard.runInPhase<void>(
+          TreeLifecyclePhase.didChangeDependencies,
+          _state.didChangeDependencies,
+        );
+      }
+      super.performRebuild();
+    });
   }
 
   @override
   void unmount() {
-    assert(() {
-      _debugInDispose = true;
-      return true;
-    }());
-    _state.dispose();
-    assert(() {
-      _debugInDispose = false;
-      return true;
-    }());
+    owner!.lifecyclePhaseGuard.runInPhase<void>(
+      TreeLifecyclePhase.dispose,
+      _state.dispose,
+    );
     super.unmount();
   }
 }
