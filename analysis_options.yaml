@@ -1,5 +1,10 @@
 include: package:lints/recommended.yaml
+plugins:
+  genesis_lint:
+    path: packages/lint
 analyzer:
+  exclude:
+    - packages/lint/**
   language:
     strict-casts: true
     strict-inference: true

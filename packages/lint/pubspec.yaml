@@ -1,0 +1,17 @@
+name: genesis_lint
+description: Static analysis rules for safe genesis tree context use.
+version: 0.1.0
+repository: https://github.com/memento-engineering/genesis
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  analysis_server_plugin: 0.3.22
+  analyzer: 14.3.0
+
+dev_dependencies:
+  analyzer_testing: 0.4.1
+  lints: ^6.1.0
+  test: ^1.26.1
+  test_reflective_loader: ^0.4.0

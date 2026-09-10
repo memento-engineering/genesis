@@ -21,6 +21,9 @@ jobs:
       - name: Resolve workspace
         run: dart pub get
 
+      - name: Check lint extension
+        run: cd packages/lint && dart pub get && dart analyze && dart format --output=none --set-exit-if-changed . && dart test
+
       - name: Analyze
         run: dart analyze
 
