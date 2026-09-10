@@ -16,6 +16,7 @@ export 'src/component_branch.dart';
 export 'src/inherited.dart';
 export 'src/key.dart';
 export 'src/multi_child.dart';
+export 'src/provider.dart';
 export 'src/seed.dart';
 export 'src/single_child.dart';
 export 'src/sprout.dart';
