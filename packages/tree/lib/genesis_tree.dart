@@ -22,5 +22,6 @@ export 'src/sprout.dart';
 export 'src/stateful.dart';
 export 'src/stateless.dart';
 export 'src/tree_context.dart' show TreeContext;
+export 'src/tree_lifecycle_phase.dart';
 export 'src/tree_owner.dart';
 export 'src/watch.dart';
