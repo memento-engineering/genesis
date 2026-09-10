@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:genesis_tree/genesis_tree.dart';
 import 'package:test/test.dart';
 
@@ -16,6 +18,7 @@ final class _Participant with TreeLifecycleParticipant {
 
   TreeSnapshotReader? snapshotReader;
   TreeWatchingReader? watchingReader;
+  final List<TreeDependencyScope> dependencyScopes = [];
   int? snapshot;
   final List<int?> watched = [];
   int disposeCount = 0;
@@ -29,9 +32,13 @@ final class _Participant with TreeLifecycleParticipant {
   }
 
   @override
-  void didChangeDependencies(TreeWatchingReader reader) {
+  void didChangeDependencies(
+    TreeWatchingReader reader,
+    TreeDependencyScope scope,
+  ) {
     events?.add('didChangeDependencies');
     watchingReader = reader;
+    dependencyScopes.add(scope);
     if (watchInt) watched.add(reader.watch<int>());
     onDidChangeDependencies?.call();
   }
@@ -116,6 +123,14 @@ StateError _expectStateError(void Function() callback) {
   fail('Expected callback to throw StateError.');
 }
 
+Future<bool> _readScopeAfter(
+  TreeDependencyScope scope,
+  Future<void> release,
+) async {
+  await release;
+  return scope.isCurrent;
+}
+
 void main() {
   test('created participant runs initState then didChangeDependencies before '
       'first build and watches every change', () {
@@ -171,6 +186,48 @@ void main() {
     expect(participant.watched, [1, 2, 3]);
     expect(createCount, 1);
   });
+
+  test(
+    'each dependency pass receives a fresh scope and supersedes the prior pass',
+    () {
+      final participant = _Participant(watchInt: true);
+      late _InheritedHostState host;
+      final owner = TreeOwner();
+      addTearDown(owner.dispose);
+
+      owner.mountRoot(
+        _InheritedHost(
+          onCreate: (state) => host = state,
+          describe: () => LifecycleProvider<_Participant>.value(
+            participant,
+            child: const _Leaf(),
+          ),
+        ),
+      );
+
+      final first = participant.dependencyScopes.single;
+      expect(first.isCurrent, isTrue);
+
+      host.update(2);
+      owner.flush();
+
+      expect(participant.dependencyScopes, hasLength(2));
+      final second = participant.dependencyScopes[1];
+      expect(second, isNot(same(first)));
+      expect(first.isCurrent, isFalse);
+      expect(second.isCurrent, isTrue);
+
+      host.update(3);
+      owner.flush();
+
+      expect(participant.dependencyScopes, hasLength(3));
+      final third = participant.dependencyScopes[2];
+      expect(third, isNot(same(second)));
+      expect(first.isCurrent, isFalse);
+      expect(second.isCurrent, isFalse);
+      expect(third.isCurrent, isTrue);
+    },
+  );
 
   test('captured readers throw StateError after their hook returns through the '
       'owner phase guard', () {
@@ -287,6 +344,39 @@ void main() {
     expect(adopted.disposeCount, 0);
   });
 
+  test('unmount invalidates the outstanding scope without throwing', () async {
+    Future<void> probe({required bool created}) async {
+      final participant = _Participant();
+      final owner = TreeOwner();
+      final provider = created
+          ? LifecycleProvider<_Participant>(
+              create: () => participant,
+              child: const _Leaf(),
+            )
+          : LifecycleProvider<_Participant>.value(
+              participant,
+              child: const _Leaf(),
+            );
+      owner.mountRoot(provider);
+
+      final release = Completer<void>();
+      final observation = _readScopeAfter(
+        participant.dependencyScopes.single,
+        release.future,
+      );
+
+      owner.unmountRoot();
+      release.complete();
+
+      expect(await observation, isFalse);
+      expect(participant.disposeCount, created ? 1 : 0);
+      owner.dispose();
+    }
+
+    await probe(created: true);
+    await probe(created: false);
+  });
+
   test('first-mount failure disposes a created participant once but not an '
       'adopted participant', () {
     final created = _Participant();
@@ -303,6 +393,7 @@ void main() {
       throwsA(isA<_MountFailure>()),
     );
     expect(created.disposeCount, 1);
+    expect(created.dependencyScopes.single.isCurrent, isFalse);
 
     final adopted = _Participant();
     final adoptedOwner = TreeOwner();
@@ -318,7 +409,40 @@ void main() {
       throwsA(isA<_MountFailure>()),
     );
     expect(adopted.disposeCount, 0);
+    expect(adopted.dependencyScopes.single.isCurrent, isFalse);
   });
+
+  test(
+    'old dependency scope becomes non-current while the provider remains mounted',
+    () {
+      final participant = _Participant(watchInt: true);
+      late _InheritedHostState host;
+      final owner = TreeOwner();
+      addTearDown(owner.dispose);
+      final root =
+          owner.mountRoot(
+                _InheritedHost(
+                  onCreate: (state) => host = state,
+                  describe: () => LifecycleProvider<_Participant>.value(
+                    participant,
+                    child: const _Leaf(),
+                  ),
+                ),
+              )
+              as StatefulBranch;
+      final inherited = root.child as InheritedBranch<int>;
+      final lifecycleProviderBranch = inherited.childBranch!;
+      final oldScope = participant.dependencyScopes.single;
+
+      host.update(2);
+      owner.flush();
+
+      expect(inherited.childBranch, same(lifecycleProviderBranch));
+      expect(lifecycleProviderBranch.mounted, isTrue);
+      expect(oldScope.isCurrent, isFalse);
+      expect(participant.dependencyScopes.last.isCurrent, isTrue);
+    },
+  );
 
   group('same-key reconcile guard', () {
     const key = ValueKey<String>('participant');
