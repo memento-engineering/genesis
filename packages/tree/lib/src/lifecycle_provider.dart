@@ -46,6 +46,7 @@ final class _LifecycleProviderState<T extends TreeLifecycleParticipant>
   late final TreeLifecyclePhaseGuard Function() _guard;
   late final T _participant;
   late final bool _created;
+  _TreeDependencyScope? _dependencyScope;
   bool _ownsParticipant = false;
 
   TreeLifecyclePhaseGuard get _lifecyclePhaseGuard => _guard();
@@ -69,9 +70,12 @@ final class _LifecycleProviderState<T extends TreeLifecycleParticipant>
 
   @override
   void didChangeDependencies() {
+    _dependencyScope?._invalidate();
+    final scope = _TreeDependencyScope();
+    _dependencyScope = scope;
     final reader = _LifecycleWatchingReader(context, _lifecyclePhaseGuard);
     try {
-      _participant.didChangeDependencies(reader);
+      _participant.didChangeDependencies(reader, scope);
     } finally {
       reader._revoke();
     }
@@ -101,7 +105,14 @@ final class _LifecycleProviderState<T extends TreeLifecycleParticipant>
   }
 
   @override
-  void dispose() => _disposeOwnedParticipant();
+  void dispose() => _disposeLifecycle();
+
+  void _disposeLifecycle() {
+    final dependencyScope = _dependencyScope;
+    _dependencyScope = null;
+    dependencyScope?._invalidate();
+    _disposeOwnedParticipant();
+  }
 
   void _disposeOwnedParticipant() {
     if (!_ownsParticipant) return;
@@ -132,13 +143,22 @@ final class _LifecycleProviderBranch<T extends TreeLifecycleParticipant>
       try {
         owner!.lifecyclePhaseGuard.runInPhase<void>(
           TreeLifecyclePhase.dispose,
-          (state as _LifecycleProviderState<T>)._disposeOwnedParticipant,
+          (state as _LifecycleProviderState<T>)._disposeLifecycle,
         );
       } finally {
         Error.throwWithStackTrace(error, stackTrace);
       }
     }
   }
+}
+
+final class _TreeDependencyScope implements TreeDependencyScope {
+  bool _isCurrent = true;
+
+  @override
+  bool get isCurrent => _isCurrent;
+
+  void _invalidate() => _isCurrent = false;
 }
 
 abstract base class _LifecycleReader {
