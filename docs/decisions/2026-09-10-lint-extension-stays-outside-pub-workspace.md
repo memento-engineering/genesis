@@ -59,7 +59,7 @@ constraints.
 * Bad, because repository tooling must enter `packages/lint` for its own
   resolution and tests instead of relying on melos workspace membership.
 
-## Alternatives Considered
+## Considered Options
 
 Add `packages/lint` to the pub workspace for melos convenience. Rejected: the
 benefit is avoiding one directory change in scripts, while the cost is letting
