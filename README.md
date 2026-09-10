@@ -62,6 +62,8 @@ Pure Dart, no Flutter — everything runs on the bare VM.
 
 ## Design model
 
+Consumers of `genesis_tree` follow the [D–H tree-consumption doctrine](docs/design/tree-consumption.md): five rules for dependency tracking, reactive reads, service boundaries, pure descriptions, and I/O.
+
 genesis is built decision-first. Two documents govern it:
 
 - **`docs/adr/ADR-0000-ai-decision-register.md`** — a living register where every
