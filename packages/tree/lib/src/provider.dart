@@ -23,6 +23,107 @@ typedef ProviderCreate<T extends Object> = T Function(TreeContext context);
 /// from an ancestor-provided one goes down before its dependency).
 typedef ProviderDispose<T extends Object> = void Function(T value);
 
+/// Derives an owned [R] from one ambient [T] and the nullable previous [R].
+typedef ProxyProviderUpdate<T extends Object, R extends Object> =
+    R Function(TreeContext context, T value, R? previous);
+
+/// Derives an owned [R] from two ambient values and the nullable previous [R].
+typedef ProxyProvider2Update<
+  T1 extends Object,
+  T2 extends Object,
+  R extends Object
+> = R Function(TreeContext context, T1 value1, T2 value2, R? previous);
+
+/// Derives an owned [R] from three ambient values and the nullable previous
+/// [R].
+typedef ProxyProvider3Update<
+  T1 extends Object,
+  T2 extends Object,
+  T3 extends Object,
+  R extends Object
+> =
+    R Function(
+      TreeContext context,
+      T1 value1,
+      T2 value2,
+      T3 value3,
+      R? previous,
+    );
+
+/// Derives an owned [R] from four ambient values and the nullable previous
+/// [R].
+typedef ProxyProvider4Update<
+  T1 extends Object,
+  T2 extends Object,
+  T3 extends Object,
+  T4 extends Object,
+  R extends Object
+> =
+    R Function(
+      TreeContext context,
+      T1 value1,
+      T2 value2,
+      T3 value3,
+      T4 value4,
+      R? previous,
+    );
+
+/// Derives an owned [R] from five ambient values and the nullable previous
+/// [R].
+typedef ProxyProvider5Update<
+  T1 extends Object,
+  T2 extends Object,
+  T3 extends Object,
+  T4 extends Object,
+  T5 extends Object,
+  R extends Object
+> =
+    R Function(
+      TreeContext context,
+      T1 value1,
+      T2 value2,
+      T3 value3,
+      T4 value4,
+      T5 value5,
+      R? previous,
+    );
+
+/// Derives an owned [R] from six ambient values and the nullable previous [R].
+typedef ProxyProvider6Update<
+  T1 extends Object,
+  T2 extends Object,
+  T3 extends Object,
+  T4 extends Object,
+  T5 extends Object,
+  T6 extends Object,
+  R extends Object
+> =
+    R Function(
+      TreeContext context,
+      T1 value1,
+      T2 value2,
+      T3 value3,
+      T4 value4,
+      T5 value5,
+      T6 value6,
+      R? previous,
+    );
+
+/// Shared provider configuration consumed by the one ownership state/branch
+/// path. Adopted [Provider.value] instances are the only values outside that
+/// path.
+abstract class _ProviderSeedBase<R extends Object>
+    extends SingleChildStatefulSeed {
+  const _ProviderSeedBase({super.child, super.key});
+
+  ProviderCreate<R>? get _providerCreate;
+  ProviderDispose<R>? get _providerDispose;
+  bool get _treeOwnsValues;
+
+  @override
+  SingleChildStatefulBranch createBranch() => _ProviderBranch(this);
+}
+
 /// A MOUNTED SEED providing an ambient value of type [T] to its subtree.
 ///
 /// `Provider` sits on the single-child ancestry ([SingleChildStatefulSeed]),
@@ -69,7 +170,7 @@ typedef ProviderDispose<T extends Object> = void Function(T value);
 /// Mount and unmount are announced to the enclosing [ProviderScope] so
 /// availability notification is bidirectional; delivery is deferred past the
 /// announcing flush pass (see [ProviderScope] for the scheduling contract).
-final class Provider<T extends Object> extends SingleChildStatefulSeed {
+final class Provider<T extends Object> extends _ProviderSeedBase<T> {
   /// A provider whose value the TREE creates and owns: [create] runs once per
   /// mount and [dispose] (if any) runs at unmount with the created value.
   ///
@@ -97,10 +198,265 @@ final class Provider<T extends Object> extends SingleChildStatefulSeed {
   final T? _value;
 
   @override
-  SingleChildState<Provider<T>> createState() => _ProviderState<T>();
+  ProviderCreate<T>? get _providerCreate => _create;
 
   @override
-  SingleChildStatefulBranch createBranch() => _ProviderBranch(this);
+  ProviderDispose<T>? get _providerDispose => _dispose;
+
+  @override
+  bool get _treeOwnsValues => _create != null;
+
+  @override
+  SingleChildState<Provider<T>> createState() => _ProviderState<T>();
+}
+
+/// Shared lifecycle configuration for every ProxyProvider arity.
+abstract class _ProxyProviderBase<R extends Object>
+    extends _ProviderSeedBase<R> {
+  const _ProxyProviderBase({
+    ProviderCreate<R>? create,
+    ProviderDispose<R>? dispose,
+    super.child,
+    super.key,
+  }) : _create = create,
+       _dispose = dispose;
+
+  final ProviderCreate<R>? _create;
+  final ProviderDispose<R>? _dispose;
+
+  @override
+  ProviderCreate<R>? get _providerCreate => _create;
+
+  @override
+  ProviderDispose<R>? get _providerDispose => _dispose;
+
+  @override
+  bool get _treeOwnsValues => true;
+
+  /// Watches every declared input, then returns null when any is absent or
+  /// invokes this arity's typed callback with all resolved values.
+  R? _derive(TreeContext context, R? previous);
+
+  @override
+  SingleChildState<_ProxyProviderBase<R>> createState() =>
+      _ProxyProviderState<R>();
+}
+
+/// Provides an owned [R] derived from an ambient [T].
+///
+/// Every build watches [T]. Once it resolves, [update] receives the current
+/// value and the previous [R], and its result is projected to descendants.
+/// The optional [create] runs once at mount and seeds the first update's
+/// `previous`; without it, the first update receives null. Every distinct
+/// created or updated [R] is tree-owned and disposed when replaced or after
+/// descendant teardown. There is deliberately no `.value` form: adoption
+/// remains [Provider.value].
+final class ProxyProvider<T extends Object, R extends Object>
+    extends _ProxyProviderBase<R> {
+  /// Creates a one-input proxy provider.
+  const ProxyProvider({
+    super.create,
+    required this.update,
+    super.dispose,
+    super.child,
+    super.key,
+  });
+
+  /// Derives the next [R] from [T] and the nullable previous [R].
+  final ProxyProviderUpdate<T, R> update;
+
+  @override
+  R? _derive(TreeContext context, R? previous) {
+    final value = context.watch<T>();
+    if (value == null) return null;
+    return update(context, value, previous);
+  }
+}
+
+/// Provides an owned [R] derived from two ambient values.
+final class ProxyProvider2<
+  T1 extends Object,
+  T2 extends Object,
+  R extends Object
+>
+    extends _ProxyProviderBase<R> {
+  /// Creates a two-input proxy provider.
+  const ProxyProvider2({
+    super.create,
+    required this.update,
+    super.dispose,
+    super.child,
+    super.key,
+  });
+
+  /// Derives the next [R] after both dependencies resolve.
+  final ProxyProvider2Update<T1, T2, R> update;
+
+  @override
+  R? _derive(TreeContext context, R? previous) {
+    final value1 = context.watch<T1>();
+    final value2 = context.watch<T2>();
+    if (value1 == null || value2 == null) return null;
+    return update(context, value1, value2, previous);
+  }
+}
+
+/// Provides an owned [R] derived from three ambient values.
+final class ProxyProvider3<
+  T1 extends Object,
+  T2 extends Object,
+  T3 extends Object,
+  R extends Object
+>
+    extends _ProxyProviderBase<R> {
+  /// Creates a three-input proxy provider.
+  const ProxyProvider3({
+    super.create,
+    required this.update,
+    super.dispose,
+    super.child,
+    super.key,
+  });
+
+  /// Derives the next [R] after all three dependencies resolve.
+  final ProxyProvider3Update<T1, T2, T3, R> update;
+
+  @override
+  R? _derive(TreeContext context, R? previous) {
+    final value1 = context.watch<T1>();
+    final value2 = context.watch<T2>();
+    final value3 = context.watch<T3>();
+    if (value1 == null || value2 == null || value3 == null) return null;
+    return update(context, value1, value2, value3, previous);
+  }
+}
+
+/// Provides an owned [R] derived from four ambient values.
+final class ProxyProvider4<
+  T1 extends Object,
+  T2 extends Object,
+  T3 extends Object,
+  T4 extends Object,
+  R extends Object
+>
+    extends _ProxyProviderBase<R> {
+  /// Creates a four-input proxy provider.
+  const ProxyProvider4({
+    super.create,
+    required this.update,
+    super.dispose,
+    super.child,
+    super.key,
+  });
+
+  /// Derives the next [R] after all four dependencies resolve.
+  final ProxyProvider4Update<T1, T2, T3, T4, R> update;
+
+  @override
+  R? _derive(TreeContext context, R? previous) {
+    final value1 = context.watch<T1>();
+    final value2 = context.watch<T2>();
+    final value3 = context.watch<T3>();
+    final value4 = context.watch<T4>();
+    if (value1 == null || value2 == null || value3 == null || value4 == null) {
+      return null;
+    }
+    return update(context, value1, value2, value3, value4, previous);
+  }
+}
+
+/// Provides an owned [R] derived from five ambient values.
+final class ProxyProvider5<
+  T1 extends Object,
+  T2 extends Object,
+  T3 extends Object,
+  T4 extends Object,
+  T5 extends Object,
+  R extends Object
+>
+    extends _ProxyProviderBase<R> {
+  /// Creates a five-input proxy provider.
+  const ProxyProvider5({
+    super.create,
+    required this.update,
+    super.dispose,
+    super.child,
+    super.key,
+  });
+
+  /// Derives the next [R] after all five dependencies resolve.
+  final ProxyProvider5Update<T1, T2, T3, T4, T5, R> update;
+
+  @override
+  R? _derive(TreeContext context, R? previous) {
+    final value1 = context.watch<T1>();
+    final value2 = context.watch<T2>();
+    final value3 = context.watch<T3>();
+    final value4 = context.watch<T4>();
+    final value5 = context.watch<T5>();
+    if (value1 == null ||
+        value2 == null ||
+        value3 == null ||
+        value4 == null ||
+        value5 == null) {
+      return null;
+    }
+    return update(context, value1, value2, value3, value4, value5, previous);
+  }
+}
+
+/// Provides an owned [R] derived from six ambient values.
+final class ProxyProvider6<
+  T1 extends Object,
+  T2 extends Object,
+  T3 extends Object,
+  T4 extends Object,
+  T5 extends Object,
+  T6 extends Object,
+  R extends Object
+>
+    extends _ProxyProviderBase<R> {
+  /// Creates a six-input proxy provider.
+  const ProxyProvider6({
+    super.create,
+    required this.update,
+    super.dispose,
+    super.child,
+    super.key,
+  });
+
+  /// Derives the next [R] after all six dependencies resolve.
+  final ProxyProvider6Update<T1, T2, T3, T4, T5, T6, R> update;
+
+  @override
+  R? _derive(TreeContext context, R? previous) {
+    // Resolve every dependency before checking for a miss. An early return
+    // would leave later absent types unregistered with ProviderScope.
+    final value1 = context.watch<T1>();
+    final value2 = context.watch<T2>();
+    final value3 = context.watch<T3>();
+    final value4 = context.watch<T4>();
+    final value5 = context.watch<T5>();
+    final value6 = context.watch<T6>();
+    if (value1 == null ||
+        value2 == null ||
+        value3 == null ||
+        value4 == null ||
+        value5 == null ||
+        value6 == null) {
+      return null;
+    }
+    return update(
+      context,
+      value1,
+      value2,
+      value3,
+      value4,
+      value5,
+      value6,
+      previous,
+    );
+  }
 }
 
 /// The AVAILABILITY REGISTRY — one per tree, near the tree root.
@@ -203,76 +559,90 @@ extension ProviderTreeContext on TreeContext {
 
 // --- Provider internals -----------------------------------------------------
 
-final class _ProviderState<T extends Object>
-    extends SingleChildState<Provider<T>> {
-  /// The tree-created value, null for a `.value` provider. Created exactly
-  /// once per mount, in [initState]; never touched by reconcile.
-  T? _owned;
+/// Owns one provider-created value and its mount-captured disposal policy.
+///
+/// Both Provider and every ProxyProvider arity use this owner. Adopted
+/// Provider.value instances never enter it. Replacement installs the new
+/// value first, then disposes a distinct previous value; identity retention
+/// is not a replacement. Final disposal clears first, so every value is
+/// disposed at most once even when a callback throws.
+final class _ProviderValueOwner<R extends Object> {
+  _ProviderValueOwner(this._disposeValue);
 
-  /// The unmount disposal, captured AT CREATION (ownership follows
-  /// construction): a created value pairs with the dispose it was authored
-  /// with; an adopted value captures nothing and is never tree-disposed.
-  ///
-  /// NOT run by this state's own `dispose` — `StatefulBranch.unmount` runs
-  /// `State.dispose` BEFORE the subtree comes down, which would hand every
-  /// descendant's teardown read an already-disposed value and invert the
-  /// inner-before-outer order across a [Nest] chain. It is threaded into the
-  /// built [_ProviderInherited] and runs in [_ProviderInheritedBranch.unmount]
-  /// AFTER the subtree is fully unmounted.
-  void Function()? _disposeOwned;
+  final ProviderDispose<R>? _disposeValue;
+  R? _value;
+
+  R? get value => _value;
+
+  void _replace(R value) {
+    final previous = _value;
+    if (identical(previous, value)) return;
+    _value = value;
+    if (previous != null) _disposeValue?.call(previous);
+  }
+
+  void _dispose() {
+    final value = _value;
+    _value = null;
+    if (value != null) _disposeValue?.call(value);
+  }
+}
+
+/// The one ownership/projection state shared by Provider and ProxyProvider.
+abstract class _ProviderStateBase<
+  S extends _ProviderSeedBase<R>,
+  R extends Object
+>
+    extends SingleChildState<S> {
+  _ProviderValueOwner<R>? _owner;
 
   @override
   void initState() {
-    final create = seed._create;
-    if (create == null) return;
-    final value = create(context);
-    _owned = value;
-    final dispose = seed._dispose;
-    if (dispose != null) _disposeOwned = () => dispose(value);
+    if (!seed._treeOwnsValues) return;
+    final owner = _owner = _ProviderValueOwner<R>(seed._providerDispose);
+    final create = seed._providerCreate;
+    if (create != null) owner._replace(create(context));
   }
 
-  /// The failed-mount unwind (see [_ProviderBranch]): disposes the owned
-  /// value NOW, exactly once, because this provider's mount failed and the
-  /// substrate will never attach — and therefore never unmount — the branch
-  /// that would have carried the disposal. Nulling both fields keeps THIS
-  /// method single-shot and stops any future [buildWithChild] from
-  /// re-threading the disposal; an already-built [_ProviderInherited] still
-  /// holds the armed closure — what forecloses a double dispose is that its
-  /// branch was orphaned by the failed mount, and unmount, the only site
-  /// that runs the closure, never fires on an orphan.
-  void _disposeOwnedForFailedMount() {
-    final dispose = _disposeOwned;
-    _disposeOwned = null;
-    _owned = null;
-    dispose?.call();
-  }
+  /// Resolves the value to project for this build, or null while a proxy is
+  /// still missing at least one dependency.
+  R? valueForBuild(TreeContext context);
+
+  /// The failed-mount unwind (see [_ProviderBranch]). The same owner later
+  /// carried by [_ProviderInherited] makes this single-shot.
+  void _disposeOwnedForFailedMount() => _owner?._dispose();
+
+  /// Final-disposal fallback for a proxy whose dependencies never resolved,
+  /// so it never built the [_ProviderInherited] that normally disposes after
+  /// descendant teardown. For every projected value this is a no-op because
+  /// that inherited branch has already cleared the same stable owner.
+  void _disposeOwnedAfterSubtree() => _owner?._dispose();
 
   @override
   Seed buildWithChild(TreeContext context, Seed child) {
-    // Pure projection (docs/STYLE.md rule 1): no creation, no registry
-    // mutation, no side effects — the value over the child, nothing else.
-    // Reading seed._value (not a cached copy) is what propagates a `.value`
-    // update through InheritedSeed.updateShouldNotify.
-    //
-    // The kind guard is BIDIRECTIONAL: the provider's kind (create vs .value)
-    // is fixed for the life of a mounted branch, and a flip in either
-    // direction is incoherent — value-to-create has no owned value to
-    // project; create-to-value would silently shadow the owned value with the
-    // adopted one while the unmount disposal stays armed with the original.
-    // This independent kind-swap check is consistent with the
-    // `release-mode-tree-invariants-throw-in-release` decision: like the
-    // unconditional Branch.update and TreeOwner.scheduleRebuildFor guards it
-    // layers on, "a violation is a programming error that must fail loudly."
-    // No substrate guard needs to change here.
+    final value = valueForBuild(context);
+    if (value == null) return child;
+    return _ProviderInherited<R>(value: value, child: child, owner: _owner);
+  }
+}
+
+final class _ProviderState<T extends Object>
+    extends _ProviderStateBase<Provider<T>, T> {
+  @override
+  T? valueForBuild(TreeContext context) {
+    // Reading seed._value (not a cached copy) propagates a `.value` update.
+    // The bidirectional kind guard is deliberately loud in every build mode,
+    // preserving the release-mode invariant doctrine across the shared base.
     final adopted = seed._value;
-    if (adopted != null && _owned != null) {
+    final owned = _owner?.value;
+    if (adopted != null && owned != null) {
       throw StateError(
         'Provider<$T> reconciled from create: into .value — the provider kind '
         'is fixed for the life of a mounted branch (same runtimeType + key '
         'updates in place). Change the type or key to remount instead.',
       );
     }
-    final value = adopted ?? _owned;
+    final value = adopted ?? owned;
     if (value == null) {
       throw StateError(
         'Provider<$T> reconciled from .value into create: — the provider kind '
@@ -280,11 +650,19 @@ final class _ProviderState<T extends Object>
         'updates in place). Change the type or key to remount instead.',
       );
     }
-    return _ProviderInherited<T>(
-      value: value,
-      child: child,
-      disposeOwned: _disposeOwned,
-    );
+    return value;
+  }
+}
+
+final class _ProxyProviderState<R extends Object>
+    extends _ProviderStateBase<_ProxyProviderBase<R>, R> {
+  @override
+  R? valueForBuild(TreeContext context) {
+    final owner = _owner!;
+    final value = seed._derive(context, owner.value);
+    if (value == null) return null;
+    owner._replace(value);
+    return owner.value;
   }
 }
 
@@ -317,7 +695,7 @@ final class _ProviderState<T extends Object>
 /// multi-provider composition surface is [Nest] (which nests, and is fully
 /// covered), so that shape has no production author today.
 final class _ProviderBranch extends SingleChildStatefulBranch {
-  _ProviderBranch(Provider<Object> super.seed);
+  _ProviderBranch(_ProviderSeedBase<Object> super.seed);
 
   /// True until the first (mount-pass) build completes or fails. Rebuilds of
   /// an ATTACHED provider must not run the unwind: a failure there leaves the
@@ -331,9 +709,15 @@ final class _ProviderBranch extends SingleChildStatefulBranch {
     try {
       super.performRebuild();
     } catch (error, stackTrace) {
-      (state as _ProviderState)._disposeOwnedForFailedMount();
+      (state as _ProviderStateBase)._disposeOwnedForFailedMount();
       Error.throwWithStackTrace(error, stackTrace);
     }
+  }
+
+  @override
+  void unmount() {
+    super.unmount();
+    (state as _ProviderStateBase)._disposeOwnedAfterSubtree();
   }
 }
 
@@ -343,14 +727,12 @@ final class _ProviderInherited<T extends Object> extends InheritedSeed<T> {
   const _ProviderInherited({
     required super.value,
     required super.child,
-    required this.disposeOwned,
+    required this.owner,
   });
 
-  /// The owned value's disposal (null for an adopted `.value` instance),
-  /// stable for the life of the mount — created once in `initState` alongside
-  /// the value it pairs with. Run by the branch at unmount, AFTER the subtree
-  /// is fully down (see [_ProviderInheritedBranch.unmount]).
-  final void Function()? disposeOwned;
+  /// The stable owner whose disposal policy was captured at mount. Null only
+  /// for an adopted Provider.value instance.
+  final _ProviderValueOwner<T>? owner;
 
   @override
   InheritedBranch<T> createBranch() => _ProviderInheritedBranch<T>(this);
@@ -403,7 +785,7 @@ final class _ProviderInheritedBranch<T extends Object>
     // pending through its own watch miss.
     _registry?.providerUnmounted(T, List.of(_live));
     _live.clear();
-    final disposeOwned = (seed as _ProviderInherited<T>).disposeOwned;
+    final owner = (seed as _ProviderInherited<T>).owner;
     super.unmount();
     // Dispose an OWNED value only now, with the subtree fully down: a
     // descendant's teardown read (`context.read` from `State.dispose`) saw a
@@ -411,7 +793,7 @@ final class _ProviderInheritedBranch<T extends Object>
     // every inner provider — disposal therefore runs inner-before-outer,
     // reverse creation order (an inner value built from an outer one goes
     // down before its dependency).
-    disposeOwned?.call();
+    owner?._dispose();
   }
 }
 

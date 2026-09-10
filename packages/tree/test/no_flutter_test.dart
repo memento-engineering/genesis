@@ -27,4 +27,31 @@ void main() {
           'Offending files: $hits',
     );
   });
+
+  test('lib/ contains no package:state_notifier imports', () {
+    final re = RegExp(
+      r'''^\s*import\s+['"]package:state_notifier(?:/[^'"]*)?['"]\s*;''',
+      multiLine: true,
+    );
+    final dir = Directory('lib');
+    if (!dir.existsSync()) {
+      fail('lib/ directory not found — run dart test from packages/tree/');
+    }
+    final hits = <String>[];
+    for (final f in dir.listSync(recursive: true).whereType<File>()) {
+      if (!f.path.endsWith('.dart')) continue;
+      final librarySource = f
+          .readAsStringSync()
+          .replaceAll(RegExp(r'/\*[\s\S]*?\*/'), '')
+          .replaceAll(RegExp(r'//.*$', multiLine: true), '');
+      if (re.hasMatch(librarySource)) hits.add(f.path);
+    }
+    expect(
+      hits,
+      isEmpty,
+      reason:
+          'package:state_notifier imports are forbidden in tree/lib. '
+          'Offending files: $hits',
+    );
+  });
 }
