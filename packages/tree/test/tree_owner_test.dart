@@ -22,24 +22,6 @@ class _FakeB extends Branch {
   }
 }
 
-class _SideEffectS extends Seed {
-  const _SideEffectS();
-  @override
-  _SideEffectB createBranch() => _SideEffectB(this);
-}
-
-class _SideEffectB extends Branch {
-  _SideEffectB(super.seed);
-  int buildCount = 0;
-  void Function()? sideEffect;
-
-  @override
-  void performRebuild() {
-    buildCount++;
-    sideEffect?.call();
-  }
-}
-
 class _RedirtyS extends Seed {
   const _RedirtyS();
   @override
@@ -68,6 +50,48 @@ class _ObservingB extends Branch {
   @override
   void performRebuild() {
     lastValue = dependOnInheritedSeedOfExactType<int>();
+  }
+}
+
+class _CascadeSeed extends Seed {
+  const _CascadeSeed();
+
+  @override
+  _CascadeBranch createBranch() => _CascadeBranch(this);
+}
+
+class _CascadeBranch extends Branch {
+  _CascadeBranch(super.seed);
+
+  final List<Branch> _children = [];
+  List<Seed> nextChildSeeds = const [];
+  void Function()? postReconcile;
+  int buildCount = 0;
+
+  List<Branch> get mountedChildren => List.unmodifiable(_children);
+
+  @override
+  void performRebuild() {
+    buildCount++;
+    final updated = updateChildren(_children, nextChildSeeds);
+    _children
+      ..clear()
+      ..addAll(updated);
+    postReconcile?.call();
+  }
+
+  @override
+  void visitChildren(void Function(Branch child) visitor) {
+    _children.forEach(visitor);
+  }
+
+  @override
+  void unmount() {
+    for (final child in _children.reversed) {
+      child.unmount();
+    }
+    _children.clear();
+    super.unmount();
   }
 }
 
@@ -113,11 +137,13 @@ void main() {
 
     test('fires again after flush empties dirty set', () {
       final owner = TreeOwner();
-      final root = owner.mountRoot(_FakeS()) as _FakeB;
+      final root = owner.mountRoot(_FakeS(childConfig: _FakeS())) as _FakeB;
+      root.performRebuild();
+      final child = root.childBranch!;
       int fired = 0;
       owner.onNeedsFlush = () => fired++;
 
-      root.markNeedsRebuild();
+      child.markNeedsRebuild();
       owner.flush();
       root.markNeedsRebuild();
       expect(fired, 2);
@@ -172,29 +198,64 @@ void main() {
       },
     );
 
-    test(
-      'dirty-during-flush: branch dirtied mid-flush is rebuilt in same pass',
-      () {
-        final owner = TreeOwner();
-        final root = owner.mountRoot(_SideEffectS()) as _SideEffectB;
-        // Mount a target as a child of root so it inherits the owner
-        final target = _FakeS().createBranch();
-        target.mount(root, 0);
+    test('restored root may dirty an identical-skipped descendant', () {
+      final owner = TreeOwner();
+      final root = owner.mountRoot(const _CascadeSeed()) as _CascadeBranch;
+      root.nextChildSeeds = [_CascadeSeed(), _CascadeSeed()];
+      root.rebuild(force: true);
+      final first = root.mountedChildren[0] as _CascadeBranch;
+      final target = root.mountedChildren[1] as _CascadeBranch;
 
-        // root's performRebuild will dirty target mid-flush
-        root.sideEffect = () => target.markNeedsRebuild();
-        root.markNeedsRebuild();
+      root.nextChildSeeds = [_CascadeSeed(), target.seed];
+      root.postReconcile = target.markNeedsRebuild;
+      root.markNeedsRebuild();
 
-        owner.flush();
+      final rebuilt = owner.flush();
 
-        expect(root.buildCount, 1);
-        expect(
-          target.buildCount,
-          1,
-        ); // dirtied mid-flush; rebuilt in the same pass
-        owner.dispose();
-      },
-    );
+      expect(first.buildCount, 1, reason: 'the first child was force-updated');
+      expect(target.buildCount, 1);
+      expect(rebuilt, orderedEquals([root, target]));
+      expect(root.mountedChildren.every((child) => child.mounted), isTrue);
+      owner.dispose();
+    });
+
+    test('deeper cousin dirty from a later cascade sibling is rejected', () {
+      final owner = TreeOwner();
+      final root = owner.mountRoot(const _CascadeSeed()) as _CascadeBranch;
+      root.nextChildSeeds = [_CascadeSeed(), _CascadeSeed()];
+      root.rebuild(force: true);
+      final first = root.mountedChildren[0] as _CascadeBranch;
+      final laterSibling = root.mountedChildren[1] as _CascadeBranch;
+      first.nextChildSeeds = [_CascadeSeed()];
+      first.rebuild(force: true);
+      final target = first.mountedChildren.single as _CascadeBranch;
+
+      // The depth-2 target is force-updated earlier in this same cascade. It
+      // would look valid against the depth-0 drained root, but it is not a
+      // descendant of the later depth-1 sibling whose build dirties it.
+      first.nextChildSeeds = [_CascadeSeed()];
+      laterSibling.postReconcile = target.markNeedsRebuild;
+      root.nextChildSeeds = [_CascadeSeed(), _CascadeSeed()];
+      root.markNeedsRebuild();
+
+      expect(
+        owner.flush,
+        throwsA(
+          isA<AssertionError>().having(
+            (error) => error.message,
+            'message',
+            allOf(
+              contains('branch ${target.branchId}'),
+              contains('branch ${laterSibling.branchId}'),
+              contains('descendant'),
+              contains('may not be visited in this flush pass'),
+            ),
+          ),
+        ),
+      );
+      expect(target.buildCount, 1, reason: 'already updated in this cascade');
+      owner.dispose();
+    });
 
     test(
       'pathological re-dirty: performRebuild re-dirties self throws StateError',
