@@ -1,3 +1,7 @@
+## 0.4.0
+
+Stable promotion of `0.4.0-dev.1`: the same content, published on the stable rung on Nico's promotion call (2026-09-12). The wave is additive over 0.3.1; the `0.4.0-dev.1` entry below carries the full list.
+
 # Changelog
 
 ## 0.4.0-dev.1
