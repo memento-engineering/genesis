@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- Require `genesis_tree ^0.4.0`: the published pin moves off the 0.3.x line so consumers that
+  adopted genesis_tree 0.4.0 (grid_engine 0.4.0-dev.1 and up) can resolve perception beside it.
+  No perception-side API change; a caret consumer on `genesis_perception ^0.3.0` picks this up
+  automatically, and one still on genesis_tree 0.3.x keeps resolving 0.3.0.
+
 ## 0.3.0
 
 - **Breaking:** `PerceptionContext` carries the tree handle's aspect-scoped dependency, so `dependOnInheritedSeedOfExactType<T>()` now takes an optional `{Object? aspect}`. Migration: an external `PerceptionContext` implementation adds `{Object? aspect}` to that method and forwards it to the handle it wraps. Call sites that pass no aspect are unchanged.
