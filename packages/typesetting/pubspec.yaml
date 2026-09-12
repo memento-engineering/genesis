@@ -10,7 +10,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
-  genesis_tree: ^0.4.0
+  genesis_tree: ^0.4.0-dev.1
   meta: ^1.15.0
 
 dev_dependencies:

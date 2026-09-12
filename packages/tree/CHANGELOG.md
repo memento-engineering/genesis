@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0-dev.1
+
+Prerelease on the `dev` rung: this wave is additive over 0.3.1 (nothing published in 0.3.1 is removed or changed) and its API is still moving; stable `0.4.0` is a separate, human-promoted act.
+
+- Add the provider composition family to the tree composition layer: the dependency-free provider primitives (`Provider`, `ProviderScope`, `ProviderTreeContext`, `AvailabilityRegistry`, `LifecycleProvider`) and their contract suite, lifted out of `grid_engine`'s private sources and exported publicly. The provider kind-swap check is an independent `StateError` in every build mode.
+- Add the lifecycle phase guard (`TreeLifecyclePhase`, `TreeLifecyclePhaseGuard`, `TreeOwner.lifecyclePhaseGuard`): one lifecycle phase definition for tree drivers, composed with the owner flush marker; retained-context dependency registration before mutation is rejected.
+- Add the proxy provider ladder (`ProxyProvider` through `ProxyProvider6`): one- through six-input proxy providers that derive owned ambient values through the existing provider lifecycle and availability registry, sharing replacement and teardown ownership across providers.
+- Add lifecycle participation for long-lived non-node values (`TreeLifecycleParticipant`, `TreeSnapshotReader`, `TreeWatchingReader`): call-scoped snapshot and watching readers driven through the shared phase guard, with mounted identity retained across reconciliation; only participants the provider constructed are disposed. Retained reader use and invalid in-place participant replacement fail loudly in every build mode.
+- Add dependency supersession scopes (`TreeDependencyScope`): `TreeLifecycleParticipant.didChangeDependencies` receives a retainable scope that becomes non-current on the next pass or on teardown, and the provider invalidates scopes before participant disposal for owned and adopted participants alike, so continuation staleness stays out of the synchronous build path.
+- Fix: mid-flush dirties are guarded by build ancestry, so a cascade-dirtied descendant no longer trips the one-build-per-branch invariant.
+
 ## 0.3.1
 
 - Three tree invariants were debug-only assertions and vanished from release builds; **release builds now enforce** all three, throwing `StateError` with the message the assertion carried. (1) `TreeOwner.flush` rejects a branch re-dirtied after it was already built in the pass — a branch that calls `setState` from inside its own `build` used to drain forever in release; the pass is bounded at one build per branch. (2) `Branch.updateChildren` rejects duplicate non-null sibling keys before it touches the old child list, so a rejected reconcile leaves the mounted tree unchanged. (3) `Branch.update` rejects a seed that fails `canUpdate` instead of swapping in an incompatible config. No API change; code that relied on catching `AssertionError` from these three paths now catches `StateError`.
