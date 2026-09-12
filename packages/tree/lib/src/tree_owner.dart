@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:meta/meta.dart';
+
 import 'branch.dart';
 import 'seed.dart';
 import 'tree_lifecycle_phase.dart';
@@ -36,12 +38,40 @@ class TreeOwner {
   // unbounded by design, and one build per branch per pass is what bounds it.
   Set<Branch>? _builtThisPass;
 
+  // Set only while assertions are enabled. Unlike [_builtThisPass], this
+  // follows nested rebuilds so a synchronous update cascade is checked against
+  // the branch whose hook is actually executing.
+  Branch? _debugCurrentBuildTarget;
+
   /// The shared lifecycle phase definition for drivers owned by this tree.
   late final TreeLifecyclePhaseGuard lifecyclePhaseGuard;
 
   /// Issues the next owner-scoped branch id: a monotonic decimal string
   /// starting at '0'. Stable for the branch's lifetime.
   String issueId() => (_nextId++).toString();
+
+  /// Package-internal: runs [build] with [branch] installed as the current
+  /// debug build target, restoring the enclosing target even when it throws.
+  ///
+  /// [build] executes exactly once in every build mode. Target bookkeeping is
+  /// assertion-only, so release builds pay no scope-management cost.
+  @internal
+  void runBranchBuild(Branch branch, VoidCallback build) {
+    Branch? previousTarget;
+    assert(() {
+      previousTarget = _debugCurrentBuildTarget;
+      _debugCurrentBuildTarget = branch;
+      return true;
+    }());
+    try {
+      build();
+    } finally {
+      assert(() {
+        _debugCurrentBuildTarget = previousTarget;
+        return true;
+      }());
+    }
+  }
 
   /// Mounts [seed] as the root branch of this owner's tree.
   Branch mountRoot(Seed seed) {
@@ -73,9 +103,28 @@ class TreeOwner {
         'handler or a passive effect.',
       );
     }
+    assert(
+      _debugCurrentBuildTarget == null ||
+          _debugIsDescendantOf(branch, _debugCurrentBuildTarget!),
+      'branch ${branch.branchId} (${branch.runtimeType}) was marked dirty '
+      'while branch ${_debugCurrentBuildTarget?.branchId} '
+      '(${_debugCurrentBuildTarget.runtimeType}) was building. A branch '
+      'dirtied during build must be a descendant of the branch currently '
+      'building. Parents build before children, so a dirty descendant is '
+      'always built; any other branch may not be visited in this flush pass.',
+    );
     final wasEmpty = _dirtyBranches.isEmpty;
     _dirtyBranches.add(branch);
     if (wasEmpty) onNeedsFlush?.call();
+  }
+
+  bool _debugIsDescendantOf(Branch candidate, Branch target) {
+    while (candidate.depth > target.depth) {
+      final parent = debugParentOf(candidate);
+      if (parent == null) return false;
+      candidate = parent;
+    }
+    return identical(candidate, target);
   }
 
   /// Drains the dirty set in depth order (parents before children),

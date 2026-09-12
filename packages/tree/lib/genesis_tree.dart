@@ -11,7 +11,7 @@ library;
 
 export 'package:genesis_foundation/genesis_foundation.dart';
 
-export 'src/branch.dart' hide InheritedBranchBase;
+export 'src/branch.dart' hide InheritedBranchBase, debugParentOf;
 export 'src/component_branch.dart';
 export 'src/inherited.dart';
 export 'src/key.dart';

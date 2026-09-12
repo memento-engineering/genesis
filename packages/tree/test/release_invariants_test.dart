@@ -1,12 +1,38 @@
-// The four tree guards this file covers throw in RELEASE builds, not only
-// under assertions. It is therefore run both ways in validation:
+// The four pre-existing tree guards this file covers throw in RELEASE builds,
+// not only under assertions. The mid-flush dirty-ancestry order guard is
+// deliberately assertion-only. This file is therefore run both ways:
 //   dart test test/release_invariants_test.dart   (assertions ON)
 //   dart run  test/release_invariants_test.dart   (assertions OFF)
-// Nothing here may expect an AssertionError.
 import 'package:genesis_tree/genesis_tree.dart';
 import 'package:test/test.dart';
 
 import 'src/fixtures.dart';
+
+bool get _assertionsEnabled {
+  var enabled = false;
+  assert(enabled = true);
+  return enabled;
+}
+
+class _SiblingDirtySeed extends Seed {
+  const _SiblingDirtySeed();
+
+  @override
+  _SiblingDirtyBranch createBranch() => _SiblingDirtyBranch(this);
+}
+
+class _SiblingDirtyBranch extends Branch {
+  _SiblingDirtyBranch(super.seed);
+
+  Branch? dirtyTarget;
+  int buildCount = 0;
+
+  @override
+  void performRebuild() {
+    buildCount++;
+    dirtyTarget?.markNeedsRebuild();
+  }
+}
 
 /// A stateful seed whose build calls setState — the pathological case that
 /// drained forever in release.
@@ -93,6 +119,44 @@ void main() {
       ),
     );
     expect(owner.flush(), isEmpty);
+  });
+
+  test('sibling dirty during build is rejected only under assertions', () {
+    final owner = TreeOwner();
+    addTearDown(owner.dispose);
+    final root =
+        owner.mountRoot(
+              const Node(
+                'root',
+                children: [_SiblingDirtySeed(), _SiblingDirtySeed()],
+              ),
+            )
+            as NodeBranch;
+    final source = root.children[0] as _SiblingDirtyBranch;
+    final target = root.children[1] as _SiblingDirtyBranch;
+    source.dirtyTarget = target;
+    source.markNeedsRebuild();
+
+    if (_assertionsEnabled) {
+      expect(
+        owner.flush,
+        throwsA(
+          isA<AssertionError>().having(
+            (error) => error.message,
+            'message',
+            allOf(
+              contains('branch ${target.branchId}'),
+              contains('branch ${source.branchId}'),
+              contains('descendant'),
+            ),
+          ),
+        ),
+      );
+      expect(target.buildCount, 0);
+    } else {
+      expect(owner.flush(), orderedEquals([source, target]));
+      expect(target.buildCount, 1);
+    }
   });
 
   test('duplicate sibling keys throw before any old branch is unmounted', () {

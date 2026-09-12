@@ -117,7 +117,7 @@ abstract class Branch with Diagnosticable, DiagnosticableTree {
   void rebuild({bool force = false}) {
     if (mounted && (_dirty || force)) {
       _dirty = false;
-      performRebuild();
+      owner!.runBranchBuild(this, performRebuild);
     }
   }
 
@@ -384,6 +384,11 @@ abstract class Branch with Diagnosticable, DiagnosticableTree {
     }
   }
 }
+
+/// Package-internal: returns [branch]'s parent for owner-level ancestry checks
+/// without exposing mutable parent state.
+@internal
+Branch? debugParentOf(Branch branch) => branch._parent;
 
 /// Package-internal bridge. Defined alongside [Branch] so that
 /// [Branch._dependencies] can be typed `Set<InheritedBranchBase>` without
