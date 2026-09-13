@@ -12,7 +12,8 @@ register:
   obsoletes: []
   updates: []
   obsoleted-by: null
-  updated-by: []
+  updated-by:
+    - release-mode-tree-invariants-throw-in-release
   bead: null
   legacy-id: "A38"
 ---

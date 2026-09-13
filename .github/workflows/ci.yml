@@ -24,6 +24,13 @@ jobs:
       - name: Check lint extension
         run: cd packages/lint && dart pub get && dart analyze && dart format --output=none --set-exit-if-changed . && dart test
 
+      # Runs the register lint (`decisions lint docs/decisions`, via the
+      # standalone tool/ package — genesis's main workspace has no dependency
+      # on the `decisions` package) so a stale force cache fails the build
+      # instead of only surfacing when an agent lints a branch by hand.
+      - name: decisions lint
+        run: cd tool && dart pub get && dart analyze && dart format --output=none --set-exit-if-changed . && dart run lint_register.dart
+
       - name: Analyze
         run: dart analyze
 

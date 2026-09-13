@@ -5,6 +5,7 @@ plugins:
 analyzer:
   exclude:
     - packages/lint/**
+    - tool/**
   language:
     strict-casts: true
     strict-inference: true
