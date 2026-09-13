@@ -64,16 +64,22 @@ Pure Dart, no Flutter — everything runs on the bare VM.
 
 Consumers of `genesis_tree` follow the [D–H tree-consumption doctrine](docs/design/tree-consumption.md): five rules for dependency tracking, reactive reads, service boundaries, pure descriptions, and I/O.
 
-genesis is built decision-first. Two documents govern it:
+genesis is built decision-first, tracked in the decision register at
+[`docs/decisions/`](docs/decisions/):
 
-- **`docs/adr/ADR-0000-ai-decision-register.md`** — a living register where every
-  AI-made API/naming/semantic decision lands as an amendment and stays pending
-  until the maintainer promotes or rejects it.
-- **`docs/adr/ADR-0001..0006`** — the ratified ADRs: foundations, schema-first
-  codegen, the A2UI wire format, render backends, the projection/action
-  substrate, and the pull-free build.
+- **the register itself** — every AI-made API/naming/semantic decision lands
+  here directly, `status: accepted` on write, per the format specified by
+  `engineering.memento/decisions`'s `SPEC.md` (which now carries the rule the
+  retired `ADR-0000` register-rule document used to state): "Entries are born
+  `accepted`. This profile never uses `proposed`." A later challenge to a
+  filed entry runs through SPEC.md's docket, not a hand-edit.
+- **the six foundational entries** — foundations, schema-first codegen, the
+  A2UI wire format, render backends, the projection/action substrate, and the
+  pull-free build — are dated 2026-06-11 through 2026-06-17 with `adr-000N`
+  slugs, e.g.
+  [`2026-06-11-adr-0001-foundations.md`](docs/decisions/2026-06-11-adr-0001-foundations.md).
 
-Read `ADR-0000` and `ADR-0001` before changing anything structural.
+Read the foundations entry before changing anything structural.
 
 ## Stability
 
