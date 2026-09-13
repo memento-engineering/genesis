@@ -12,7 +12,8 @@ register:
   obsoletes: []
   updates: []
   obsoleted-by: null
-  updated-by: []
+  updated-by:
+    - lifecycle-phase-guard-is-public-tree-api
   bead: null
   legacy-id: "A31"
 ---
