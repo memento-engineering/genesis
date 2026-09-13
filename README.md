@@ -68,9 +68,11 @@ genesis is built decision-first, tracked in the decision register at
 [`docs/decisions/`](docs/decisions/):
 
 - **the register itself** — every AI-made API/naming/semantic decision lands
-  here directly (`status: proposed` until ratified), per the format specified
-  by `engineering.memento/decisions`'s `SPEC.md` (which now carries the
-  staging rule the retired `ADR-0000` register-rule document used to state).
+  here directly, `status: accepted` on write, per the format specified by
+  `engineering.memento/decisions`'s `SPEC.md` (which now carries the rule the
+  retired `ADR-0000` register-rule document used to state): "Entries are born
+  `accepted`. This profile never uses `proposed`." A later challenge to a
+  filed entry runs through SPEC.md's docket, not a hand-edit.
 - **the six foundational entries** — foundations, schema-first codegen, the
   A2UI wire format, render backends, the projection/action substrate, and the
   pull-free build — are dated 2026-06-11 through 2026-06-17 with `adr-000N`

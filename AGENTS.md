@@ -48,12 +48,16 @@ retired `ADR-0000` register-rule document used to state.
 The register captures decisions an AI makes **autonomously** — with no human
 in the loop (an unattended agent run). If you (an AI agent) make such an API,
 naming, or semantic call that is not already covered by an accepted entry,
-file it as a new register entry with `status: proposed`; SPEC.md's "docket"
-is the human-agent ratification event that later flips it to `accepted` or
-`rejected`. A decision reached collaboratively with Nico is already
-ratified: file it `status: accepted` directly. Only the decisions verbs
-(`decisions lint` / `decisions obsolete` / `decisions update` / `decisions
-vacate`) write the register — never hand-edit an entry's front matter.
+file it as a new register entry. Per SPEC.md: "Entries are born `accepted`.
+This profile never uses `proposed`." A decision reached collaboratively with
+Nico is filed the same way, `status: accepted`, with Nico in
+`decision-makers`. A later challenge to a filed entry is not an edit to that
+entry — it runs through SPEC.md's docket, "the human-agent ratification
+event," which "produces a worksheet — one row per decision needing a force
+change — and the dispositions are themselves entries with the human in
+`decision-makers`." Only the decisions verbs (`decisions lint` / `decisions
+obsolete` / `decisions update` / `decisions vacate`) write the register —
+never hand-edit an entry's front matter.
 
 ## Build & test
 
@@ -125,11 +129,10 @@ publishing under the `memento.engineering` verified publisher, then tag
 
 ## Where things live
 
-- `docs/decisions/` — the decision register: every proposed and accepted
-  entry, including the six foundational ones — foundations, schema-first
-  codegen, A2UI wire format, render backends, projection/action substrate,
-  pull-free build. Read the foundations entry before changing anything
-  structural.
+- `docs/decisions/` — the decision register: every accepted entry, including
+  the six foundational ones — foundations, schema-first codegen, A2UI wire
+  format, render backends, projection/action substrate, pull-free build. Read
+  the foundations entry before changing anything structural.
 - `packages/` — the seven published members (`tree`, `perception`, `taxonomy`,
   `typesetting`, `dialogue`, `consent`, `tmux`); `apps/` holds the `console`
   driver app (`genesis_console`, `publish_to: none`).

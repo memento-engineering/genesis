@@ -108,7 +108,7 @@ Boundary note: lenny A1 is pending in *lenny's* register and ratifies there; thi
 
 ## Register provenance
 
-This document promotes the entries below from the retired register-rule document ADR-0000 (the rule it stated is now specified by `engineering.memento/decisions`'s `SPEC.md`); the register keeper flips their status separately:
+This document promotes the entries below from `genesis/docs/adr/ADR-0000-ai-decision-register.md`; the register keeper flips their status separately (this pass does not edit ADR-0000):
 
 | Entry | Title | Status |
 |---|---|---|

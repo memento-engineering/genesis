@@ -259,7 +259,7 @@ aliases its owner, pulls its protocol, and re-exports its scopes.
 
 the_grid runs its orchestrator on the spine and defines an artifact layer for *live effects*:
 a spawned `claude` process, a tmux session, a federation lease, a running app
-(`the_grid/docs/adr/ADR-0009-the-allocation-tree.md`, Accepted 2026-07-01).
+(`the_grid/docs/decisions/2026-07-01-adr-0009-the-allocation-tree.md`, Accepted 2026-07-01).
 
 - **Artifacts:** an `Allocation` — a persistent, addressable managed object holding one live
   effect. Held *by* a branch rather than equal to it, because the effect must survive
