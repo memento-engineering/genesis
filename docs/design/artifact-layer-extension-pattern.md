@@ -6,8 +6,8 @@
 §"The artifact layer — deliberately not shipped", which carries the shipped summary; the
 worked examples live here because a published archive may not carry internal references
 (`docs/publishing.md`, the scrub gate).
-**Reads against:** `docs/adr/ADR-0001-foundations.md` (Decisions 2, 3, 4, 5, 6) and
-`docs/adr/ADR-0004-render-backends.md` (Decision 2).
+**Reads against:** `docs/decisions/2026-06-11-adr-0001-foundations.md` (Decisions 2, 3, 4, 5, 6) and
+`docs/decisions/2026-06-11-adr-0004-render-backends.md` (Decision 2).
 **Worked examples:** `packages/typesetting`, `packages/perception`, and — outside this repo —
 the_grid's Allocation Tree.
 
@@ -22,7 +22,7 @@ state into live identity; **what that identity spawns and owns — the artifact 
 consumer's.**
 
 The stop is a ratified constraint, not an omission. ADR-0001 Decision 3
-(`docs/adr/ADR-0001-foundations.md`):
+(`docs/decisions/2026-06-11-adr-0001-foundations.md`):
 
 > **`Branch` core is artifact-agnostic** — identity, lifecycle, keyed reconcile, dirtiness,
 > and **one abstract rebuild hook** (the `performRebuild` analog). It carries **no build
@@ -65,7 +65,7 @@ Two shapes are both correct:
 
 - **The branch *is* the artifact.** `RenderBranch` collapses Flutter's `RenderObjectElement`
   and `RenderObject` into one type — ADR-0004 Decision 2
-  (`docs/adr/ADR-0004-render-backends.md`): "A cell grid is a single immediate surface, so
+  (`docs/decisions/2026-06-11-adr-0004-render-backends.md`): "A cell grid is a single immediate surface, so
   there is no separate retained render node to keep: the branch *is* the render object."
   Cheapest; use it when the artifact's lifetime is exactly the branch's.
 - **The branch *holds* the artifact.** The branch creates a separate object at mount and
@@ -188,7 +188,7 @@ Two details there are load-bearing, not incidental:
 
 **When a scope must carry domain *capabilities* rather than ambient values, layer them onto
 the context handle — never make the branch its own context.** ADR-0001 Decision 2
-(`docs/adr/ADR-0001-foundations.md`, "The tree spine: `Seed` → `Branch`; `TreeContext` is a
+(`docs/decisions/2026-06-11-adr-0001-foundations.md`, "The tree spine: `Seed` → `Branch`; `TreeContext` is a
 separate handle") is the constraint:
 
 > **The fork — shed Flutter's Element≡BuildContext "original sin":** `Branch` does **not**

@@ -58,8 +58,8 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
    pub.dev renders.~~ **Done (2026-06-14)** — descriptions (commit `863380b`)
    plus all six **READMEs**, every **lib docblock**, and the **CHANGELOGs**
    scrubbed of inline ADR/register numbers, spike/`NOTES.md` references,
-   `docs/adr/` / "monorepo" pointers, and the unshipped `genesis_expression`
-   mention; load-bearing refs rewritten as plain prose. Two user-facing
+   internal ADR-directory / "monorepo" pointers, and the unshipped
+   `genesis_expression` mention; load-bearing refs rewritten as plain prose. Two user-facing
    error-strings (`tree_context.dart`, `consent/router.dart`) also de-jargoned.
    Decision: **self-contained, no design pointers** — pub.dev already links the
    repo from each pubspec's `repository:` field, so the prose carries none.

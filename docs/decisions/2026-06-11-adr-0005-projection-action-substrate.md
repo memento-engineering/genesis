@@ -104,7 +104,7 @@ The lean: LWW is the zero-mechanism default, and the `Applied`/`Rejected` result
 
 ## Register provenance
 
-This document promotes register entries from `docs/adr/ADR-0000-ai-decision-register.md`:
+This document promotes register entries from the retired register-rule document ADR-0000 (the rule it stated is now specified by `engineering.memento/decisions`'s `SPEC.md`):
 
 - **A5** — *The projection/manipulation substrate: four dynamics, four audiences, enforce/reject* → flip to `promoted → ADR-0005` on ratification.
 - **A17** (folded 2026-06-13) — *Roadmap package names: `taxonomy` / `dialogue` / `consent`* — the action-router slot is named **`genesis_consent`**; the consume-relationships (`genesis_taxonomy`'s `x-actions` affordances in, intents out over the `genesis_dialogue` wire) are recorded in the Context amendment and Decisions 1–2. `genesis_consent` is **not yet built** — this records direction, not an as-built surface.
