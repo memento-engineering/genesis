@@ -12,7 +12,8 @@ register:
   obsoletes: []
   updates: []
   obsoleted-by: null
-  updated-by: []
+  updated-by:
+    - element-and-build-context-stay-separate-under-their-new-names
   bead: null
   legacy-id: "ADR-0001"
 ---
