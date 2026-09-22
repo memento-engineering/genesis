@@ -1,7 +1,6 @@
 # Changelog
 
-## 0.2.0
-
+## 0.2.0-dev.1
 - **Breaking:** action routing now exposes and traverses canonical `Element` values; migrate `ConsentRouter.rootBranch` to `rootElement`. The deprecated forwarding getter remains, and routing gates, outcomes, and wire fields are unchanged.
 
 ## 0.1.1

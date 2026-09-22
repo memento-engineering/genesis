@@ -2,7 +2,7 @@ name: genesis_dialogue
 description: >-
   The A2UI v0.9 wire format: parse and serialize the updateComponents envelope
   and reconcile re-emissions by key onto a genesis_tree.
-version: 0.2.0
+version: 0.2.0-dev.1
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 
@@ -10,11 +10,10 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
-  genesis_taxonomy: ^0.2.0
-  genesis_tree: ^0.5.0
-
+  genesis_taxonomy: ^0.2.0-dev.1
+  genesis_tree: ^0.5.0-dev.1
 dev_dependencies:
   build_runner: ^2.15.0
-  genesis_perception: ^0.4.0
+  genesis_perception: ^0.4.0-dev.1
   lints: ^5.1.0
   test: ^1.25.0

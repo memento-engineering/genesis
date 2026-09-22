@@ -1,7 +1,6 @@
 # Changelog
 
-## 0.2.0
-
+## 0.2.0-dev.1
 - **Breaking:** generated registries and runtime factories now use `Component`; migrate `SeedFactoryFn` to `ComponentFactoryFn` and `buildSeedTree(...)` to `buildComponentTree(...)`. Deprecated aliases/forwarders remain, and catalog/wire fields are unchanged.
 
 ## 0.1.1

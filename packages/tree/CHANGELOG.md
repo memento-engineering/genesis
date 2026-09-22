@@ -1,7 +1,6 @@
 # Changelog
 
-## 0.5.0
-
+## 0.5.0-dev.1
 - **Breaking:** the canonical spine vocabulary is now `Component` → `Element`, with separate `BuildContext`, `BuildOwner`, and `BuildableElement`; migrate `Seed`/`Branch`/`TreeContext`/`TreeOwner`/`ComponentBranch` and their family descendants to the new names. Deprecated typedefs preserve type identity, constructors, subclassing, and static dispatch.
 - **Breaking:** migrate members such as `createBranch()` → `createElement()`, `seed` → `component`, `branchId` → `elementId`, `State.seed` → `State.component`, and inherited lookup verbs to `dependOnInheritedValueOfExactType` / `getInheritedValueOfExactType`. Deprecated forwarding members remain for a separately approved removal release.
 - **Breaking:** the hooks family is now `HookComponent`/`HookBuildContext`/`HookElement` (from `Sprout`/`SproutContext`/`SproutBranch`), and provider context extensions use `ProviderBuildContext`. Normal `context.watch`/`context.read` calls remain source-compatible; explicitly naming the old extension cannot be bridged without ambiguous extension resolution.

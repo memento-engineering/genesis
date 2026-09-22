@@ -17,11 +17,11 @@ dependencies:
   # console is publish_to: none. json_schema_builder backs the
   # ToolDefinition.inputSchema type.
   genai_primitives: ^0.2.3
-  genesis_consent: ^0.2.0
-  genesis_dialogue: ^0.2.0
-  genesis_taxonomy: ^0.2.0
-  genesis_tree: ^0.5.0
-  genesis_typesetting: ^0.2.0
+  genesis_consent: ^0.2.0-dev.1
+  genesis_dialogue: ^0.2.0-dev.1
+  genesis_taxonomy: ^0.2.0-dev.1
+  genesis_tree: ^0.5.0-dev.1
+  genesis_typesetting: ^0.2.0-dev.1
   http: ^1.2.0
   json_schema_builder: ^0.1.5
 
