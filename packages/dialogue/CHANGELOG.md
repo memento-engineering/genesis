@@ -1,7 +1,6 @@
 # Changelog
 
-## 0.2.0
-
+## 0.2.0-dev.1
 - **Breaking:** `DialogueSurface` now owns a `BuildOwner`, reconciles `Component`/`Element` values through `buildComponentTree`, and exposes `rootElement`; migrate `rootBranch` to `rootElement`. The deprecated forwarding getter remains, and A2UI fields and reconcile semantics are unchanged.
 
 ## 0.1.2

@@ -1,7 +1,6 @@
 # Changelog
 
-## 0.4.0
-
+## 0.4.0-dev.1
 - **Breaking:** perception now surfaces the canonical tree spine: migrate tree-facing `Seed`/`Branch`/`TreeContext`/`TreeOwner` signatures to `Component`/`Element`/`BuildContext`/`BuildOwner`, including `component`, `elementId`, and inherited-value lookup members. `Perception`, `Node`, `Field`, harvest names, and the version-1 `seedType` wire key remain unchanged.
 
 ## 0.3.1
