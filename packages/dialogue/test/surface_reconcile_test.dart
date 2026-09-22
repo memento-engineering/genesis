@@ -84,20 +84,20 @@ Map<String, Object?> v2() => {
   },
 };
 
-/// Returns the direct child of [node] whose Seed key equals [id].
-Branch childById(NodeElement node, String id) =>
+/// Returns the direct child of [node] whose Component key equals [id].
+Element childById(NodeElement node, String id) =>
     node.children.firstWhere((c) => c.key == ValueKey(id));
 
 void main() {
-  group('mount: deserialize -> buildSeedTree -> mountRoot', () {
-    test('tree structure, props, and component-id == Seed-key', () {
+  group('mount: deserialize -> buildComponentTree -> mountRoot', () {
+    test('tree structure, props, and component-id == Component-key', () {
       final surface = DialogueSurface(registry: componentRegistry);
       final root = surface.mount(parseUpdateComponents(v1()));
 
       // root is a Node mounted by id "root".
       expect(root, isA<NodeElement>());
       expect(root.key, const ValueKey('root'));
-      expect((root.seed as Node).name, 'form');
+      expect((root.component as Node).name, 'form');
 
       final rootEl = root as NodeElement;
       expect(rootEl.children.map((c) => c.key), const [
@@ -118,9 +118,9 @@ void main() {
       final street = addr.children.single as FieldElement;
       expect(street.field.value, '1 Main');
 
-      // Every component id surfaced as the Seed key.
-      expect(name.seed.key, const ValueKey('f_name'));
-      expect(addr.seed.key, const ValueKey('n_addr'));
+      // Every component id surfaced as the Component key.
+      expect(name.component.key, const ValueKey('f_name'));
+      expect(addr.component.key, const ValueKey('n_addr'));
     });
   });
 
@@ -128,7 +128,7 @@ void main() {
     'reconcile by key (the crux: identity preserved across re-emission)',
     () {
       test(
-        'kept ids = same Branch; prop-change = same Branch; remove unmounts; '
+        'kept ids = same Element; prop-change = same Element; remove unmounts; '
         'insert is fresh; deep identity in a moved subtree',
         () {
           final surface = DialogueSurface(registry: componentRegistry);
@@ -146,7 +146,7 @@ void main() {
           surface.apply(parseUpdateComponents(v2()));
 
           // Root survived (stable key "root", canUpdate held).
-          expect(identical(surface.rootBranch, root), isTrue);
+          expect(identical(surface.rootElement, root), isTrue);
           expect(root.mounted, isTrue);
 
           final nameAfter = childById(root, 'f_name');
@@ -162,7 +162,7 @@ void main() {
             ValueKey('f_phone'),
           ]);
 
-          // Prop-changed id: SAME instance, new seed/props.
+          // Prop-changed id: SAME instance, new component/props.
           expect(identical(nameAfter, nameBefore), isTrue);
           expect((nameAfter as FieldElement).field.value, 'Nicholas');
 
@@ -192,28 +192,28 @@ void main() {
       final root = surface.mount(parseUpdateComponents(v1())) as NodeElement;
       surface.apply(parseUpdateComponents(v2()));
 
-      final nameBranch = childById(root, 'f_name');
-      final addrBranch = childById(root, 'n_addr') as NodeElement;
-      final streetBranch = addrBranch.children.single;
-      final nameSeedBefore = nameBranch.seed;
+      final nameElement = childById(root, 'f_name');
+      final addrElement = childById(root, 'n_addr') as NodeElement;
+      final streetElement = addrElement.children.single;
+      final nameSeedBefore = nameElement.component;
 
       // Re-apply a freshly-deserialized, byte-identical v2. Fresh seeds are
       // never identical() to the mounted ones, so the A18 fast path does
-      // NOT fire — update() runs and swaps the seed instance...
+      // NOT fire — update() runs and swaps the component instance...
       surface.apply(parseUpdateComponents(v2()));
 
-      // ...the seed object IS a new instance (the skip did not short-circuit)
+      // ...the component object IS a new instance (the skip did not short-circuit)
       expect(
-        identical(childById(root, 'f_name').seed, nameSeedBefore),
+        identical(childById(root, 'f_name').component, nameSeedBefore),
         isFalse,
       );
 
-      // ...yet keyed identity preservation still holds: same Branch
+      // ...yet keyed identity preservation still holds: same Element
       // instances, including deep into the n_addr subtree.
-      expect(identical(childById(root, 'f_name'), nameBranch), isTrue);
+      expect(identical(childById(root, 'f_name'), nameElement), isTrue);
       final addrAfter = childById(root, 'n_addr') as NodeElement;
-      expect(identical(addrAfter, addrBranch), isTrue);
-      expect(identical(addrAfter.children.single, streetBranch), isTrue);
+      expect(identical(addrAfter, addrElement), isTrue);
+      expect(identical(addrAfter.children.single, streetElement), isTrue);
     });
   });
 }

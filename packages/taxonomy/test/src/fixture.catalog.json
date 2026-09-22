@@ -18,7 +18,7 @@
       },
       "dart": {
         "class": "Panel",
-        "import": "fixture_seeds.dart",
+        "import": "fixture_components.dart",
         "positionalProps": ["name"],
         "namedProps": [],
         "childrenParam": "children"
@@ -41,7 +41,7 @@
       },
       "dart": {
         "class": "Label",
-        "import": "fixture_seeds.dart",
+        "import": "fixture_components.dart",
         "positionalProps": [],
         "namedProps": ["name", "value"]
       }
@@ -82,7 +82,7 @@
       },
       "dart": {
         "class": "Gauge",
-        "import": "fixture_seeds.dart",
+        "import": "fixture_components.dart",
         "positionalProps": ["label"],
         "namedProps": ["value", "scale", "enabled", "align"]
       },

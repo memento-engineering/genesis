@@ -1,6 +1,6 @@
 # genesis
 
-A framework-agnostic, **bare-VM** `Seed` → `Branch` keyed-reconcile engine —
+A framework-agnostic, **bare-VM** `Component` → `Element` keyed-reconcile engine —
 Flutter's element/reconciliation model extracted to pure Dart — and the layers
 built on it: a measurement domain, schema-first codegen, the A2UI v0.9 wire
 format, a terminal render backend, and an enforce/reject action substrate.
@@ -10,7 +10,7 @@ genesis is positioned as the **substrate and framework-agnostic renderer for the
 `flutter/genui`, but runs with no Flutter / `dart:ui` dependency, so an agent can
 author, drive, render, and act on a UI tree on a plain Dart VM.
 
-The engine deliberately stops at `Seed` → `Branch`: it reconciles desired state
+The engine deliberately stops at `Component` → `Element`: it reconciles desired state
 into live identity, and **what that identity spawns and owns — the artifact
 layer — is each consumer's to define** (a character grid, a serialized
 observation, live processes). See ["The artifact layer — deliberately not
@@ -29,7 +29,7 @@ the_grid's Allocation Tree walked end to end.
 
 | Package (dir · pub name) | What it is |
 |---|---|
-| `tree` · `genesis_tree` | the engine — `Seed` (immutable config) → `Branch` (mounted node), `TreeContext` (a *separate* capability handle, never the branch), `TreeOwner` (scheduler), keyed reconcile, and an experimental composition layer (`Stateless`/`Stateful`/`State`, `InheritedSeed`, `Watch`, `Sprout` — hooks, `MultiChildSeed`, and the `SingleChildSeed`/`Nest` chain) |
+| `tree` · `genesis_tree` | the engine — `Component` (immutable config) → `Element` (mounted node), `BuildContext` (a *separate* capability handle, never the element), `BuildOwner` (scheduler), keyed reconcile, and an experimental composition layer (`Stateless`/`Stateful`/`State`, `InheritedComponent`, `Watch`, `HookComponent` — hooks, `MultiChildComponent`, and the `SingleChildComponent`/`Nest` chain) |
 | `perception` · `genesis_perception` | the measurement domain, rebuilt on the tree spine by subclassing |
 | `taxonomy` · `genesis_taxonomy` | schema-first node catalog → a Dart factory registry **and** an LLM tool schema (codegen, one source of truth) |
 | `dialogue` · `genesis_dialogue` | the A2UI v0.9 wire: the `updateComponents` codec, a receive-side surface that reconciles re-emissions by key, and `action`-message parsing |
@@ -84,9 +84,9 @@ Read the foundations entry before changing anything structural.
 ## Stability
 
 The `tree` **composition layer** (`Stateless`/`Stateful`/`State`,
-`InheritedSeed`, `Watch`, `Sprout`, `MultiChildSeed`, `SingleChildSeed`/`Nest`)
+`InheritedComponent`, `Watch`, `HookComponent`, `MultiChildComponent`, `SingleChildComponent`/`Nest`)
 is marked EXPERIMENTAL and may change before 1.0. The core spine
-(`Seed`/`Branch`/`TreeContext`/`TreeOwner`/keyed reconcile) and the measurement
+(`Component`/`Element`/`BuildContext`/`BuildOwner`/keyed reconcile) and the measurement
 domain are stable in shape. Deferred surface and the 1.0 boundary are tracked
 in [`docs/release-scope.md`](docs/release-scope.md).
 

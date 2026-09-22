@@ -9,7 +9,7 @@ enum TreeLifecyclePhase {
   /// A state object is responding to inherited dependency changes.
   didChangeDependencies,
 
-  /// A branch is rebuilding its tree contribution.
+  /// A element is rebuilding its tree contribution.
   building,
 
   /// A state object is running its teardown callback.
@@ -55,7 +55,7 @@ final class TreeLifecyclePhaseGuard {
   /// [TreeLifecyclePhase.building]. The historical initialization and
   /// teardown diagnostics remain debug assertions; registration outside all
   /// tree phases throws [StateError] in every build mode.
-  void checkCanDependOnInheritedSeedOfExactType<T extends Object>() {
+  void checkCanDependOnInheritedValueOfExactType<T extends Object>() {
     switch (phase) {
       case TreeLifecyclePhase.didChangeDependencies:
       case TreeLifecyclePhase.building:
@@ -63,28 +63,34 @@ final class TreeLifecyclePhaseGuard {
       case TreeLifecyclePhase.initState:
         assert(
           false,
-          'dependOnInheritedSeedOfExactType<$T>() called from initState. '
+          'dependOnInheritedValueOfExactType<$T>() called from initState. '
           'initState never re-runs, so caching the value read here goes stale '
           'when the provider changes. For a one-shot read use '
-          'getInheritedSeedOfExactType<$T>(); to cache and track the value, move '
+          'getInheritedValueOfExactType<$T>(); to cache and track the value, '
+          'move '
           'the lookup to didChangeDependencies(), which re-runs on every change.',
         );
         return;
       case TreeLifecyclePhase.dispose:
         assert(
           false,
-          'dependOnInheritedSeedOfExactType<$T>() called from dispose. The '
-          'branch is unmounting — a dependency registered now can never observe '
-          'a change. Use getInheritedSeedOfExactType<$T>() for a last read '
+          'dependOnInheritedValueOfExactType<$T>() called from dispose. The '
+          'element is unmounting — a dependency registered now can never observe '
+          'a change. Use getInheritedValueOfExactType<$T>() for a last read '
           'during teardown.',
         );
         return;
       case TreeLifecyclePhase.notInTreePhase:
         throw StateError(
-          'dependOnInheritedSeedOfExactType<$T>() called outside a tree '
+          'dependOnInheritedValueOfExactType<$T>() called outside a tree '
           'lifecycle phase (TreeLifecyclePhase.notInTreePhase). Register '
           'inherited dependencies from didChangeDependencies() or build().',
         );
     }
   }
+
+  /// Legacy spelling for [checkCanDependOnInheritedValueOfExactType].
+  @Deprecated('Use checkCanDependOnInheritedValueOfExactType instead.')
+  void checkCanDependOnInheritedSeedOfExactType<T extends Object>() =>
+      checkCanDependOnInheritedValueOfExactType<T>();
 }

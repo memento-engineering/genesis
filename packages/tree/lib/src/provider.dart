@@ -5,12 +5,12 @@ import 'package:meta/meta.dart';
 
 /// Creates the value a [Provider] OWNS, from ambient tree state.
 ///
-/// Runs exactly once per mount, inside `initState`. Lookups through [TreeContext]
-/// here must be dependency-free — use the [ProviderTreeContext.read] verb (the
+/// Runs exactly once per mount, inside `initState`. Lookups through [BuildContext]
+/// here must be dependency-free — use the [ProviderBuildContext.read] verb (the
 /// substrate asserts on a build-binding `dependOn` lookup in `initState`). This
 /// is how a provider constructs its value from ambient configuration provided
 /// by an ancestor.
-typedef ProviderCreate<T extends Object> = T Function(TreeContext context);
+typedef ProviderCreate<T extends Object> = T Function(BuildContext context);
 
 /// Disposes a value a [Provider] CREATED.
 ///
@@ -25,14 +25,14 @@ typedef ProviderDispose<T extends Object> = void Function(T value);
 
 /// Derives an owned [R] from one ambient [T] and the nullable previous [R].
 typedef ProxyProviderUpdate<T extends Object, R extends Object> =
-    R Function(TreeContext context, T value, R? previous);
+    R Function(BuildContext context, T value, R? previous);
 
 /// Derives an owned [R] from two ambient values and the nullable previous [R].
 typedef ProxyProvider2Update<
   T1 extends Object,
   T2 extends Object,
   R extends Object
-> = R Function(TreeContext context, T1 value1, T2 value2, R? previous);
+> = R Function(BuildContext context, T1 value1, T2 value2, R? previous);
 
 /// Derives an owned [R] from three ambient values and the nullable previous
 /// [R].
@@ -43,7 +43,7 @@ typedef ProxyProvider3Update<
   R extends Object
 > =
     R Function(
-      TreeContext context,
+      BuildContext context,
       T1 value1,
       T2 value2,
       T3 value3,
@@ -60,7 +60,7 @@ typedef ProxyProvider4Update<
   R extends Object
 > =
     R Function(
-      TreeContext context,
+      BuildContext context,
       T1 value1,
       T2 value2,
       T3 value3,
@@ -79,7 +79,7 @@ typedef ProxyProvider5Update<
   R extends Object
 > =
     R Function(
-      TreeContext context,
+      BuildContext context,
       T1 value1,
       T2 value2,
       T3 value3,
@@ -99,7 +99,7 @@ typedef ProxyProvider6Update<
   R extends Object
 > =
     R Function(
-      TreeContext context,
+      BuildContext context,
       T1 value1,
       T2 value2,
       T3 value3,
@@ -109,24 +109,24 @@ typedef ProxyProvider6Update<
       R? previous,
     );
 
-/// Shared provider configuration consumed by the one ownership state/branch
+/// Shared provider configuration consumed by the one ownership state/element
 /// path. Adopted [Provider.value] instances are the only values outside that
 /// path.
-abstract class _ProviderSeedBase<R extends Object>
-    extends SingleChildStatefulSeed {
-  const _ProviderSeedBase({super.child, super.key});
+abstract class _ProviderComponentBase<R extends Object>
+    extends SingleChildStatefulComponent {
+  const _ProviderComponentBase({super.child, super.key});
 
   ProviderCreate<R>? get _providerCreate;
   ProviderDispose<R>? get _providerDispose;
   bool get _treeOwnsValues;
 
   @override
-  SingleChildStatefulBranch createBranch() => _ProviderBranch(this);
+  SingleChildStatefulElement createElement() => _ProviderElement(this);
 }
 
 /// A MOUNTED SEED providing an ambient value of type [T] to its subtree.
 ///
-/// `Provider` sits on the single-child ancestry ([SingleChildStatefulSeed]),
+/// `Provider` sits on the single-child ancestry ([SingleChildStatefulComponent]),
 /// so it composes both ways:
 ///
 /// - standalone, wrapping its own `child:`;
@@ -150,27 +150,27 @@ abstract class _ProviderSeedBase<R extends Object>
 /// inner-before-outer. A [Provider.value] provider ADOPTS an
 /// instance held by another owner and never disposes it (`docs/STYLE.md` rule
 /// 2). The build is pure: it projects the value over the child as an
-/// [InheritedSeed] and does nothing else (`docs/STYLE.md` rule 1).
+/// [InheritedComponent] and does nothing else (`docs/STYLE.md` rule 1).
 ///
 /// **Failed mount.** A `create` that throws fails the whole mount, and the
 /// unwind strands no owned value: every provider whose own mount encloses the
 /// failure — the failing provider itself, each earlier link of the same
 /// [Nest] chain, every provider ancestor — disposes what it already created,
 /// in reverse creation order, before the error rethrows (see
-/// [_ProviderBranch] for the mechanism and its exact extent).
+/// [_ProviderElement] for the mechanism and its exact extent).
 ///
 /// **Reconcile.** Same runtimeType + key updates in place: a `.value` update
-/// propagates to dependents through [InheritedSeed.updateShouldNotify]; a
+/// propagates to dependents through [InheritedComponent.updateShouldNotify]; a
 /// create-provider never re-runs `create` on update. A type or key change is
 /// unmount + remount by substrate rules — the provider's kind (create vs
-/// `.value`) is therefore fixed for the life of a mounted branch.
+/// `.value`) is therefore fixed for the life of a mounted element.
 ///
-/// **Availability.** Descendants bind with [ProviderTreeContext.watch] —
+/// **Availability.** Descendants bind with [ProviderBuildContext.watch] —
 /// nullable always; absence is a designed posture (`docs/STYLE.md` rules 3-4).
 /// Mount and unmount are announced to the enclosing [ProviderScope] so
 /// availability notification is bidirectional; delivery is deferred past the
 /// announcing flush pass (see [ProviderScope] for the scheduling contract).
-final class Provider<T extends Object> extends _ProviderSeedBase<T> {
+final class Provider<T extends Object> extends _ProviderComponentBase<T> {
   /// A provider whose value the TREE creates and owns: [create] runs once per
   /// mount and [dispose] (if any) runs at unmount with the created value.
   ///
@@ -212,7 +212,7 @@ final class Provider<T extends Object> extends _ProviderSeedBase<T> {
 
 /// Shared lifecycle configuration for every ProxyProvider arity.
 abstract class _ProxyProviderBase<R extends Object>
-    extends _ProviderSeedBase<R> {
+    extends _ProviderComponentBase<R> {
   const _ProxyProviderBase({
     ProviderCreate<R>? create,
     ProviderDispose<R>? dispose,
@@ -235,7 +235,7 @@ abstract class _ProxyProviderBase<R extends Object>
 
   /// Watches every declared input, then returns null when any is absent or
   /// invokes this arity's typed callback with all resolved values.
-  R? _derive(TreeContext context, R? previous);
+  R? _derive(BuildContext context, R? previous);
 
   @override
   SingleChildState<_ProxyProviderBase<R>> createState() =>
@@ -266,7 +266,7 @@ final class ProxyProvider<T extends Object, R extends Object>
   final ProxyProviderUpdate<T, R> update;
 
   @override
-  R? _derive(TreeContext context, R? previous) {
+  R? _derive(BuildContext context, R? previous) {
     final value = context.watch<T>();
     if (value == null) return null;
     return update(context, value, previous);
@@ -293,7 +293,7 @@ final class ProxyProvider2<
   final ProxyProvider2Update<T1, T2, R> update;
 
   @override
-  R? _derive(TreeContext context, R? previous) {
+  R? _derive(BuildContext context, R? previous) {
     final value1 = context.watch<T1>();
     final value2 = context.watch<T2>();
     if (value1 == null || value2 == null) return null;
@@ -322,7 +322,7 @@ final class ProxyProvider3<
   final ProxyProvider3Update<T1, T2, T3, R> update;
 
   @override
-  R? _derive(TreeContext context, R? previous) {
+  R? _derive(BuildContext context, R? previous) {
     final value1 = context.watch<T1>();
     final value2 = context.watch<T2>();
     final value3 = context.watch<T3>();
@@ -353,7 +353,7 @@ final class ProxyProvider4<
   final ProxyProvider4Update<T1, T2, T3, T4, R> update;
 
   @override
-  R? _derive(TreeContext context, R? previous) {
+  R? _derive(BuildContext context, R? previous) {
     final value1 = context.watch<T1>();
     final value2 = context.watch<T2>();
     final value3 = context.watch<T3>();
@@ -388,7 +388,7 @@ final class ProxyProvider5<
   final ProxyProvider5Update<T1, T2, T3, T4, T5, R> update;
 
   @override
-  R? _derive(TreeContext context, R? previous) {
+  R? _derive(BuildContext context, R? previous) {
     final value1 = context.watch<T1>();
     final value2 = context.watch<T2>();
     final value3 = context.watch<T3>();
@@ -429,7 +429,7 @@ final class ProxyProvider6<
   final ProxyProvider6Update<T1, T2, T3, T4, T5, T6, R> update;
 
   @override
-  R? _derive(TreeContext context, R? previous) {
+  R? _derive(BuildContext context, R? previous) {
     // Resolve every dependency before checking for a miss. An early return
     // would leave later absent types unregistered with ProviderScope.
     final value1 = context.watch<T1>();
@@ -462,24 +462,24 @@ final class ProxyProvider6<
 /// The AVAILABILITY REGISTRY — one per tree, near the tree root.
 ///
 /// It owns ONLY a pending-dependents-by-type map, and exists because the
-/// substrate cannot register a dependency on a branch that does not exist:
-/// `dependOnInheritedSeedOfExactType` returns null on a miss BEFORE any
+/// substrate cannot register a dependency on a element that does not exist:
+/// `dependOnInheritedValueOfExactType` returns null on a miss BEFORE any
 /// dependent is added, so an absent [Provider] would otherwise leave no edge
 /// to notify when it mounts.
 ///
-/// [ProviderTreeContext.watch] resolves through the normal inherited ancestor
-/// walk (nearest provider shadows); on a MISS it registers the calling branch
+/// [ProviderBuildContext.watch] resolves through the normal inherited ancestor
+/// walk (nearest provider shadows); on a MISS it registers the calling element
 /// here, keyed by the missed type. A [Provider] announces its mount and
 /// unmount to this scope, and the scope notifies the affected dependents
 /// (`dependencyChanged` through the owner's rebuild scheduling — never
 /// re-entering a build).
 ///
 /// **Scheduling.** A provider mounts and unmounts MID-FLUSH (inside some
-/// ancestor's rebuild), and the substrate forbids re-dirtying a branch that
+/// ancestor's rebuild), and the substrate forbids re-dirtying a element that
 /// was already built in the in-progress flush pass
-/// (`TreeOwner.scheduleRebuildFor`). Notification is therefore DEFERRED: the
+/// (`BuildOwner.scheduleRebuildFor`). Notification is therefore DEFERRED: the
 /// registry queues the affected dependents and delivers `dependencyChanged`
-/// from a microtask, after the current pass has drained. The marked branches
+/// from a microtask, after the current pass has drained. The marked elements
 /// ride the owner's next flush (the kernel schedules one off the
 /// `onNeedsFlush` edge; tests pump the microtask queue and flush again).
 ///
@@ -495,7 +495,7 @@ final class ProxyProvider6<
 /// posture, and re-register pending through its own watch miss. Value
 /// transitions across a provider boundary otherwise ride unmount + remount of
 /// the dependent subtree by ordinary substrate reconcile rules.
-final class ProviderScope extends SingleChildStatefulSeed {
+final class ProviderScope extends SingleChildStatefulComponent {
   /// Creates the registry over [child] (null when placed in a [Nest]).
   const ProviderScope({super.child, super.key});
 
@@ -503,11 +503,11 @@ final class ProviderScope extends SingleChildStatefulSeed {
   SingleChildState<ProviderScope> createState() => _ProviderScopeState();
 }
 
-/// Adds nullable provider lookup verbs to [TreeContext] (ADR-0008 D3/D-H —
+/// Adds nullable provider lookup verbs to [BuildContext] (ADR-0008 D3/D-H —
 /// two verbs, one lookup system).
-extension ProviderTreeContext on TreeContext {
+extension ProviderBuildContext on BuildContext {
   /// The build-time BINDING verb: the nearest [T], registering the dependency
-  /// edge UNCONDITIONALLY — with the provider's branch on a hit, or with the
+  /// edge UNCONDITIONALLY — with the provider's element on a hit, or with the
   /// enclosing [ProviderScope]'s pending map on a miss.
   ///
   /// Nullable ALWAYS, and deliberately without a throwing variant:
@@ -520,30 +520,30 @@ extension ProviderTreeContext on TreeContext {
   ///
   /// Use [read] for a non-binding snapshot lookup from an effect path.
   T? watch<T extends Object>() {
-    final value = dependOnInheritedSeedOfExactType<T>();
+    final value = dependOnInheritedValueOfExactType<T>();
     if (value != null) return value;
-    // MISS: the walk found no provider, so no branch holds the edge. Park the
+    // MISS: the walk found no provider, so no element holds the edge. Park the
     // registration with the availability registry. The registration rides the
-    // substrate's own addDependent path (see _RegistryBranch): the registry
-    // branch never notifies (its value is scope-lifetime stable), and the
-    // dependency edge auto-releases when this branch unmounts.
-    final registry = getInheritedSeedOfExactType<AvailabilityRegistry>();
+    // substrate's own addDependent path (see _RegistryElement): the registry
+    // element never notifies (its value is scope-lifetime stable), and the
+    // dependency edge auto-releases when this element unmounts.
+    final registry = getInheritedValueOfExactType<AvailabilityRegistry>();
     // Debug guard, release behavior unchanged (return null): a scope-less
     // miss is almost always a composition mistake — the registration cannot
-    // park anywhere, so the branch would never learn when a Provider<T>
+    // park anywhere, so the element would never learn when a Provider<T>
     // mounts. Applications should mount the scope near the tree root.
     assert(
       registry != null,
       'watch<$T>() missed with no ProviderScope ancestor: there is no '
       'availability registry to park the pending registration with, so this '
-      'branch can never be notified when a Provider<$T> mounts. Mount a '
-      'ProviderScope near the tree root (above every watching branch), or '
+      'element can never be notified when a Provider<$T> mounts. Mount a '
+      'ProviderScope near the tree root (above every watching element), or '
       'use read<$T>() if a one-shot snapshot is all that is needed.',
     );
     if (registry != null) {
       registry._registering = T;
       try {
-        dependOnInheritedSeedOfExactType<AvailabilityRegistry>();
+        dependOnInheritedValueOfExactType<AvailabilityRegistry>();
       } finally {
         registry._registering = null;
       }
@@ -553,8 +553,8 @@ extension ProviderTreeContext on TreeContext {
 
   /// The effect-path SNAPSHOT verb: the nearest [T] without registering any
   /// dependency — neither live nor pending. A later change, mount, or unmount
-  /// of the provider does not rebuild this branch.
-  T? read<T extends Object>() => getInheritedSeedOfExactType<T>();
+  /// of the provider does not rebuild this element.
+  T? read<T extends Object>() => getInheritedValueOfExactType<T>();
 }
 
 // --- Provider internals -----------------------------------------------------
@@ -590,7 +590,7 @@ final class _ProviderValueOwner<R extends Object> {
 
 /// The one ownership/projection state shared by Provider and ProxyProvider.
 abstract class _ProviderStateBase<
-  S extends _ProviderSeedBase<R>,
+  S extends _ProviderComponentBase<R>,
   R extends Object
 >
     extends SingleChildState<S> {
@@ -598,28 +598,28 @@ abstract class _ProviderStateBase<
 
   @override
   void initState() {
-    if (!seed._treeOwnsValues) return;
-    final owner = _owner = _ProviderValueOwner<R>(seed._providerDispose);
-    final create = seed._providerCreate;
+    if (!component._treeOwnsValues) return;
+    final owner = _owner = _ProviderValueOwner<R>(component._providerDispose);
+    final create = component._providerCreate;
     if (create != null) owner._replace(create(context));
   }
 
   /// Resolves the value to project for this build, or null while a proxy is
   /// still missing at least one dependency.
-  R? valueForBuild(TreeContext context);
+  R? valueForBuild(BuildContext context);
 
-  /// The failed-mount unwind (see [_ProviderBranch]). The same owner later
+  /// The failed-mount unwind (see [_ProviderElement]). The same owner later
   /// carried by [_ProviderInherited] makes this single-shot.
   void _disposeOwnedForFailedMount() => _owner?._dispose();
 
   /// Final-disposal fallback for a proxy whose dependencies never resolved,
   /// so it never built the [_ProviderInherited] that normally disposes after
   /// descendant teardown. For every projected value this is a no-op because
-  /// that inherited branch has already cleared the same stable owner.
+  /// that inherited element has already cleared the same stable owner.
   void _disposeOwnedAfterSubtree() => _owner?._dispose();
 
   @override
-  Seed buildWithChild(TreeContext context, Seed child) {
+  Component buildWithChild(BuildContext context, Component child) {
     final value = valueForBuild(context);
     if (value == null) return child;
     return _ProviderInherited<R>(value: value, child: child, owner: _owner);
@@ -629,16 +629,16 @@ abstract class _ProviderStateBase<
 final class _ProviderState<T extends Object>
     extends _ProviderStateBase<Provider<T>, T> {
   @override
-  T? valueForBuild(TreeContext context) {
-    // Reading seed._value (not a cached copy) propagates a `.value` update.
+  T? valueForBuild(BuildContext context) {
+    // Reading component._value (not a cached copy) propagates a `.value` update.
     // The bidirectional kind guard is deliberately loud in every build mode,
     // preserving the release-mode invariant doctrine across the shared base.
-    final adopted = seed._value;
+    final adopted = component._value;
     final owned = _owner?.value;
     if (adopted != null && owned != null) {
       throw StateError(
         'Provider<$T> reconciled from create: into .value — the provider kind '
-        'is fixed for the life of a mounted branch (same runtimeType + key '
+        'is fixed for the life of a mounted element (same runtimeType + key '
         'updates in place). Change the type or key to remount instead.',
       );
     }
@@ -646,7 +646,7 @@ final class _ProviderState<T extends Object>
     if (value == null) {
       throw StateError(
         'Provider<$T> reconciled from .value into create: — the provider kind '
-        'is fixed for the life of a mounted branch (same runtimeType + key '
+        'is fixed for the life of a mounted element (same runtimeType + key '
         'updates in place). Change the type or key to remount instead.',
       );
     }
@@ -657,25 +657,25 @@ final class _ProviderState<T extends Object>
 final class _ProxyProviderState<R extends Object>
     extends _ProviderStateBase<_ProxyProviderBase<R>, R> {
   @override
-  R? valueForBuild(TreeContext context) {
+  R? valueForBuild(BuildContext context) {
     final owner = _owner!;
-    final value = seed._derive(context, owner.value);
+    final value = component._derive(context, owner.value);
     if (value == null) return null;
     owner._replace(value);
     return owner.value;
   }
 }
 
-/// The provider's branch: a [SingleChildStatefulBranch] that additionally
+/// The provider's element: a [SingleChildStatefulElement] that additionally
 /// carries the FAILED-MOUNT unwind.
 ///
 /// **Substrate unwind semantics** (genesis_tree, investigated at 0.2.0): when
 /// a mount throws mid-reconcile, `updateChild` propagates the error BEFORE the
 /// caller's child-slot assignment, at every level of the failing spine. Every
-/// branch mounted within the failed reconcile call is left orphaned — still
+/// element mounted within the failed reconcile call is left orphaned — still
 /// `mounted == true`, unreachable from the root, its `unmount()` never to be
 /// called. For providers that means the disposal site
-/// ([_ProviderInheritedBranch.unmount]) is unreachable: an owned value created
+/// ([_ProviderInheritedElement.unmount]) is unreachable: an owned value created
 /// before the failure would be STRANDED, never disposed.
 ///
 /// The unwind therefore rides the exception's own propagation: the mount-time
@@ -694,12 +694,12 @@ final class _ProxyProviderState<R extends Object>
 /// code is on that stack, so its disposal is out of this seam's reach. The
 /// multi-provider composition surface is [Nest] (which nests, and is fully
 /// covered), so that shape has no production author today.
-final class _ProviderBranch extends SingleChildStatefulBranch {
-  _ProviderBranch(_ProviderSeedBase<Object> super.seed);
+final class _ProviderElement extends SingleChildStatefulElement {
+  _ProviderElement(_ProviderComponentBase<Object> super.component);
 
   /// True until the first (mount-pass) build completes or fails. Rebuilds of
   /// an ATTACHED provider must not run the unwind: a failure there leaves the
-  /// branch attached, its value live, and its normal unmount disposal intact.
+  /// element attached, its value live, and its normal unmount disposal intact.
   bool _mountBuild = true;
 
   @override
@@ -721,9 +721,9 @@ final class _ProviderBranch extends SingleChildStatefulBranch {
   }
 }
 
-/// The provider's projection over its child: a plain [InheritedSeed] whose
-/// branch additionally announces mount/unmount to the availability registry.
-final class _ProviderInherited<T extends Object> extends InheritedSeed<T> {
+/// The provider's projection over its child: a plain [InheritedComponent] whose
+/// element additionally announces mount/unmount to the availability registry.
+final class _ProviderInherited<T extends Object> extends InheritedComponent<T> {
   const _ProviderInherited({
     required super.value,
     required super.child,
@@ -735,12 +735,12 @@ final class _ProviderInherited<T extends Object> extends InheritedSeed<T> {
   final _ProviderValueOwner<T>? owner;
 
   @override
-  InheritedBranch<T> createBranch() => _ProviderInheritedBranch<T>(this);
+  InheritedElement<T> createElement() => _ProviderInheritedElement<T>(this);
 }
 
-final class _ProviderInheritedBranch<T extends Object>
-    extends InheritedBranch<T> {
-  _ProviderInheritedBranch(_ProviderInherited<T> super.seed);
+final class _ProviderInheritedElement<T extends Object>
+    extends InheritedElement<T> {
+  _ProviderInheritedElement(_ProviderInherited<T> super.component);
 
   /// The registry captured at mount — the unmount announcement must not
   /// re-walk a tree that is already coming down.
@@ -748,30 +748,30 @@ final class _ProviderInheritedBranch<T extends Object>
 
   /// Live dependents, mirrored through the addDependent/removeDependent
   /// chokepoints (the base class set is a test-only surface).
-  final Set<Branch> _live = {};
+  final Set<Element> _live = {};
 
   @override
-  void addDependent(Branch branch, {Object? aspect}) {
+  void addDependent(Element element, {Object? aspect}) {
     // Forward first: a plain provider rejects non-null aspects. Mirroring the
-    // branch before that rejection would leave a phantom live dependent.
-    super.addDependent(branch, aspect: aspect);
-    _live.add(branch);
+    // element before that rejection would leave a phantom live dependent.
+    super.addDependent(element, aspect: aspect);
+    _live.add(element);
   }
 
   @override
-  void removeDependent(Branch branch) {
-    _live.remove(branch);
-    super.removeDependent(branch);
+  void removeDependent(Element element) {
+    _live.remove(element);
+    super.removeDependent(element);
   }
 
   @override
-  void mount(Branch? parent, Object? slot) {
+  void mount(Element? parent, Object? slot) {
     // super.mount reconciles the child subtree first: descendants that watch
-    // this type register live against THIS branch (it is mounted before they
+    // this type register live against THIS element (it is mounted before they
     // build); only then are the scope's parked dependents notified.
     super.mount(parent, slot);
     final registry = _registry =
-        getInheritedSeedOfExactType<AvailabilityRegistry>();
+        getInheritedValueOfExactType<AvailabilityRegistry>();
     registry?.providerMounted(T);
   }
 
@@ -785,11 +785,11 @@ final class _ProviderInheritedBranch<T extends Object>
     // pending through its own watch miss.
     _registry?.providerUnmounted(T, List.of(_live));
     _live.clear();
-    final owner = (seed as _ProviderInherited<T>).owner;
+    final owner = (component as _ProviderInherited<T>).owner;
     super.unmount();
     // Dispose an OWNED value only now, with the subtree fully down: a
     // descendant's teardown read (`context.read` from `State.dispose`) saw a
-    // live value, and across a Nest chain this branch's subtree contained
+    // live value, and across a Nest chain this element's subtree contained
     // every inner provider — disposal therefore runs inner-before-outer,
     // reverse creation order (an inner value built from an outer one goes
     // down before its dependency).
@@ -803,42 +803,44 @@ final class _ProviderScopeState extends SingleChildState<ProviderScope> {
   /// The pending-dependents-by-type map — the scope's WHOLE state. Owned by
   /// the state so it survives reconcile; shared with providers and watchers
   /// as a scope-lifetime-stable inherited value (identity-equal across
-  /// rebuilds, so InheritedSeed.updateShouldNotify never fires for it).
+  /// rebuilds, so InheritedComponent.updateShouldNotify never fires for it).
   final AvailabilityRegistry _registry = AvailabilityRegistry();
 
   @override
-  Seed buildWithChild(TreeContext context, Seed child) =>
-      _RegistrySeed(value: _registry, child: child);
+  Component buildWithChild(BuildContext context, Component child) =>
+      _RegistryComponent(value: _registry, child: child);
 }
 
-final class _RegistrySeed extends InheritedSeed<AvailabilityRegistry> {
-  const _RegistrySeed({required super.value, required super.child});
+final class _RegistryComponent
+    extends InheritedComponent<AvailabilityRegistry> {
+  const _RegistryComponent({required super.value, required super.child});
 
   @override
-  InheritedBranch<AvailabilityRegistry> createBranch() => _RegistryBranch(this);
+  InheritedElement<AvailabilityRegistry> createElement() =>
+      _RegistryElement(this);
 }
 
-/// The registry's branch: the substrate's addDependent path doubles as the
+/// The registry's element: the substrate's addDependent path doubles as the
 /// pending-registration chokepoint. A watcher that misses depends on THIS
-/// branch (see [ProviderTreeContext.watch]); the interception below files it
+/// element (see [ProviderBuildContext.watch]); the interception below files it
 /// under the missed type, and the substrate's unmount bookkeeping calls
 /// [removeDependent], auto-releasing the parked registration.
-final class _RegistryBranch extends InheritedBranch<AvailabilityRegistry> {
-  _RegistryBranch(_RegistrySeed super.seed);
+final class _RegistryElement extends InheritedElement<AvailabilityRegistry> {
+  _RegistryElement(_RegistryComponent super.component);
 
   @override
-  void addDependent(Branch branch, {Object? aspect}) {
+  void addDependent(Element element, {Object? aspect}) {
     // Forward first so a rejected aspect cannot park a pending registration
     // without a corresponding dependency edge in the substrate.
-    super.addDependent(branch, aspect: aspect);
+    super.addDependent(element, aspect: aspect);
     final type = value._registering;
-    if (type != null) value._addPending(type, branch);
+    if (type != null) value._addPending(type, element);
   }
 
   @override
-  void removeDependent(Branch branch) {
-    value._dropPending(branch);
-    super.removeDependent(branch);
+  void removeDependent(Element element) {
+    value._dropPending(element);
+    super.removeDependent(element);
   }
 }
 
@@ -848,64 +850,64 @@ final class _RegistryBranch extends InheritedBranch<AvailabilityRegistry> {
 /// notification has no observable end-to-end effect on this no-reparent
 /// substrate (every live dependent of an unmounting provider is a descendant
 /// and unmounts with it), so its receive-side contract behavior is pinned by
-/// direct unit tests against this class, and the provider branch's transmit
+/// direct unit tests against this class, and the provider element's transmit
 /// side through [debugNotifying]. Production code composes [ProviderScope]
 /// and never names the registry.
 ///
-/// **Release semantics.** A parked registration (per branch, per type,
+/// **Release semantics.** A parked registration (per element, per type,
 /// idempotent) is released by exactly three events:
 ///
 /// 1. **Drain** — a [Provider] mount of the type removes the WHOLE bucket
 ///    ([providerMounted]); recipients that still miss re-file through their
 ///    own rebuild's watch miss.
-/// 2. **Delivery consumes** — any notification delivered to a branch first
-///    drops ALL of that branch's parked registrations (every type): the
-///    rebuild the ping triggers re-files the branch's CURRENT interests, so a
-///    type the branch stopped watching does not linger past its next
+/// 2. **Delivery consumes** — any notification delivered to a element first
+///    drops ALL of that element's parked registrations (every type): the
+///    rebuild the ping triggers re-files the element's CURRENT interests, so a
+///    type the element stopped watching does not linger past its next
 ///    notification.
 /// 3. **Unmount** — the substrate's own dependency release
-///    ([_RegistryBranch.removeDependent], riding the registry-branch edge the
-///    watch miss registered) drops the branch from every bucket.
+///    ([_RegistryElement.removeDependent], riding the registry-element edge the
+///    watch miss registered) drops the element from every bucket.
 ///
-/// A mounted branch that rebuilds WITHOUT issuing any watch keeps its prior
+/// A mounted element that rebuilds WITHOUT issuing any watch keeps its prior
 /// registrations until the next of these events — there is no substrate hook
 /// on a hook-free rebuild — which is bounded (at most one entry per type, all
-/// for live branches) and self-corrects at the branch's next ping or unmount.
+/// for live elements) and self-corrects at the element's next ping or unmount.
 @visibleForTesting
 final class AvailabilityRegistry {
-  final Map<Type, Set<Branch>> _pending = {};
+  final Map<Type, Set<Element>> _pending = {};
 
-  /// Branches queued for a deferred [Branch.dependencyChanged] — provider
+  /// Branches queued for a deferred [Element.dependencyChanged] — provider
   /// (un)mount announcements land here mid-flush and are delivered from a
   /// microtask, after the in-progress pass has drained. Delivering
-  /// synchronously would re-dirty a branch the current flush pass already
-  /// built, which the substrate forbids (`TreeOwner.scheduleRebuildFor`).
-  final Set<Branch> _notifying = {};
+  /// synchronously would re-dirty a element the current flush pass already
+  /// built, which the substrate forbids (`BuildOwner.scheduleRebuildFor`).
+  final Set<Element> _notifying = {};
   bool _deliveryScheduled = false;
 
-  /// Set by [ProviderTreeContext.watch] around its registry-dependency call so
-  /// [_RegistryBranch.addDependent] knows which missed type to file the
+  /// Set by [ProviderBuildContext.watch] around its registry-dependency call so
+  /// [_RegistryElement.addDependent] knows which missed type to file the
   /// dependent under (the capability handle deliberately never exposes its
-  /// branch; the substrate's own dependency path is the one place the branch
+  /// element; the substrate's own dependency path is the one place the element
   /// surfaces).
   Type? _registering;
 
-  void _addPending(Type type, Branch dependent) =>
+  void _addPending(Type type, Element dependent) =>
       (_pending[type] ??= {}).add(dependent);
 
   /// Drops [dependent] from EVERY bucket — the shared release chokepoint for
   /// rules 2 (delivery consumes) and 3 (unmount, via
-  /// [_RegistryBranch.removeDependent]) of the release semantics.
-  void _dropPending(Branch dependent) {
+  /// [_RegistryElement.removeDependent]) of the release semantics.
+  void _dropPending(Element dependent) {
     for (final waiting in _pending.values) {
       waiting.remove(dependent);
     }
   }
 
   /// Queues [dependents] for notification and schedules one delivery
-  /// microtask. Delivery guards on [Branch.mounted]: a branch that unmounted
+  /// microtask. Delivery guards on [Element.mounted]: a element that unmounted
   /// between announcement and delivery is skipped, not retained.
-  void _notifyDeferred(Iterable<Branch> dependents) {
+  void _notifyDeferred(Iterable<Element> dependents) {
     _notifying.addAll(dependents);
     if (_deliveryScheduled || _notifying.isEmpty) return;
     _deliveryScheduled = true;
@@ -921,8 +923,8 @@ final class AvailabilityRegistry {
       for (final dependent in batch) {
         // Delivery CONSUMES the recipient's parked registrations (all types,
         // release semantics rule 2): the rebuild this ping triggers re-files
-        // the branch's current interests through its own watch misses, so a
-        // stale interest cannot outlive the branch's next notification.
+        // the element's current interests through its own watch misses, so a
+        // stale interest cannot outlive the element's next notification.
         _dropPending(dependent);
         if (!dependent.mounted) continue;
         try {
@@ -943,10 +945,10 @@ final class AvailabilityRegistry {
   }
 
   /// A [Provider] of [type] mounted: drain its pending dependents and notify
-  /// each through [Branch.dependencyChanged] — mark-needs-rebuild through the
+  /// each through [Element.dependencyChanged] — mark-needs-rebuild through the
   /// owner, DEFERRED past the flush pass the mount happened in. A notified
   /// dependent rebuilds in the owner's next flush; one that now resolves the
-  /// value registers live with the provider's branch (the migration), one
+  /// value registers live with the provider's element (the migration), one
   /// that still misses re-registers pending on its own rebuild.
   void providerMounted(Type type) {
     final waiting = _pending.remove(type);
@@ -959,24 +961,24 @@ final class AvailabilityRegistry {
   /// here: a dependent that unmounts with the provider's subtree — on this
   /// no-reparent substrate, all of them — must not be retained by the
   /// registry, and a surviving one re-registers pending through its own
-  /// rebuild's watch miss, which rides the [_RegistryBranch] dependency path
+  /// rebuild's watch miss, which rides the [_RegistryElement] dependency path
   /// that IS released on unmount.
-  void providerUnmounted(Type type, Iterable<Branch> dependents) {
+  void providerUnmounted(Type type, Iterable<Element> dependents) {
     _notifyDeferred(dependents);
   }
 
   /// The pending dependents parked under [type] — a read-only test probe
-  /// (leak regressions assert no unmounted branch is ever retained here).
+  /// (leak regressions assert no unmounted element is ever retained here).
   @visibleForTesting
-  Set<Branch> debugPendingOf(Type type) =>
-      Set.unmodifiable(_pending[type] ?? const <Branch>{});
+  Set<Element> debugPendingOf(Type type) =>
+      Set.unmodifiable(_pending[type] ?? const <Element>{});
 
-  /// The branches queued for the next delivery microtask — a read-only test
+  /// The elements queued for the next delivery microtask — a read-only test
   /// probe. Pins the TRANSMIT side of the unmount announcement end-to-end:
-  /// the provider branch's mirrored live-dependent set has no other
+  /// the provider element's mirrored live-dependent set has no other
   /// observable outlet on this no-reparent substrate (every recipient is
   /// down before delivery), so tests read the queue between the announcing
   /// flush and the delivery microtask.
   @visibleForTesting
-  Set<Branch> get debugNotifying => Set.unmodifiable(_notifying);
+  Set<Element> get debugNotifying => Set.unmodifiable(_notifying);
 }

@@ -1,10 +1,10 @@
-// Proof-fixture Seed types bound by test/src/fixture.catalog.json.
+// Proof-fixture Component types bound by test/src/fixture.catalog.json.
 //
 // Three species, mirroring the tree package's own test fixtures (ADR-0001
 // Decision 3: container artifacts live with their domains, so these stay
 // test-side):
 //
-// - `Panel`   — keyed multichild container whose branch reconciles children
+// - `Panel`   — keyed multichild container whose element reconciles children
 //               in `performRebuild` (the tree test-fixture Node analog);
 // - `Label`   — bare leaf with required string props;
 // - `Gauge`   — leaf exercising every prop kind (string / number / integer /
@@ -12,8 +12,8 @@
 //               type-level action declaration in the catalog.
 import 'package:genesis_tree/genesis_tree.dart';
 
-/// Keyed multichild container seed.
-class Panel extends Seed {
+/// Keyed multichild container component.
+class Panel extends Component {
   /// Creates a panel holding [children].
   const Panel(this.name, {this.children = const [], super.key});
 
@@ -21,27 +21,27 @@ class Panel extends Seed {
   final String name;
 
   /// Child configurations, reconciled by key.
-  final List<Seed> children;
+  final List<Component> children;
 
   @override
-  PanelBranch createBranch() => PanelBranch(this);
+  PanelElement createElement() => PanelElement(this);
 }
 
-/// Branch for [Panel]: a non-component branch whose artifact response in the
+/// Element for [Panel]: a non-component element whose artifact response in the
 /// rebuild hook is keyed reconciliation of its children.
-class PanelBranch extends Branch {
-  /// Creates the branch for [seed].
-  PanelBranch(Panel super.seed);
+class PanelElement extends Element {
+  /// Creates the element for [component].
+  PanelElement(Panel super.component);
 
-  List<Branch> _children = const [];
+  List<Element> _children = const [];
 
-  /// The mounted child branches. Exposed for testing.
-  List<Branch> get children => _children;
+  /// The mounted child elements. Exposed for testing.
+  List<Element> get children => _children;
 
-  Panel get _panel => seed as Panel;
+  Panel get _panel => component as Panel;
 
   @override
-  void mount(Branch? parent, Object? slot) {
+  void mount(Element? parent, Object? slot) {
     super.mount(parent, slot);
     performRebuild();
   }
@@ -52,7 +52,7 @@ class PanelBranch extends Branch {
   }
 
   @override
-  void visitChildren(void Function(Branch child) visitor) {
+  void visitChildren(void Function(Element child) visitor) {
     for (final child in _children) {
       visitor(child);
     }
@@ -65,8 +65,8 @@ class PanelBranch extends Branch {
   }
 }
 
-/// Leaf seed holding a single named string value.
-class Label extends Seed {
+/// Leaf component holding a single named string value.
+class Label extends Component {
   /// Creates a label.
   const Label({required this.name, required this.value, super.key});
 
@@ -77,18 +77,18 @@ class Label extends Seed {
   final String value;
 
   @override
-  LabelBranch createBranch() => LabelBranch(this);
+  LabelElement createElement() => LabelElement(this);
 }
 
-/// Branch for [Label]; the empty default rebuild hook.
-class LabelBranch extends Branch {
-  /// Creates the branch for [seed].
-  LabelBranch(Label super.seed);
+/// Element for [Label]; the empty default rebuild hook.
+class LabelElement extends Element {
+  /// Creates the element for [component].
+  LabelElement(Label super.component);
 }
 
-/// Leaf seed exercising every catalog prop kind; its catalog type also
+/// Leaf component exercising every catalog prop kind; its catalog type also
 /// declares action affordances (`set` / `reset`).
-class Gauge extends Seed {
+class Gauge extends Component {
   /// Creates a gauge.
   const Gauge(
     this.label, {
@@ -117,11 +117,11 @@ class Gauge extends Seed {
   final String align;
 
   @override
-  GaugeBranch createBranch() => GaugeBranch(this);
+  GaugeElement createElement() => GaugeElement(this);
 }
 
-/// Branch for [Gauge]; the empty default rebuild hook.
-class GaugeBranch extends Branch {
-  /// Creates the branch for [seed].
-  GaugeBranch(Gauge super.seed);
+/// Element for [Gauge]; the empty default rebuild hook.
+class GaugeElement extends Element {
+  /// Creates the element for [component].
+  GaugeElement(Gauge super.component);
 }

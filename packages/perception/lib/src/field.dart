@@ -83,8 +83,8 @@ class Field extends Perception {
 /// the inherited empty rebuild hook. An in-place update swaps the
 /// configuration, so [field] always reports the latest measured value.
 class FieldElement extends PerceptionElement {
-  /// Creates the element for [seed].
-  FieldElement(Field super.seed);
+  /// Creates the element for [component].
+  FieldElement(Field super.component);
 
   /// The current [Field] configuration, typed.
   Field get field => perception as Field;

@@ -36,17 +36,17 @@ class Counter extends StatefulPerception {
   CounterState createState() => CounterState();
 
   @override
-  CounterElement createBranch() => CounterElement(this);
+  CounterElement createElement() => CounterElement(this);
 }
 
 /// The actionable element — the spike-5 "seam on elements": it implements
 /// [Actionable] and forwards to its [CounterState], so consent reaches the
-/// action seam via `branch is Actionable` and never touches `.state` (which is
+/// action seam via `element is Actionable` and never touches `.state` (which is
 /// `@protected`). The element is a `StatefulPerceptionElement` subclass, so its
 /// own `state` access is legitimate.
 class CounterElement extends StatefulPerceptionElement implements Actionable {
-  /// Creates the actionable element for [seed].
-  CounterElement(Counter super.seed);
+  /// Creates the actionable element for [component].
+  CounterElement(Counter super.component);
 
   CounterState get _state => state as CounterState;
 
@@ -74,7 +74,7 @@ class CounterState extends PerceptionState<Counter> implements Actionable {
   }
 
   @override
-  Seed build(PerceptionContext context) {
+  Component build(PerceptionContext context) {
     consentFixtureBuildCounts.update(
       perception.label,
       (n) => n + 1,

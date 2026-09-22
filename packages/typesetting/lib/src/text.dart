@@ -1,9 +1,9 @@
 import 'cell_grid.dart';
-import 'render_branch.dart';
+import 'render_element.dart';
 
 /// A single glyph run (render vocabulary v1): one line of
 /// [content], e.g. a name-value readout like `count: 3`.
-class Text extends RenderSeed {
+class Text extends RenderComponent {
   /// Creates a one-line glyph run, optionally [key]ed.
   const Text(this.content, {super.key});
 
@@ -12,16 +12,16 @@ class Text extends RenderSeed {
   final String content;
 
   @override
-  TextBranch createBranch() => TextBranch(this);
+  TextElement createElement() => TextElement(this);
 }
 
-/// Mounted render branch for [Text]: a render leaf occupying one flow line;
+/// Mounted render element for [Text]: a render leaf occupying one flow line;
 /// its artifact response paints the run into its rect.
-class TextBranch extends RenderBranch {
-  /// Creates the branch for [seed].
-  TextBranch(Text super.seed);
+class TextElement extends RenderElement {
+  /// Creates the element for [component].
+  TextElement(Text super.component);
 
-  Text get _text => seed as Text;
+  Text get _text => component as Text;
 
   @override
   int get flowHeight => 1;
@@ -37,3 +37,7 @@ class TextBranch extends RenderBranch {
     grid.putText(rect.left, rect.top, content);
   }
 }
+
+/// Legacy name for [TextElement].
+@Deprecated('Use TextElement instead.')
+typedef TextBranch = TextElement;

@@ -48,8 +48,8 @@ Map<String, Object?> v2NoA() => {
   },
 };
 
-/// A DAG emission: `shared` is referenced by BOTH n1 and n2, so buildSeedTree
-/// builds it twice — two mounted branches under one id (A19). Reachable from a
+/// A DAG emission: `shared` is referenced by BOTH n1 and n2, so buildComponentTree
+/// builds it twice — two mounted elements under one id (A19). Reachable from a
 /// valid updateComponents message (the envelope rejects duplicate top-level
 /// ids, not an id reused as a child of two parents).
 Map<String, Object?> v1Dag() => {
@@ -100,10 +100,10 @@ ActionEvent setTo(String id, Object? value, {String surfaceId = 'main'}) =>
 
 // --- live-tree probes ------------------------------------------------------
 
-Branch? findByKey(Branch root, String id) {
-  Branch? found;
+Element? findByKey(Element root, String id) {
+  Element? found;
   final target = ValueKey(id);
-  void walk(Branch b) {
+  void walk(Element b) {
     if (found != null) return;
     if (b.key == target) {
       found = b;
@@ -117,27 +117,27 @@ Branch? findByKey(Branch root, String id) {
 }
 
 /// The string a counter currently renders (its built `Field`'s value).
-String renderedValue(Branch root, String counterId) {
+String renderedValue(Element root, String counterId) {
   final counter = findByKey(root, counterId)!;
   String? value;
   counter.visitChildren((child) {
-    final seed = child.seed;
-    if (seed is Field) value = seed.value?.toString();
+    final component = child.component;
+    if (component is Field) value = component.value?.toString();
   });
   return value!;
 }
 
 /// A canonical dump of config props AND live state (the rendered Field
 /// values), used to assert a rejection left the tree byte-for-byte untouched.
-String dumpTree(Branch root) {
+String dumpTree(Element root) {
   final lines = <String>[];
-  void walk(Branch b, int depth) {
-    final seed = b.seed;
-    final extra = switch (seed) {
+  void walk(Element b, int depth) {
+    final component = b.component;
+    final extra = switch (component) {
       Node n => 'node name=${n.name}',
       Field f => 'field name=${f.name} value=${f.value}',
       Counter c => 'counter label=${c.label} start=${c.start}',
-      _ => seed.runtimeType.toString(),
+      _ => component.runtimeType.toString(),
     };
     lines.add('${'  ' * depth}${b.key}|$extra|mounted=${b.mounted}');
     b.visitChildren((c) => walk(c, depth + 1));
@@ -228,7 +228,7 @@ void main() {
 
         expect(router.route(press('cA', amount: 4)), isA<Applied>());
 
-        // No manual flush: enforce marked the branch dirty, which fired
+        // No manual flush: enforce marked the element dirty, which fired
         // onNeedsFlush; the scheduled microtask drains it on the same pipeline.
         await Future<void>.delayed(Duration.zero);
 
@@ -242,7 +242,7 @@ void main() {
     /// Asserts [act] rejects with [kind] and leaves the tree byte-for-byte
     /// untouched: identical canonical dump, zero rebuilds, empty dirty set.
     Rejected expectCleanReject(
-      Branch root,
+      Element root,
       ConsentOutcome Function() act,
       RejectionKind kind,
     ) {
@@ -390,7 +390,7 @@ void main() {
       expect(() => router.route(press('cA')), throwsStateError);
     });
 
-    test('a DAG-shared id resolves to >1 mounted branch and route throws '
+    test('a DAG-shared id resolves to >1 mounted element and route throws '
         'rather than silently mutating one copy', () {
       // mount succeeds — taxonomy/dialogue permit the DAG share (built twice).
       final root = router.mount(msg(v1Dag()));
@@ -403,7 +403,7 @@ void main() {
           isA<StateError>().having(
             (e) => e.message,
             'message',
-            contains('resolves to 2 mounted branches'),
+            contains('resolves to 2 mounted elements'),
           ),
         ),
       );

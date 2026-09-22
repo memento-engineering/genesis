@@ -50,40 +50,40 @@ final class _Participant with TreeLifecycleParticipant {
   }
 }
 
-final class _BuildProbe extends StatelessSeed {
+final class _BuildProbe extends StatelessComponent {
   const _BuildProbe(this.participant, this.events);
 
   final _Participant participant;
   final List<String> events;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     expect(context.watch<_Participant>(), same(participant));
     events.add('build');
     return const _Leaf();
   }
 }
 
-final class _Leaf extends Seed {
+final class _Leaf extends Component {
   const _Leaf();
 
   @override
-  Branch createBranch() => _LeafBranch(this);
+  Element createElement() => _LeafElement(this);
 }
 
-final class _LeafBranch extends Branch {
-  _LeafBranch(_Leaf super.seed);
+final class _LeafElement extends Element {
+  _LeafElement(_Leaf super.component);
 }
 
-final class _Slots extends MultiChildSeed {
-  _Slots(List<Seed> children) : super(children: children);
+final class _Slots extends MultiChildComponent {
+  _Slots(List<Component> children) : super(children: children);
 }
 
-final class _InheritedHost extends StatefulSeed {
+final class _InheritedHost extends StatefulComponent {
   const _InheritedHost({required this.onCreate, required this.describe});
 
   final void Function(_InheritedHostState state) onCreate;
-  final Seed Function() describe;
+  final Component Function() describe;
 
   @override
   State<_InheritedHost> createState() {
@@ -99,15 +99,15 @@ final class _InheritedHostState extends State<_InheritedHost> {
   void update(int value) => setState(() => _value = value);
 
   @override
-  Seed build(TreeContext context) =>
-      InheritedSeed<int>(value: _value, child: seed.describe());
+  Component build(BuildContext context) =>
+      InheritedComponent<int>(value: _value, child: component.describe());
 }
 
-final class _ThrowingSeed extends StatelessSeed {
-  const _ThrowingSeed();
+final class _ThrowingComponent extends StatelessComponent {
+  const _ThrowingComponent();
 
   @override
-  Seed build(TreeContext context) => throw const _MountFailure();
+  Component build(BuildContext context) => throw const _MountFailure();
 }
 
 final class _MountFailure implements Exception {
@@ -138,7 +138,7 @@ void main() {
     final participant = _Participant(events: events, watchInt: true);
     late _InheritedHostState host;
     var createCount = 0;
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     owner.mountRoot(
@@ -192,7 +192,7 @@ void main() {
     () {
       final participant = _Participant(watchInt: true);
       late _InheritedHostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -246,14 +246,14 @@ void main() {
       },
     );
     first = _Participant(watchInt: true);
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     final stringProvider =
         owner.mountRoot(
-              InheritedSeed<String>(
+              InheritedComponent<String>(
                 value: 'ambient',
-                child: InheritedSeed<int>(
+                child: InheritedComponent<int>(
                   value: 7,
                   child: _Slots([
                     LifecycleProvider<_Participant>.value(
@@ -268,7 +268,7 @@ void main() {
                 ),
               ),
             )
-            as InheritedBranch<String>;
+            as InheritedElement<String>;
 
     expect(matchingPhaseErrors, hasLength(2));
     expect(
@@ -319,7 +319,7 @@ void main() {
   test('created participant disposes once and adopted participant never '
       'disposes', () {
     final created = _Participant();
-    final createdOwner = TreeOwner();
+    final createdOwner = BuildOwner();
     createdOwner.mountRoot(
       LifecycleProvider<_Participant>(
         create: () => created,
@@ -333,7 +333,7 @@ void main() {
     expect(created.disposeCount, 1);
 
     final adopted = _Participant();
-    final adoptedOwner = TreeOwner();
+    final adoptedOwner = BuildOwner();
     adoptedOwner.mountRoot(
       LifecycleProvider<_Participant>.value(adopted, child: const _Leaf()),
     );
@@ -347,7 +347,7 @@ void main() {
   test('unmount invalidates the outstanding scope without throwing', () async {
     Future<void> probe({required bool created}) async {
       final participant = _Participant();
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final provider = created
           ? LifecycleProvider<_Participant>(
               create: () => participant,
@@ -380,14 +380,14 @@ void main() {
   test('first-mount failure disposes a created participant once but not an '
       'adopted participant', () {
     final created = _Participant();
-    final createdOwner = TreeOwner();
+    final createdOwner = BuildOwner();
     addTearDown(createdOwner.dispose);
 
     expect(
       () => createdOwner.mountRoot(
         LifecycleProvider<_Participant>(
           create: () => created,
-          child: const _ThrowingSeed(),
+          child: const _ThrowingComponent(),
         ),
       ),
       throwsA(isA<_MountFailure>()),
@@ -396,14 +396,14 @@ void main() {
     expect(created.dependencyScopes.single.isCurrent, isFalse);
 
     final adopted = _Participant();
-    final adoptedOwner = TreeOwner();
+    final adoptedOwner = BuildOwner();
     addTearDown(adoptedOwner.dispose);
 
     expect(
       () => adoptedOwner.mountRoot(
         LifecycleProvider<_Participant>.value(
           adopted,
-          child: const _ThrowingSeed(),
+          child: const _ThrowingComponent(),
         ),
       ),
       throwsA(isA<_MountFailure>()),
@@ -417,7 +417,7 @@ void main() {
     () {
       final participant = _Participant(watchInt: true);
       late _InheritedHostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final root =
           owner.mountRoot(
@@ -429,16 +429,16 @@ void main() {
                   ),
                 ),
               )
-              as StatefulBranch;
-      final inherited = root.child as InheritedBranch<int>;
-      final lifecycleProviderBranch = inherited.childBranch!;
+              as StatefulElement;
+      final inherited = root.child as InheritedElement<int>;
+      final lifecycleProviderElement = inherited.childElement!;
       final oldScope = participant.dependencyScopes.single;
 
       host.update(2);
       owner.flush();
 
-      expect(inherited.childBranch, same(lifecycleProviderBranch));
-      expect(lifecycleProviderBranch.mounted, isTrue);
+      expect(inherited.childElement, same(lifecycleProviderElement));
+      expect(lifecycleProviderElement.mounted, isTrue);
       expect(oldScope.isCurrent, isFalse);
       expect(participant.dependencyScopes.last.isCurrent, isTrue);
     },
@@ -450,8 +450,8 @@ void main() {
     test('rejects create to value and keeps owned disposal armed', () {
       final original = _Participant();
       final replacement = _Participant();
-      final owner = TreeOwner();
-      final branch = owner.mountRoot(
+      final owner = BuildOwner();
+      final element = owner.mountRoot(
         LifecycleProvider<_Participant>(
           key: key,
           create: () => original,
@@ -460,7 +460,7 @@ void main() {
       );
 
       expect(
-        () => branch.update(
+        () => element.update(
           LifecycleProvider<_Participant>.value(
             replacement,
             key: key,
@@ -481,8 +481,8 @@ void main() {
       final original = _Participant();
       final replacement = _Participant();
       var createCount = 0;
-      final owner = TreeOwner();
-      final branch = owner.mountRoot(
+      final owner = BuildOwner();
+      final element = owner.mountRoot(
         LifecycleProvider<_Participant>.value(
           original,
           key: key,
@@ -491,7 +491,7 @@ void main() {
       );
 
       expect(
-        () => branch.update(
+        () => element.update(
           LifecycleProvider<_Participant>(
             key: key,
             create: () {
@@ -513,8 +513,8 @@ void main() {
     test('rejects a non-identical adopted replacement', () {
       final original = _Participant();
       final replacement = _Participant();
-      final owner = TreeOwner();
-      final branch = owner.mountRoot(
+      final owner = BuildOwner();
+      final element = owner.mountRoot(
         LifecycleProvider<_Participant>.value(
           original,
           key: key,
@@ -523,7 +523,7 @@ void main() {
       );
 
       expect(
-        () => branch.update(
+        () => element.update(
           LifecycleProvider<_Participant>.value(
             replacement,
             key: key,

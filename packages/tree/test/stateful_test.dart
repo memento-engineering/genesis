@@ -5,23 +5,23 @@ import 'package:genesis_tree/genesis_tree.dart';
 
 // --- fixtures ---
 
-class _Leaf extends Seed {
+class _Leaf extends Component {
   const _Leaf();
   @override
-  _LeafBranch createBranch() => _LeafBranch(this);
+  _LeafElement createElement() => _LeafElement(this);
 }
 
-class _LeafBranch extends Branch {
-  _LeafBranch(super.seed);
+class _LeafElement extends Element {
+  _LeafElement(super.component);
 }
 
-class _TrackedSeed extends StatefulSeed {
-  const _TrackedSeed();
+class _TrackedComponent extends StatefulComponent {
+  const _TrackedComponent();
   @override
   _TrackedState createState() => _TrackedState();
 }
 
-class _TrackedState extends State<_TrackedSeed> {
+class _TrackedState extends State<_TrackedComponent> {
   final calls = <String>[];
   int count = 0;
 
@@ -32,7 +32,7 @@ class _TrackedState extends State<_TrackedSeed> {
   void didChangeDependencies() => calls.add('dcd');
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     calls.add('build');
     return const _Leaf();
   }
@@ -41,144 +41,151 @@ class _TrackedState extends State<_TrackedSeed> {
   void dispose() => calls.add('dispose');
 }
 
-class _ReaderSeed extends StatefulSeed {
-  const _ReaderSeed();
+class _ReaderComponent extends StatefulComponent {
+  const _ReaderComponent();
   @override
   _ReaderState createState() => _ReaderState();
 }
 
-class _ReaderState extends State<_ReaderSeed> {
+class _ReaderState extends State<_ReaderComponent> {
   final calls = <String>[];
   int? lastValue;
 
   @override
   void didChangeDependencies() {
     calls.add('dcd');
-    lastValue = context.dependOnInheritedSeedOfExactType<int>();
+    lastValue = context.dependOnInheritedValueOfExactType<int>();
   }
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     calls.add('build');
     return const _Leaf();
   }
 }
 
-class _InitGetSeed extends StatefulSeed {
-  const _InitGetSeed();
+class _InitGetComponent extends StatefulComponent {
+  const _InitGetComponent();
   @override
   _InitGetState createState() => _InitGetState();
 }
 
-class _InitGetState extends State<_InitGetSeed> {
+class _InitGetState extends State<_InitGetComponent> {
   int? initValue;
 
   @override
   void initState() {
-    initValue = context.getInheritedSeedOfExactType<int>();
+    initValue = context.getInheritedValueOfExactType<int>();
   }
 
   @override
-  Seed build(TreeContext context) => const _Leaf();
+  Component build(BuildContext context) => const _Leaf();
 }
 
-class _InitDependSeed extends StatefulSeed {
-  const _InitDependSeed();
+class _InitDependComponent extends StatefulComponent {
+  const _InitDependComponent();
   @override
   _InitDependState createState() => _InitDependState();
 }
 
-class _InitDependState extends State<_InitDependSeed> {
+class _InitDependState extends State<_InitDependComponent> {
   @override
   void initState() {
-    context.dependOnInheritedSeedOfExactType<int>();
+    context.dependOnInheritedValueOfExactType<int>();
   }
 
   @override
-  Seed build(TreeContext context) => const _Leaf();
+  Component build(BuildContext context) => const _Leaf();
 }
 
-class _DisposeDependSeed extends StatefulSeed {
-  const _DisposeDependSeed();
+class _DisposeDependComponent extends StatefulComponent {
+  const _DisposeDependComponent();
   @override
   _DisposeDependState createState() => _DisposeDependState();
 }
 
-class _DisposeDependState extends State<_DisposeDependSeed> {
+class _DisposeDependState extends State<_DisposeDependComponent> {
   @override
-  Seed build(TreeContext context) => const _Leaf();
+  Component build(BuildContext context) => const _Leaf();
 
   @override
   void dispose() {
-    context.dependOnInheritedSeedOfExactType<int>();
+    context.dependOnInheritedValueOfExactType<int>();
   }
 }
 
-class _DisposeGetSeed extends StatefulSeed {
-  const _DisposeGetSeed();
+class _DisposeGetComponent extends StatefulComponent {
+  const _DisposeGetComponent();
   @override
   _DisposeGetState createState() => _DisposeGetState();
 }
 
-class _DisposeGetState extends State<_DisposeGetSeed> {
+class _DisposeGetState extends State<_DisposeGetComponent> {
   int? disposeValue;
 
   @override
-  Seed build(TreeContext context) => const _Leaf();
+  Component build(BuildContext context) => const _Leaf();
 
   @override
   void dispose() {
-    disposeValue = context.getInheritedSeedOfExactType<int>();
+    disposeValue = context.getInheritedValueOfExactType<int>();
   }
 }
 
 // --- tests ---
 
 void main() {
-  group('StatefulSeed', () {
-    test('createBranch returns StatefulBranch', () {
-      expect(const _TrackedSeed().createBranch(), isA<StatefulBranch>());
+  group('StatefulComponent', () {
+    test('createElement returns StatefulElement', () {
+      expect(const _TrackedComponent().createElement(), isA<StatefulElement>());
     });
   });
 
-  group('StatefulBranch lifecycle on mount', () {
+  group('StatefulElement lifecycle on mount', () {
     test('order: initState → didChangeDependencies → build', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch = owner.mountRoot(const _TrackedSeed()) as StatefulBranch;
+      final element =
+          owner.mountRoot(const _TrackedComponent()) as StatefulElement;
       expect(
-        (branch.state as _TrackedState).calls,
+        (element.state as _TrackedState).calls,
         equals(['initState', 'dcd', 'build']),
       );
     });
 
-    test('state.seed is the StatefulSeed config', () {
-      final owner = TreeOwner();
+    test('state.component is the StatefulComponent config', () {
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch = owner.mountRoot(const _TrackedSeed()) as StatefulBranch;
-      expect(branch.state.seed, isA<_TrackedSeed>());
+      final element =
+          owner.mountRoot(const _TrackedComponent()) as StatefulElement;
+      expect(element.state.component, isA<_TrackedComponent>());
     });
 
-    test('state.context is the capability handle bound to the branch (A8)', () {
-      final owner = TreeOwner();
-      addTearDown(owner.dispose);
-      final branch = owner.mountRoot(const _TrackedSeed()) as StatefulBranch;
-      final context = (branch.state as _TrackedState).context;
-      // The handle delegates to the branch...
-      expect(context.branchId, equals(branch.branchId));
-      // ...but is never the branch itself (A8: the separate-handle fork —
-      // perception asserted `state.context` WAS the element here).
-      expect(context, isNot(same(branch)));
-      expect(context, isNot(isA<Branch>()));
-    });
+    test(
+      'state.context is the capability handle bound to the element (A8)',
+      () {
+        final owner = BuildOwner();
+        addTearDown(owner.dispose);
+        final element =
+            owner.mountRoot(const _TrackedComponent()) as StatefulElement;
+        final context = (element.state as _TrackedState).context;
+        // The handle delegates to the element...
+        expect(context.elementId, equals(element.elementId));
+        // ...but is never the element itself (A8: the separate-handle fork —
+        // perception asserted `state.context` WAS the element here).
+        expect(context, isNot(same(element)));
+        expect(context, isNot(isA<Element>()));
+      },
+    );
   });
 
   group('setState() sink', () {
-    test('setState() marks branch dirty and rebuild runs state.build', () {
-      final owner = TreeOwner();
+    test('setState() marks element dirty and rebuild runs state.build', () {
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch = owner.mountRoot(const _TrackedSeed()) as StatefulBranch;
-      final state = branch.state as _TrackedState;
+      final element =
+          owner.mountRoot(const _TrackedComponent()) as StatefulElement;
+      final state = element.state as _TrackedState;
       state.calls.clear();
 
       state.setState(() => state.count++);
@@ -188,10 +195,11 @@ void main() {
     });
 
     test('setState() does not fire didChangeDependencies', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch = owner.mountRoot(const _TrackedSeed()) as StatefulBranch;
-      final state = branch.state as _TrackedState;
+      final element =
+          owner.mountRoot(const _TrackedComponent()) as StatefulElement;
+      final state = element.state as _TrackedState;
       state.calls.clear();
 
       state.setState(() {});
@@ -203,9 +211,10 @@ void main() {
 
   group('dispose lifecycle', () {
     test('dispose() called on unmount', () {
-      final owner = TreeOwner();
-      final branch = owner.mountRoot(const _TrackedSeed()) as StatefulBranch;
-      final state = branch.state as _TrackedState;
+      final owner = BuildOwner();
+      final element =
+          owner.mountRoot(const _TrackedComponent()) as StatefulElement;
+      final state = element.state as _TrackedState;
       state.calls.clear();
 
       owner.unmountRoot();
@@ -213,30 +222,34 @@ void main() {
     });
 
     test(
-      'dispose() called before super.unmount() (branch still mounted during dispose)',
+      'dispose() called before super.unmount() (element still mounted during dispose)',
       () {
-        final owner = TreeOwner();
-        final branch = owner.mountRoot(const _TrackedSeed()) as StatefulBranch;
+        final owner = BuildOwner();
+        final element =
+            owner.mountRoot(const _TrackedComponent()) as StatefulElement;
 
         owner.unmountRoot();
-        expect(branch.mounted, isFalse);
+        expect(element.mounted, isFalse);
       },
     );
   });
 
-  group('didChangeDependencies on InheritedSeed change', () {
+  group('didChangeDependencies on InheritedComponent change', () {
     test('fires before build when inherited value changes', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       final root =
           owner.mountRoot(
-                InheritedSeed<int>(value: 1, child: const _ReaderSeed()),
+                InheritedComponent<int>(
+                  value: 1,
+                  child: const _ReaderComponent(),
+                ),
               )
-              as InheritedBranch<int>;
+              as InheritedElement<int>;
 
-      final readerBranch = root.childBranch as StatefulBranch;
-      final state = readerBranch.state as _ReaderState;
+      final readerElement = root.childElement as StatefulElement;
+      final state = readerElement.state as _ReaderState;
 
       // Initial mount: dcd called with value=1
       expect(state.calls, equals(['dcd', 'build']));
@@ -244,7 +257,9 @@ void main() {
       state.calls.clear();
 
       // Update inherited value → triggers dependencyChanged → rebuild with dcd
-      root.update(InheritedSeed<int>(value: 2, child: const _ReaderSeed()));
+      root.update(
+        InheritedComponent<int>(value: 2, child: const _ReaderComponent()),
+      );
       owner.flush();
 
       expect(state.calls, equals(['dcd', 'build']));
@@ -252,17 +267,20 @@ void main() {
     });
 
     test('does not fire dcd on setState()-driven rebuild', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       final root =
           owner.mountRoot(
-                InheritedSeed<int>(value: 1, child: const _ReaderSeed()),
+                InheritedComponent<int>(
+                  value: 1,
+                  child: const _ReaderComponent(),
+                ),
               )
-              as InheritedBranch<int>;
+              as InheritedElement<int>;
 
-      final readerBranch = root.childBranch as StatefulBranch;
-      final state = readerBranch.state as _ReaderState;
+      final readerElement = root.childElement as StatefulElement;
+      final state = readerElement.state as _ReaderState;
       state.calls.clear();
 
       // setState()-driven rebuild: no dependency change
@@ -275,28 +293,37 @@ void main() {
   });
 
   group('inherited lookups across the State lifecycle', () {
-    test('getInheritedSeedOfExactType works in initState, dependency-free', () {
-      final owner = TreeOwner();
-      addTearDown(owner.dispose);
+    test(
+      'getInheritedValueOfExactType works in initState, dependency-free',
+      () {
+        final owner = BuildOwner();
+        addTearDown(owner.dispose);
 
-      final root =
-          owner.mountRoot(
-                InheritedSeed<int>(value: 7, child: const _InitGetSeed()),
-              )
-              as InheritedBranch<int>;
+        final root =
+            owner.mountRoot(
+                  InheritedComponent<int>(
+                    value: 7,
+                    child: const _InitGetComponent(),
+                  ),
+                )
+                as InheritedElement<int>;
 
-      final branch = root.childBranch as StatefulBranch;
-      expect((branch.state as _InitGetState).initValue, equals(7));
-      // A snapshot read: no dependent was registered on the provider.
-      expect(root.dependents, isEmpty);
-      expect(branch.dependencies, isEmpty);
-    });
+        final element = root.childElement as StatefulElement;
+        expect((element.state as _InitGetState).initValue, equals(7));
+        // A snapshot read: no dependent was registered on the provider.
+        expect(root.dependents, isEmpty);
+        expect(element.dependencies, isEmpty);
+      },
+    );
 
-    test('dependOnInheritedSeedOfExactType in initState asserts', () {
-      final owner = TreeOwner();
+    test('dependOnInheritedValueOfExactType in initState asserts', () {
+      final owner = BuildOwner();
       expect(
         () => owner.mountRoot(
-          InheritedSeed<int>(value: 7, child: const _InitDependSeed()),
+          InheritedComponent<int>(
+            value: 7,
+            child: const _InitDependComponent(),
+          ),
         ),
         throwsA(
           isA<AssertionError>().having(
@@ -308,10 +335,13 @@ void main() {
       );
     });
 
-    test('dependOnInheritedSeedOfExactType in dispose asserts', () {
-      final owner = TreeOwner();
+    test('dependOnInheritedValueOfExactType in dispose asserts', () {
+      final owner = BuildOwner();
       owner.mountRoot(
-        InheritedSeed<int>(value: 7, child: const _DisposeDependSeed()),
+        InheritedComponent<int>(
+          value: 7,
+          child: const _DisposeDependComponent(),
+        ),
       );
       expect(
         owner.unmountRoot,
@@ -325,15 +355,18 @@ void main() {
       );
     });
 
-    test('getInheritedSeedOfExactType works in dispose (last read)', () {
-      final owner = TreeOwner();
+    test('getInheritedValueOfExactType works in dispose (last read)', () {
+      final owner = BuildOwner();
       final root =
           owner.mountRoot(
-                InheritedSeed<int>(value: 9, child: const _DisposeGetSeed()),
+                InheritedComponent<int>(
+                  value: 9,
+                  child: const _DisposeGetComponent(),
+                ),
               )
-              as InheritedBranch<int>;
+              as InheritedElement<int>;
       final state =
-          (root.childBranch as StatefulBranch).state as _DisposeGetState;
+          (root.childElement as StatefulElement).state as _DisposeGetState;
 
       owner.dispose();
       expect(state.disposeValue, equals(9));

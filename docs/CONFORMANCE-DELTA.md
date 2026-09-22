@@ -51,32 +51,32 @@ mappings that change no behavior.
   `PerceptionElement implements PerceptionContext` (lenny ADR 0001's
   re-commitment of Flutter's Element≡BuildContext sin).
 - **New expectation (genesis):** `state.context` is a `PerceptionContext`
-  whose `perceptionId` equals the element's `branchId`, **and** is not
-  `same(element)` and not a `Branch` at all — the handle is a separate,
+  whose `perceptionId` equals the element's `elementId`, **and** is not
+  `same(element)` and not a `Element` at all — the handle is a separate,
   invalidatable object.
 - **Justification:** register **A8** → **ADR-0001 Decision 2**
   (separate-handle fork) and **A12** (`PerceptionContext` is a capability
-  extension of `TreeContext`, layered onto the handle).
+  extension of `BuildContext`, layered onto the handle).
 
-### 4. `inherited_perception_test.dart` — `'InheritedPerceptionElement is a PerceptionElement'` → `'InheritedPerceptionElement is a tree Branch (A12 layering)'`
+### 4. `inherited_perception_test.dart` — `'InheritedPerceptionElement is a PerceptionElement'` → `'InheritedPerceptionElement is a tree Element (A12 layering)'`
 
 - **Original expectation (lenny):** the inherited element
   `isA<PerceptionElement>` — everything descended from the single domain
   element base.
-- **New expectation (genesis):** `isA<InheritedBranch<String>>` and
-  `isA<Branch>`. Composition elements are tree types; only artifact elements
+- **New expectation (genesis):** `isA<InheritedElement<String>>` and
+  `isA<Element>`. Composition elements are tree types; only artifact elements
   (`NodeElement`, `FieldElement`, custom measurement leaves) extend
   `PerceptionElement`.
 - **Justification:** register **A11/A12** → **ADR-0001 Decisions 3 and 6**
   (composition is tree-owned; perception subclasses the spine rather than
   re-deriving the composition layer).
 
-### 5. `watch_test.dart` — `'createElement returns StatefulElement with WatchState'` → `'createBranch returns StatefulBranch with WatchState'`
+### 5. `watch_test.dart` — `'createElement returns StatefulElement with WatchState'` → `'createElement returns StatefulElement with WatchState'`
 
 - **Original expectation (lenny):** `Watch.createElement()` is a perception
   `StatefulElement`.
-- **New expectation (genesis):** `Watch.createBranch()` is tree's
-  `StatefulBranch` (state still `isA<WatchState<int>>`); all behavioral
+- **New expectation (genesis):** `Watch.createElement()` is tree's
+  `StatefulElement` (state still `isA<WatchState<int>>`); all behavioral
   assertions (initial value, emits, cancel-on-dispose) unchanged.
 - **Justification:** register **A13** (Watch lives in tree's composition
   layer; perception consumes it via re-export, not subclassing).
@@ -87,16 +87,16 @@ mappings that change no behavior.
 
 | lenny perception | genesis perception | Where decided |
 |---|---|---|
-| `PerceptionOwner.flushHarvest()` (void) | `PerceptionOwner.flushHarvest()` → `List<Branch>`, alias of `TreeOwner.flush` | A12 + ADR-0001 Decision 5 (drained set exposed) |
-| `PerceptionOwner.onNeedsHarvest` | retained — alias of `TreeOwner.onNeedsFlush` | A12 |
-| `PerceptionElement.markNeedsHarvest()` | retained — delegates to `Branch.markNeedsRebuild`; tree invalidation funnels back through it, so overriding it still observes provider invalidation (kept lenny's `_E.markNeedsHarvest` override tests valid) | A12 |
-| `perceptionId` | retained on `PerceptionElement` and `PerceptionContext` as alias of `branchId`; composition elements (tree types) expose `branchId` only — ports of id-identity assertions over mixed children use `branchId` | A12 |
-| `Perception.createElement()` | retained as the domain factory; `createBranch()` bridges to it | A12 |
-| `PerceptionContext.dependOnInheritedPerceptionOfExactType<T>()` | **not aliased** — ports call `dependOnInheritedSeedOfExactType<T>()` (matching is by value type, so the provider-named alias was misleading) | A12 consequence: tree types surface |
+| `PerceptionOwner.flushHarvest()` (void) | `PerceptionOwner.flushHarvest()` → `List<Element>`, alias of `BuildOwner.flush` | A12 + ADR-0001 Decision 5 (drained set exposed) |
+| `PerceptionOwner.onNeedsHarvest` | retained — alias of `BuildOwner.onNeedsFlush` | A12 |
+| `PerceptionElement.markNeedsHarvest()` | retained — delegates to `Element.markNeedsRebuild`; tree invalidation funnels back through it, so overriding it still observes provider invalidation (kept lenny's `_E.markNeedsHarvest` override tests valid) | A12 |
+| `perceptionId` | retained on `PerceptionElement` and `PerceptionContext` as alias of `elementId`; composition elements (tree types) expose `elementId` only — ports of id-identity assertions over mixed children use `elementId` | A12 |
+| `Perception.createElement()` | retained as the domain factory; `createElement()` bridges to it | A12 |
+| `PerceptionContext.dependOnInheritedPerceptionOfExactType<T>()` | **not aliased** — ports call `dependOnInheritedValueOfExactType<T>()` (matching is by value type, so the provider-named alias was misleading) | A12 consequence: tree types surface |
 | `PerceptionState.perceived(fn)` | retained — alias of `State.setState` | tree register (setState-analogue) + A12 |
-| `PerceptionState.perception` | retained — alias of `State.seed` | tree register (`state.seed`) + A12 |
-| `InheritedPerceptionElement.childElement` | `childBranch` (inherited from `InheritedBranch`) | tree register rename |
-| `StatelessElement` / `StatefulElement` | `StatelessPerceptionElement` / `StatefulPerceptionElement` — thin subclasses of tree's `StatelessBranch`/`StatefulBranch` that upgrade the handle to `PerceptionContext` | A12 |
-| `Node.children: List<Perception>` / `NodeElement.children: List<PerceptionElement>` | `List<Seed>` / `List<Branch>` — Nodes mix artifact and composition children | A12 (tree types surface) |
+| `PerceptionState.perception` | retained — alias of `State.component` | tree register (`state.component`) + A12 |
+| `InheritedPerceptionElement.childElement` | `childElement` (inherited from `InheritedElement`) | tree register rename |
+| `StatelessElement` / `StatefulElement` | `StatelessPerceptionElement` / `StatefulPerceptionElement` — thin subclasses of tree's `StatelessElement`/`StatefulElement` that upgrade the handle to `PerceptionContext` | A12 |
+| `Node.children: List<Perception>` / `NodeElement.children: List<PerceptionElement>` | `List<Component>` / `List<Element>` — Nodes mix artifact and composition children | A12 (tree types surface) |
 | `perception_owner_test.dart` `'end-to-end'` | assertion unchanged (`lastValue == 7`); under A9 the dependent reads the new value during the update cascade rather than at drain time | A9 / ADR-0001 Decision 4 |
 | `node_test.dart` update tests | assertions unchanged; `NodeElement` reconciles children in `performRebuild` (reached automatically by `update()` under A9) instead of an explicit `update()` override | A9 / ADR-0001 Decision 4 |

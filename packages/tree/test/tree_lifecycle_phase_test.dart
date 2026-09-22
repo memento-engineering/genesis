@@ -3,15 +3,15 @@
 import 'package:genesis_tree/genesis_tree.dart';
 import 'package:test/test.dart';
 
-class _PhaseRecordingSeed extends Seed {
-  const _PhaseRecordingSeed();
+class _PhaseRecordingComponent extends Component {
+  const _PhaseRecordingComponent();
 
   @override
-  _PhaseRecordingBranch createBranch() => _PhaseRecordingBranch(this);
+  _PhaseRecordingElement createElement() => _PhaseRecordingElement(this);
 }
 
-class _PhaseRecordingBranch extends Branch {
-  _PhaseRecordingBranch(super.seed);
+class _PhaseRecordingElement extends Element {
+  _PhaseRecordingElement(super.component);
 
   final List<TreeLifecyclePhase> phases = [];
 
@@ -25,77 +25,77 @@ class _LifecycleRecord {
   final Map<String, TreeLifecyclePhase> phases = {};
 }
 
-class _LifecycleProbeSeed extends StatefulSeed {
-  const _LifecycleProbeSeed({required this.owner, required this.record});
+class _LifecycleProbeComponent extends StatefulComponent {
+  const _LifecycleProbeComponent({required this.owner, required this.record});
 
-  final TreeOwner owner;
+  final BuildOwner owner;
   final _LifecycleRecord record;
 
   @override
-  State<_LifecycleProbeSeed> createState() => _LifecycleProbeState();
+  State<_LifecycleProbeComponent> createState() => _LifecycleProbeState();
 }
 
-class _LifecycleProbeState extends State<_LifecycleProbeSeed> {
-  TreeLifecyclePhase get _phase => seed.owner.lifecyclePhaseGuard.phase;
+class _LifecycleProbeState extends State<_LifecycleProbeComponent> {
+  TreeLifecyclePhase get _phase => component.owner.lifecyclePhaseGuard.phase;
 
   @override
   void initState() {
-    seed.record.phases['initState'] = _phase;
+    component.record.phases['initState'] = _phase;
   }
 
   @override
   void didChangeDependencies() {
-    seed.record.phases['didChangeDependencies'] = _phase;
+    component.record.phases['didChangeDependencies'] = _phase;
   }
 
   @override
-  Seed build(TreeContext context) {
-    seed.record.phases['build'] = _phase;
-    context.dependOnInheritedSeedOfExactType<int>();
-    return const _PhaseRecordingSeed();
+  Component build(BuildContext context) {
+    component.record.phases['build'] = _phase;
+    context.dependOnInheritedValueOfExactType<int>();
+    return const _PhaseRecordingComponent();
   }
 
   @override
   void dispose() {
-    seed.record.phases['dispose'] = _phase;
+    component.record.phases['dispose'] = _phase;
   }
 }
 
-class _InitMessageSeed extends StatefulSeed {
-  const _InitMessageSeed();
+class _InitMessageComponent extends StatefulComponent {
+  const _InitMessageComponent();
 
   @override
-  State<_InitMessageSeed> createState() => _InitMessageState();
+  State<_InitMessageComponent> createState() => _InitMessageState();
 }
 
-class _InitMessageState extends State<_InitMessageSeed> {
+class _InitMessageState extends State<_InitMessageComponent> {
   @override
   void initState() {
-    context.dependOnInheritedSeedOfExactType<int>();
+    context.dependOnInheritedValueOfExactType<int>();
   }
 
   @override
-  Seed build(TreeContext context) => const _PhaseRecordingSeed();
+  Component build(BuildContext context) => const _PhaseRecordingComponent();
 }
 
-class _DisposeMessageSeed extends StatefulSeed {
-  const _DisposeMessageSeed();
+class _DisposeMessageComponent extends StatefulComponent {
+  const _DisposeMessageComponent();
 
   @override
-  State<_DisposeMessageSeed> createState() => _DisposeMessageState();
+  State<_DisposeMessageComponent> createState() => _DisposeMessageState();
 }
 
-class _DisposeMessageState extends State<_DisposeMessageSeed> {
+class _DisposeMessageState extends State<_DisposeMessageComponent> {
   bool _registerDependency = true;
 
   @override
-  Seed build(TreeContext context) => const _PhaseRecordingSeed();
+  Component build(BuildContext context) => const _PhaseRecordingComponent();
 
   @override
   void dispose() {
     if (_registerDependency) {
       _registerDependency = false;
-      context.dependOnInheritedSeedOfExactType<int>();
+      context.dependOnInheritedValueOfExactType<int>();
     }
   }
 }
@@ -148,40 +148,41 @@ void main() {
     },
   );
 
-  test('TreeOwner composes the existing flush marker as building', () {
-    final owner = TreeOwner();
+  test('BuildOwner composes the existing flush marker as building', () {
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
-    final branch =
-        owner.mountRoot(const _PhaseRecordingSeed()) as _PhaseRecordingBranch;
+    final element =
+        owner.mountRoot(const _PhaseRecordingComponent())
+            as _PhaseRecordingElement;
 
     expect(owner.lifecyclePhaseGuard.phase, TreeLifecyclePhase.notInTreePhase);
-    branch.markNeedsRebuild();
+    element.markNeedsRebuild();
 
-    expect(owner.flush(), [branch]);
-    expect(branch.phases, [TreeLifecyclePhase.building]);
+    expect(owner.flush(), [element]);
+    expect(element.phases, [TreeLifecyclePhase.building]);
     expect(owner.lifecyclePhaseGuard.phase, TreeLifecyclePhase.notInTreePhase);
   });
 
-  test('StatefulBranch drives each callback through the owner guard', () {
-    final owner = TreeOwner();
+  test('StatefulElement drives each callback through the owner guard', () {
+    final owner = BuildOwner();
     final record = _LifecycleRecord();
     final provider =
         owner.mountRoot(
-              InheritedSeed<int>(
+              InheritedComponent<int>(
                 value: 7,
-                child: _LifecycleProbeSeed(owner: owner, record: record),
+                child: _LifecycleProbeComponent(owner: owner, record: record),
               ),
             )
-            as InheritedBranch<int>;
-    final branch = provider.childBranch as StatefulBranch;
+            as InheritedElement<int>;
+    final element = provider.childElement as StatefulElement;
 
     expect(record.phases, {
       'initState': TreeLifecyclePhase.initState,
       'didChangeDependencies': TreeLifecyclePhase.didChangeDependencies,
       'build': TreeLifecyclePhase.building,
     });
-    expect(provider.dependents, {branch});
-    expect(branch.dependencies, {provider});
+    expect(provider.dependents, {element});
+    expect(element.dependencies, {provider});
     expect(owner.lifecyclePhaseGuard.phase, TreeLifecyclePhase.notInTreePhase);
 
     owner.unmountRoot();
@@ -192,22 +193,22 @@ void main() {
 
   test('existing dependency assert messages remain byte-identical', () {
     const initStateMessage =
-        'dependOnInheritedSeedOfExactType<int>() called from initState. '
+        'dependOnInheritedValueOfExactType<int>() called from initState. '
         'initState never re-runs, so caching the value read here goes stale '
         'when the provider changes. For a one-shot read use '
-        'getInheritedSeedOfExactType<int>(); to cache and track the value, move '
+        'getInheritedValueOfExactType<int>(); to cache and track the value, move '
         'the lookup to didChangeDependencies(), which re-runs on every change.';
     const disposeMessage =
-        'dependOnInheritedSeedOfExactType<int>() called from dispose. The '
-        'branch is unmounting — a dependency registered now can never observe '
-        'a change. Use getInheritedSeedOfExactType<int>() for a last read '
+        'dependOnInheritedValueOfExactType<int>() called from dispose. The '
+        'element is unmounting — a dependency registered now can never observe '
+        'a change. Use getInheritedValueOfExactType<int>() for a last read '
         'during teardown.';
 
-    final initOwner = TreeOwner();
-    final initBranch = const _InitMessageSeed().createBranch()
+    final initOwner = BuildOwner();
+    final initElement = const _InitMessageComponent().createElement()
       ..owner = initOwner;
     expect(
-      () => initBranch.mount(null, null),
+      () => initElement.mount(null, null),
       throwsA(
         isA<AssertionError>().having(
           (error) => error.message,
@@ -216,11 +217,11 @@ void main() {
         ),
       ),
     );
-    initBranch.unmount();
+    initElement.unmount();
     initOwner.dispose();
 
-    final disposeOwner = TreeOwner();
-    disposeOwner.mountRoot(const _DisposeMessageSeed());
+    final disposeOwner = BuildOwner();
+    disposeOwner.mountRoot(const _DisposeMessageComponent());
     expect(
       disposeOwner.unmountRoot,
       throwsA(

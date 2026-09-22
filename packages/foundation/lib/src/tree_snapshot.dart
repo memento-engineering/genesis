@@ -52,16 +52,19 @@ final class TreeSnapshot {
 final class TreeNode {
   /// Creates a diagnostics node and its complete child subtree.
   const TreeNode({
-    required this.seedType,
+    String? componentType,
+    @Deprecated('Use componentType instead.') String? seedType,
     required this.id,
     this.key,
     required this.properties,
     required this.children,
-  });
+  }) : assert(componentType != null || seedType != null),
+       assert(componentType == null || seedType == null),
+       componentType = componentType ?? seedType ?? '';
 
   /// Decodes a node from its wire representation.
   factory TreeNode.fromJson(Map<String, Object?> json) => TreeNode(
-    seedType: checkedJsonValue<String>(json, 'seedType'),
+    componentType: checkedJsonValue<String>(json, 'seedType'),
     id: checkedJsonValue<String>(json, 'id'),
     key: checkedJsonNullableValue<String>(json, 'key'),
     properties: checkedJsonList(json, 'properties')
@@ -78,20 +81,25 @@ final class TreeNode {
         .toList(),
   );
 
-  final String seedType;
+  final String componentType;
+
+  /// Legacy source spelling for [componentType].
+  @Deprecated('Use componentType instead. The JSON key remains seedType.')
+  String get seedType => componentType;
   final String id;
   final String? key;
   final List<DiagnosticsProperty> properties;
   final List<TreeNode> children;
 
   TreeNode copyWith({
-    String? seedType,
+    String? componentType,
+    @Deprecated('Use componentType instead.') String? seedType,
     String? id,
     Object? key = copyWithAbsent,
     List<DiagnosticsProperty>? properties,
     List<TreeNode>? children,
   }) => TreeNode(
-    seedType: seedType ?? this.seedType,
+    componentType: componentType ?? seedType ?? this.componentType,
     id: id ?? this.id,
     key: identical(key, copyWithAbsent) ? this.key : key as String?,
     properties: properties ?? this.properties,
@@ -99,7 +107,7 @@ final class TreeNode {
   );
 
   Map<String, Object?> toJson() => {
-    'seedType': seedType,
+    'seedType': componentType,
     'id': id,
     'key': key,
     'properties': properties.map((property) => property.toJson()).toList(),
@@ -110,7 +118,7 @@ final class TreeNode {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is TreeNode &&
-          seedType == other.seedType &&
+          componentType == other.componentType &&
           id == other.id &&
           key == other.key &&
           listEquals(properties, other.properties) &&
@@ -118,7 +126,7 @@ final class TreeNode {
 
   @override
   int get hashCode => Object.hash(
-    seedType,
+    componentType,
     id,
     key,
     Object.hashAll(properties),

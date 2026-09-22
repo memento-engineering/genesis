@@ -1,6 +1,6 @@
 // Port of perception's node_test.dart to tree vocabulary.
 //
-// Node/NodeBranch live in test/src/fixtures.dart, NOT in lib/: tree core is
+// Node/NodeElement live in test/src/fixtures.dart, NOT in lib/: tree core is
 // artifact-agnostic (ADR-0001 Decision 3), so the keyed multichild container
 // primitive belongs to domains; tests use the fixture analog.
 import 'package:test/test.dart';
@@ -10,8 +10,8 @@ import 'src/fixtures.dart';
 
 void main() {
   group('Node construction', () {
-    test('createBranch returns NodeBranch', () {
-      expect(const Node('n').createBranch(), isA<NodeBranch>());
+    test('createElement returns NodeElement', () {
+      expect(const Node('n').createElement(), isA<NodeElement>());
     });
 
     test('name and children stored', () {
@@ -26,48 +26,48 @@ void main() {
     });
   });
 
-  group('NodeBranch mount', () {
+  group('NodeElement mount', () {
     test('empty node mounts with no children', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch = owner.mountRoot(const Node('root')) as NodeBranch;
-      expect(branch.mounted, isTrue);
-      expect(branch.children, isEmpty);
+      final element = owner.mountRoot(const Node('root')) as NodeElement;
+      expect(element.mounted, isTrue);
+      expect(element.children, isEmpty);
     });
 
     test('children are mounted on root mount', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch =
+      final element =
           owner.mountRoot(
                 Node('root', children: [const Leaf('a'), const Leaf('b')]),
               )
-              as NodeBranch;
-      expect(branch.children.length, equals(2));
-      expect(branch.children.every((c) => c.mounted), isTrue);
+              as NodeElement;
+      expect(element.children.length, equals(2));
+      expect(element.children.every((c) => c.mounted), isTrue);
     });
 
-    test('children receive distinct branchIds', () {
-      final owner = TreeOwner();
+    test('children receive distinct elementIds', () {
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch =
+      final element =
           owner.mountRoot(
                 Node('root', children: [const Leaf('a'), const Leaf('b')]),
               )
-              as NodeBranch;
-      expect(branch.children[0].branchId, isNotEmpty);
+              as NodeElement;
+      expect(element.children[0].elementId, isNotEmpty);
       expect(
-        branch.children[0].branchId,
-        isNot(equals(branch.children[1].branchId)),
+        element.children[0].elementId,
+        isNot(equals(element.children[1].elementId)),
       );
     });
   });
 
-  group('NodeBranch update — keyed identity', () {
+  group('NodeElement update — keyed identity', () {
     test('keyed child identity preserved after reorder', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch =
+      final element =
           owner.mountRoot(
                 Node(
                   'root',
@@ -77,12 +77,12 @@ void main() {
                   ],
                 ),
               )
-              as NodeBranch;
+              as NodeElement;
 
-      final idA = branch.children[0].branchId;
-      final idB = branch.children[1].branchId;
+      final idA = element.children[0].elementId;
+      final idB = element.children[1].elementId;
 
-      branch.update(
+      element.update(
         Node(
           'root',
           children: [
@@ -92,15 +92,15 @@ void main() {
         ),
       );
 
-      expect(branch.children[0].branchId, equals(idB));
-      expect(branch.children[1].branchId, equals(idA));
-      expect(branch.children.every((c) => c.mounted), isTrue);
+      expect(element.children[0].elementId, equals(idB));
+      expect(element.children[1].elementId, equals(idA));
+      expect(element.children.every((c) => c.mounted), isTrue);
     });
 
     test('removed keyed child is unmounted', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch =
+      final element =
           owner.mountRoot(
                 Node(
                   'root',
@@ -110,27 +110,27 @@ void main() {
                   ],
                 ),
               )
-              as NodeBranch;
+              as NodeElement;
 
-      final removed = branch.children[1];
-      branch.update(
+      final removed = element.children[1];
+      element.update(
         Node('root', children: [const Leaf('a', key: ValueKey('ka'))]),
       );
 
-      expect(branch.children.length, equals(1));
+      expect(element.children.length, equals(1));
       expect(removed.mounted, isFalse);
     });
 
     test('new keyed child is freshly mounted', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch =
+      final element =
           owner.mountRoot(
                 Node('root', children: [const Leaf('a', key: ValueKey('ka'))]),
               )
-              as NodeBranch;
+              as NodeElement;
 
-      branch.update(
+      element.update(
         Node(
           'root',
           children: [
@@ -140,52 +140,54 @@ void main() {
         ),
       );
 
-      expect(branch.children.length, equals(2));
-      expect(branch.children[1].mounted, isTrue);
-      expect(branch.children[1].branchId, isNotEmpty);
+      expect(element.children.length, equals(2));
+      expect(element.children[1].mounted, isTrue);
+      expect(element.children[1].elementId, isNotEmpty);
     });
   });
 
-  group('NodeBranch update — unkeyed identity', () {
+  group('NodeElement update — unkeyed identity', () {
     test('unkeyed positional identity preserved across update', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch =
+      final element =
           owner.mountRoot(
                 Node('root', children: [const Leaf('a'), const Leaf('b')]),
               )
-              as NodeBranch;
+              as NodeElement;
 
-      final id0 = branch.children[0].branchId;
-      final id1 = branch.children[1].branchId;
+      final id0 = element.children[0].elementId;
+      final id1 = element.children[1].elementId;
 
-      branch.update(Node('root', children: [const Leaf('x'), const Leaf('y')]));
+      element.update(
+        Node('root', children: [const Leaf('x'), const Leaf('y')]),
+      );
 
-      expect(branch.children[0].branchId, equals(id0));
-      expect(branch.children[1].branchId, equals(id1));
+      expect(element.children[0].elementId, equals(id0));
+      expect(element.children[1].elementId, equals(id1));
     });
 
     test('unkeyed excess child at tail is unmounted', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final branch =
+      final element =
           owner.mountRoot(
                 Node('root', children: [const Leaf('a'), const Leaf('b')]),
               )
-              as NodeBranch;
+              as NodeElement;
 
-      final removed = branch.children[1];
-      branch.update(Node('root', children: [const Leaf('a')]));
+      final removed = element.children[1];
+      element.update(Node('root', children: [const Leaf('a')]));
 
-      expect(branch.children.length, equals(1));
+      expect(element.children.length, equals(1));
       expect(removed.mounted, isFalse);
     });
   });
 
-  group('NodeBranch unmount', () {
+  group('NodeElement unmount', () {
     test('all children unmounted when node unmounts', () {
-      final owner = TreeOwner();
-      final branch =
+      final owner = BuildOwner();
+      final element =
           owner.mountRoot(
                 Node(
                   'root',
@@ -195,9 +197,9 @@ void main() {
                   ],
                 ),
               )
-              as NodeBranch;
-      final c0 = branch.children[0];
-      final c1 = branch.children[1];
+              as NodeElement;
+      final c0 = element.children[0];
+      final c1 = element.children[1];
 
       owner.unmountRoot();
 

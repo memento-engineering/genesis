@@ -1,7 +1,7 @@
 /// Render-parent threading (the RenderObject.parent analog, register A23),
 /// flow layout v1, and keyed reorder — the render-tree structure suite.
 ///
-/// Threading is asserted as explicit render-tree adjacency: render branches
+/// Threading is asserted as explicit render-tree adjacency: render elements
 /// separated by Watch/Stateless wrappers (and perception's Node) still
 /// attach to the right render parent, exactly as RenderObjectWidgets
 /// compose across component widgets.
@@ -16,43 +16,43 @@ import 'package:test/test.dart';
 import 'src/fixtures.dart';
 
 /// A Stateless layer wrapping another Stateless layer wrapping a [Box] —
-/// two component branches between the stage and the box.
-class _LayeredBox extends StatelessSeed {
+/// two component elements between the stage and the box.
+class _LayeredBox extends StatelessComponent {
   const _LayeredBox({required this.title});
 
   final String title;
 
   @override
-  Seed build(TreeContext context) => _InnerLayer(title: title);
+  Component build(BuildContext context) => _InnerLayer(title: title);
 }
 
-class _InnerLayer extends StatelessSeed {
+class _InnerLayer extends StatelessComponent {
   const _InnerLayer({required this.title});
 
   final String title;
 
   @override
-  Seed build(TreeContext context) => Box(
+  Component build(BuildContext context) => Box(
     title: title,
     children: [_LayeredLine(content: '$title body')],
   );
 }
 
 /// A Stateless layer between a [Box] and its [Text] line.
-class _LayeredLine extends StatelessSeed {
+class _LayeredLine extends StatelessComponent {
   const _LayeredLine({required this.content});
 
   final String content;
 
   @override
-  Seed build(TreeContext context) => Text(content);
+  Component build(BuildContext context) => Text(content);
 }
 
 void main() {
   group('render-parent threading', () {
-    test('render branches separated by Stateless wrappers attach to the '
+    test('render elements separated by Stateless wrappers attach to the '
         'right render parent (explicit adjacency)', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final stage =
           owner.mountRoot(
                 Stage(
@@ -62,37 +62,37 @@ void main() {
                   children: const [_LayeredBox(title: 'layered')],
                 ),
               )
-              as StageBranch;
+              as StageElement;
 
       // Downward adjacency: stage -> box -> text, across the wrappers.
       expect(stage.renderChildren, hasLength(1));
       final box = stage.renderChildren.single;
-      expect(box, isA<BoxBranch>());
+      expect(box, isA<BoxElement>());
       expect(box.renderChildren, hasLength(1));
       final line = box.renderChildren.single;
-      expect(line, isA<TextBranch>());
+      expect(line, isA<TextElement>());
 
       // Upward adjacency (the RenderObject.parent analog).
       expect(identical(box.renderParent, stage), isTrue);
       expect(identical(line.renderParent, box), isTrue);
       expect(stage.renderParent, isNull, reason: 'the stage is the root');
 
-      // The TREE adjacency is NOT direct: component branches intervene.
-      final treeChildren = <Branch>[];
+      // The TREE adjacency is NOT direct: component elements intervene.
+      final treeChildren = <Element>[];
       stage.visitChildren(treeChildren.add);
       expect(
         treeChildren.single,
-        isNot(isA<RenderBranch>()),
+        isNot(isA<RenderElement>()),
         reason:
             'the stage\'s direct tree child is the scope wrapper, '
-            'not the box — threading crossed intervening branches',
+            'not the box — threading crossed intervening elements',
       );
 
       owner.dispose();
     });
 
-    test('render branches under a perception Node attach across it', () {
-      final owner = TreeOwner();
+    test('render elements under a perception Node attach across it', () {
+      final owner = BuildOwner();
       final stage =
           owner.mountRoot(
                 Stage(
@@ -110,7 +110,7 @@ void main() {
                   ],
                 ),
               )
-              as StageBranch;
+              as StageElement;
 
       final found = stage.renderChildren;
       expect(found, hasLength(2));
@@ -128,7 +128,7 @@ void main() {
     test('a component rebuild that swaps its render child re-attaches the '
         'replacement (the dynamic attachRenderObject case)', () async {
       final toggle = StreamController<bool>();
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final stage =
           owner.mountRoot(
                 Stage(
@@ -146,22 +146,22 @@ void main() {
                   ],
                 ),
               )
-              as StageBranch;
+              as StageElement;
 
       final before = stage.renderChildren.single;
-      expect(before, isA<BoxBranch>());
+      expect(before, isA<BoxElement>());
       expect(identical(before.renderParent, stage), isTrue);
 
       toggle.add(false); // Box -> Text: unmount + fresh mount mid-flush
       await pumpEventQueue();
 
       final after = stage.renderChildren.single;
-      expect(after, isA<TextBranch>());
+      expect(after, isA<TextElement>());
       expect(
         identical(after.renderParent, stage),
         isTrue,
         reason:
-            'the freshly mounted render branch must find its render '
+            'the freshly mounted render element must find its render '
             'parent without the container\'s reconcile in the call stack',
       );
       expect(
@@ -179,7 +179,7 @@ void main() {
   group('flow layout v1', () {
     test('stage stacks boxes; boxes stack text lines (rects + render '
         'snapshot)', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final stage =
           owner.mountRoot(
                 Stage(
@@ -192,7 +192,7 @@ void main() {
                   ],
                 ),
               )
-              as StageBranch;
+              as StageElement;
 
       final boxA = stage.renderChildren[0];
       final boxB = stage.renderChildren[1];
@@ -217,9 +217,9 @@ void main() {
 
   group('keyed reorder', () {
     test('reordering keyed boxes moves the render tree and preserves '
-        'branch identity', () async {
+        'element identity', () async {
       final order = StreamController<List<String>>();
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final stage =
           owner.mountRoot(
                 Stage(
@@ -247,12 +247,12 @@ void main() {
                   ],
                 ),
               )
-              as StageBranch;
+              as StageElement;
 
       final alphaBefore = stage.renderChildren[0];
       final betaBefore = stage.renderChildren[1];
-      expect((alphaBefore.seed as Box).title, 'alpha');
-      expect((betaBefore.seed as Box).title, 'beta');
+      expect((alphaBefore.component as Box).title, 'alpha');
+      expect((betaBefore.component as Box).title, 'beta');
       expect(alphaBefore.rect, const Rect.fromLTWH(0, 0, 20, 3));
       expect(betaBefore.rect, const Rect.fromLTWH(0, 3, 20, 3));
 
@@ -262,9 +262,9 @@ void main() {
       // The render tree follows the new order...
       final first = stage.renderChildren[0];
       final second = stage.renderChildren[1];
-      expect((first.seed as Box).title, 'beta');
-      expect((second.seed as Box).title, 'alpha');
-      // ...with branch identity preserved across the move...
+      expect((first.component as Box).title, 'beta');
+      expect((second.component as Box).title, 'alpha');
+      // ...with element identity preserved across the move...
       expect(identical(first, betaBefore), isTrue);
       expect(identical(second, alphaBefore), isTrue);
       expect(identical(first.renderParent, stage), isTrue);

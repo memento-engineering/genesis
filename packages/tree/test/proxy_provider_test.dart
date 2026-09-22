@@ -61,24 +61,24 @@ _Derived _derive(
   return result;
 }
 
-final class _Leaf extends Seed {
+final class _Leaf extends Component {
   const _Leaf();
 
   @override
-  Branch createBranch() => _LeafBranch(this);
+  Element createElement() => _LeafElement(this);
 }
 
-final class _LeafBranch extends Branch {
-  _LeafBranch(_Leaf super.seed);
+final class _LeafElement extends Element {
+  _LeafElement(_Leaf super.component);
 }
 
-final class _DerivedWatch extends StatelessSeed {
+final class _DerivedWatch extends StatelessComponent {
   const _DerivedWatch(this.observations);
 
   final List<List<int>?> observations;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     observations.add(context.watch<_Derived>()?.values);
     return const _Leaf();
   }
@@ -87,11 +87,11 @@ final class _DerivedWatch extends StatelessSeed {
 /// A stable six-source ancestor. Updating one slot retains the other five
 /// identities and never re-describes [child], so only that dependency edge
 /// dirties the proxy under test.
-final class _Sources extends StatefulSeed {
+final class _Sources extends StatefulComponent {
   const _Sources({required this.onCreate, required this.child});
 
   final void Function(_SourcesState state) onCreate;
-  final Seed child;
+  final Component child;
 
   @override
   State<_Sources> createState() {
@@ -131,7 +131,7 @@ final class _SourcesState extends State<_Sources> {
   }
 
   @override
-  Seed build(TreeContext context) => Nest(
+  Component build(BuildContext context) => Nest(
     children: [
       Provider<_Source1>.value(_source1),
       Provider<_Source2>.value(_source2),
@@ -140,15 +140,15 @@ final class _SourcesState extends State<_Sources> {
       Provider<_Source5>.value(_source5),
       Provider<_Source6>.value(_source6),
     ],
-    child: seed.child,
+    child: component.child,
   );
 }
 
-final class _Host extends StatefulSeed {
+final class _Host extends StatefulComponent {
   const _Host({required this.onCreate, required this.describe});
 
   final void Function(_HostState state) onCreate;
-  final Seed Function() describe;
+  final Component Function() describe;
 
   @override
   State<_Host> createState() {
@@ -159,21 +159,22 @@ final class _Host extends StatefulSeed {
 }
 
 final class _HostState extends State<_Host> {
-  Seed Function()? _override;
+  Component Function()? _override;
 
-  void swap(Seed Function() describe) => setState(() => _override = describe);
+  void swap(Component Function() describe) =>
+      setState(() => _override = describe);
 
   @override
-  Seed build(TreeContext context) => (_override ?? seed.describe)();
+  Component build(BuildContext context) => (_override ?? component.describe)();
 }
 
-final class _Slots extends MultiChildSeed {
-  _Slots(List<Seed> children) : super(children: children);
+final class _Slots extends MultiChildComponent {
+  _Slots(List<Component> children) : super(children: children);
 }
 
 Future<void> _pump() => Future<void>.delayed(Duration.zero);
 
-final class _DerivedTeardownRead extends StatefulSeed {
+final class _DerivedTeardownRead extends StatefulComponent {
   const _DerivedTeardownRead(this.events);
 
   final List<String> events;
@@ -184,11 +185,13 @@ final class _DerivedTeardownRead extends StatefulSeed {
 
 final class _DerivedTeardownReadState extends State<_DerivedTeardownRead> {
   @override
-  Seed build(TreeContext context) => const _Leaf();
+  Component build(BuildContext context) => const _Leaf();
 
   @override
   void dispose() {
-    seed.events.add('teardown read ${context.read<_Derived>()?.values.single}');
+    component.events.add(
+      'teardown read ${context.read<_Derived>()?.values.single}',
+    );
   }
 }
 
@@ -211,7 +214,7 @@ final class _AdoptedSource {
   }
 }
 
-final class _AdoptedSourceHost extends StatefulSeed {
+final class _AdoptedSourceHost extends StatefulComponent {
   const _AdoptedSourceHost({
     required this.initial,
     required this.onCreate,
@@ -220,7 +223,7 @@ final class _AdoptedSourceHost extends StatefulSeed {
 
   final _AdoptedSource initial;
   final void Function(_AdoptedSourceHostState state) onCreate;
-  final Seed child;
+  final Component child;
 
   @override
   State<_AdoptedSourceHost> createState() {
@@ -234,22 +237,22 @@ final class _AdoptedSourceHostState extends State<_AdoptedSourceHost> {
   late _AdoptedSource _source;
 
   @override
-  void initState() => _source = seed.initial;
+  void initState() => _source = component.initial;
 
   void update(_AdoptedSource source) => setState(() => _source = source);
 
   @override
-  Seed build(TreeContext context) =>
-      Provider<_AdoptedSource>.value(_source, child: seed.child);
+  Component build(BuildContext context) =>
+      Provider<_AdoptedSource>.value(_source, child: component.child);
 }
 
-final class _OwnedWatch extends StatelessSeed {
+final class _OwnedWatch extends StatelessComponent {
   const _OwnedWatch(this.observations);
 
   final List<String?> observations;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     observations.add(context.watch<_OwnedResult>()?.name);
     return const _Leaf();
   }
@@ -264,7 +267,7 @@ void main() {
       update: (_, value, previous) => _derive(calls, [value.value], previous),
       child: _DerivedWatch(observations),
     );
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     owner.mountRoot(
@@ -296,7 +299,7 @@ void main() {
           _derive(calls, [value1.value, value2.value], previous),
       child: _DerivedWatch(observations),
     );
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     owner.mountRoot(
@@ -325,7 +328,7 @@ void main() {
           _derive(calls, [value1.value, value2.value, value3.value], previous),
       child: _DerivedWatch(observations),
     );
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     owner.mountRoot(
@@ -358,7 +361,7 @@ void main() {
           ),
           child: _DerivedWatch(observations),
         );
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     owner.mountRoot(
@@ -401,7 +404,7 @@ void main() {
               ], previous),
           child: _DerivedWatch(observations),
         );
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     owner.mountRoot(
@@ -447,7 +450,7 @@ void main() {
                   ], previous),
           child: _DerivedWatch(observations),
         );
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     owner.mountRoot(
@@ -476,7 +479,7 @@ void main() {
           _derive(calls, [value1.value, value2.value, value3.value], previous),
       child: _DerivedWatch(observations),
     );
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     owner.mountRoot(
@@ -521,7 +524,7 @@ void main() {
                   ], previous),
           child: _DerivedWatch(observations),
         );
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
 
     owner.mountRoot(
@@ -542,7 +545,7 @@ void main() {
 
   test('shared machinery disposes after descendant teardown', () {
     final events = <String>[];
-    final owner = TreeOwner();
+    final owner = BuildOwner();
 
     owner.mountRoot(
       Nest(
@@ -589,8 +592,8 @@ void main() {
     late _AdoptedSourceHostState sources;
     final proxy = ProxyProvider<_AdoptedSource, _OwnedResult>(
       create: (_) {
-        events.add('create seed');
-        return const _OwnedResult('seed');
+        events.add('create component');
+        return const _OwnedResult('component');
       },
       update: (_, source, previous) {
         events.add('update ${source.value} previous ${previous?.name}');
@@ -600,7 +603,7 @@ void main() {
       dispose: (value) => events.add('dispose ${value.name}'),
       child: _OwnedWatch(observations),
     );
-    final owner = TreeOwner();
+    final owner = BuildOwner();
 
     owner.mountRoot(
       _AdoptedSourceHost(
@@ -609,15 +612,19 @@ void main() {
         child: proxy,
       ),
     );
-    expect(events, ['create seed', 'update 1 previous seed', 'dispose seed']);
+    expect(events, [
+      'create component',
+      'update 1 previous component',
+      'dispose component',
+    ]);
     expect(observations, ['first']);
 
     sources.update(adopted[1]);
     owner.flush();
     expect(events, [
-      'create seed',
-      'update 1 previous seed',
-      'dispose seed',
+      'create component',
+      'update 1 previous component',
+      'dispose component',
       'update 2 previous first',
       'dispose first',
     ]);
@@ -630,7 +637,7 @@ void main() {
     expect(observations.last, 'second');
 
     owner.dispose();
-    expect(events.where((event) => event == 'dispose seed'), hasLength(1));
+    expect(events.where((event) => event == 'dispose component'), hasLength(1));
     expect(events.where((event) => event == 'dispose first'), hasLength(1));
     expect(events.where((event) => event == 'dispose second'), hasLength(1));
     expect(
@@ -645,7 +652,7 @@ void main() {
     () async {
       final observations = <List<int>?>[];
       late _HostState slot;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -691,7 +698,7 @@ void main() {
     final disposed = <_Derived>[];
     var updates = 0;
     late _HostState host;
-    final owner = TreeOwner();
+    final owner = BuildOwner();
 
     owner.mountRoot(
       ProviderScope(
@@ -739,9 +746,9 @@ void main() {
       registry.debugPendingOf(_Source6),
     ];
     expect(pending.every((bucket) => bucket.length == 1), isTrue);
-    final proxyBranch = pending.first.single;
+    final proxyElement = pending.first.single;
     expect(
-      pending.every((bucket) => identical(bucket.single, proxyBranch)),
+      pending.every((bucket) => identical(bucket.single, proxyElement)),
       isTrue,
     );
     expect(updates, 0);

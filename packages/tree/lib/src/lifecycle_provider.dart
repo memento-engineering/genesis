@@ -9,14 +9,14 @@ import 'package:genesis_tree/genesis_tree.dart';
 typedef LifecycleProviderCreate<T extends TreeLifecycleParticipant> = T Function();
 // dart format on
 
-/// Drives tree lifecycle hooks for a long-lived object that is not a [Seed].
+/// Drives tree lifecycle hooks for a long-lived object that is not a [Component].
 ///
 /// The default constructor creates and owns one participant per mount. The
 /// [.value] constructor adopts an externally owned participant. Both forms
 /// initialize the participant and track its inherited dependencies; only a
 /// participant created by this provider is disposed by the tree.
 final class LifecycleProvider<T extends TreeLifecycleParticipant>
-    extends SingleChildStatefulSeed {
+    extends SingleChildStatefulComponent {
   /// Creates and owns a participant for the lifetime of this mount.
   const LifecycleProvider({
     required LifecycleProviderCreate<T> create,
@@ -38,7 +38,8 @@ final class LifecycleProvider<T extends TreeLifecycleParticipant>
       _LifecycleProviderState<T>();
 
   @override
-  SingleChildStatefulBranch createBranch() => _LifecycleProviderBranch<T>(this);
+  SingleChildStatefulElement createElement() =>
+      _LifecycleProviderElement<T>(this);
 }
 
 final class _LifecycleProviderState<T extends TreeLifecycleParticipant>
@@ -53,9 +54,9 @@ final class _LifecycleProviderState<T extends TreeLifecycleParticipant>
 
   @override
   void initState() {
-    final create = seed._create;
+    final create = component._create;
     final created = create != null;
-    final participant = created ? create() : seed._value!;
+    final participant = created ? create() : component._value!;
     _participant = participant;
     _created = created;
     _ownsParticipant = created;
@@ -82,22 +83,22 @@ final class _LifecycleProviderState<T extends TreeLifecycleParticipant>
   }
 
   @override
-  Seed buildWithChild(TreeContext context, Seed child) {
+  Component buildWithChild(BuildContext context, Component child) {
     final created = _created;
-    if ((seed._create != null) != created) {
+    if ((component._create != null) != created) {
       throw StateError(
         'LifecycleProvider<$T> changed between create: and .value while '
         'reconciling in place. The provider kind is fixed for a mounted '
-        'branch; change the type or key to remount instead.',
+        'element; change the type or key to remount instead.',
       );
     }
 
     final participant = _participant;
-    if (!created && !identical(seed._value, participant)) {
+    if (!created && !identical(component._value, participant)) {
       throw StateError(
         'LifecycleProvider<$T>.value replaced its participant while '
         'reconciling in place. Participant identity is fixed for a mounted '
-        'branch; change the type or key to remount instead.',
+        'element; change the type or key to remount instead.',
       );
     }
 
@@ -121,9 +122,9 @@ final class _LifecycleProviderState<T extends TreeLifecycleParticipant>
   }
 }
 
-final class _LifecycleProviderBranch<T extends TreeLifecycleParticipant>
-    extends SingleChildStatefulBranch {
-  _LifecycleProviderBranch(super.seed) {
+final class _LifecycleProviderElement<T extends TreeLifecycleParticipant>
+    extends SingleChildStatefulElement {
+  _LifecycleProviderElement(super.component) {
     (state as _LifecycleProviderState<T>)._guard = () =>
         owner!.lifecyclePhaseGuard;
   }
@@ -164,7 +165,7 @@ final class _TreeDependencyScope implements TreeDependencyScope {
 abstract base class _LifecycleReader {
   _LifecycleReader(this._context, this._guard, this._requiredPhase);
 
-  final TreeContext _context;
+  final BuildContext _context;
   final TreeLifecyclePhaseGuard _guard;
   final TreeLifecyclePhase _requiredPhase;
   bool _active = true;
@@ -184,7 +185,7 @@ abstract base class _LifecycleReader {
 
 final class _LifecycleSnapshotReader extends _LifecycleReader
     implements TreeSnapshotReader {
-  _LifecycleSnapshotReader(TreeContext context, TreeLifecyclePhaseGuard guard)
+  _LifecycleSnapshotReader(BuildContext context, TreeLifecyclePhaseGuard guard)
     : super(context, guard, TreeLifecyclePhase.initState);
 
   @override
@@ -196,7 +197,7 @@ final class _LifecycleSnapshotReader extends _LifecycleReader
 
 final class _LifecycleWatchingReader extends _LifecycleReader
     implements TreeWatchingReader {
-  _LifecycleWatchingReader(TreeContext context, TreeLifecyclePhaseGuard guard)
+  _LifecycleWatchingReader(BuildContext context, TreeLifecyclePhaseGuard guard)
     : super(context, guard, TreeLifecyclePhase.didChangeDependencies);
 
   @override

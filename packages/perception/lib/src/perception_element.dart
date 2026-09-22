@@ -5,14 +5,14 @@ import 'perception.dart';
 import 'perception_context.dart';
 
 /// Mounted, live node in the perception tree — `PerceptionElement extends
-/// Branch`.
+/// Element`.
 ///
 /// Identity, lifecycle, keyed reconciliation, dirtiness, and the rebuild hook
 /// are all inherited from the tree spine; this class adds the measurement
 /// domain's vocabulary on top:
 ///
-/// - [perception] — the domain view of [seed];
-/// - [perceptionId] — the domain alias of [branchId];
+/// - [perception] — the domain view of [component];
+/// - [perceptionId] — the domain alias of [elementId];
 /// - [markNeedsHarvest] — the domain alias of the tree rebuild-marking, and
 ///   the single domain override point: tree-core invalidation
 ///   ([markNeedsRebuild], e.g. provider `dependencyChanged`) funnels through
@@ -22,16 +22,16 @@ import 'perception_context.dart';
 /// This element deliberately does NOT implement [PerceptionContext]: making
 /// the element its own context re-commits Flutter's Element≡BuildContext sin,
 /// and genesis sheds it.
-abstract class PerceptionElement extends Branch {
+abstract class PerceptionElement extends Element {
   /// Creates an element configured by [perception].
-  PerceptionElement(Perception super.seed);
+  PerceptionElement(Perception super.component);
 
-  /// The current [Perception] configuration — the domain view of [seed].
-  Perception get perception => seed as Perception;
+  /// The current [Perception] configuration — the domain view of [component].
+  Perception get perception => component as Perception;
 
-  /// Domain alias of [branchId]: stable id for this mounted element,
+  /// Domain alias of [elementId]: stable id for this mounted element,
   /// assigned at mount and never changing during the element's lifetime.
-  String get perceptionId => branchId;
+  String get perceptionId => elementId;
 
   PerceptionContext? _handle;
 
@@ -50,7 +50,7 @@ abstract class PerceptionElement extends Branch {
 
   /// Marks this element dirty so the next `PerceptionOwner.flushHarvest`
   /// re-runs its rebuild hook — delegates to the tree rebuild-marking
-  /// ([Branch.markNeedsRebuild]).
+  /// ([Element.markNeedsRebuild]).
   void markNeedsHarvest() => super.markNeedsRebuild();
 
   @override

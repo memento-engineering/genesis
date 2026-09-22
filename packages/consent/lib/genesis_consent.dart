@@ -5,7 +5,7 @@
 /// `genesis_dialogue` *decodes* a client `action` message into an
 /// [ActionEvent] (parse only); consent *routes* it:
 ///
-/// - **[ConsentRouter]** hit-tests the event against the live `Seed`/`Branch`
+/// - **[ConsentRouter]** hit-tests the event against the live `Component`/`Element`
 ///   tree (walked fresh per call, never cached) and the catalog-declared
 ///   affordances, in three gates: exists/mounted, catalog-declared, payload.
 /// - A valid intent is **enforced** through the target state's [Actionable]

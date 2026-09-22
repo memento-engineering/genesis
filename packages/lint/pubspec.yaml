@@ -1,6 +1,6 @@
 name: genesis_lint
-description: Static analysis rules for safe genesis tree context use.
-version: 0.1.0
+description: Static analysis rules for safe genesis build context use.
+version: 0.2.0
 repository: https://github.com/memento-engineering/genesis
 
 environment:

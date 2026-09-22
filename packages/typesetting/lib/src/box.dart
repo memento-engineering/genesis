@@ -2,16 +2,16 @@ import 'package:genesis_tree/genesis_tree.dart';
 
 import 'cell_grid.dart';
 import 'rect.dart';
-import 'render_branch.dart';
+import 'render_element.dart';
 
 /// A titled, bordered region (render vocabulary v1): draws a
 /// box-drawing frame with [title] embedded in the top border and stacks its
-/// children's render branches as lines inside the border.
+/// children's render elements as lines inside the border.
 ///
 /// [children] mix freely: render seeds ([Text], nested [Box]) and
 /// composition seeds (Watch/Stateless/perception nodes) that resolve to
-/// them — component branches are transparent to the render tree.
-class Box extends RenderSeed {
+/// them — component elements are transparent to the render tree.
+class Box extends RenderComponent {
   /// Creates a titled box over [children], optionally [key]ed.
   const Box({
     required this.title,
@@ -24,25 +24,25 @@ class Box extends RenderSeed {
   final String title;
 
   /// The child configurations, reconciled by key identity.
-  final List<Seed> children;
+  final List<Component> children;
 
   /// 256-color index for the border and title, or -1 for terminal default.
   final int accent;
 
   @override
-  BoxBranch createBranch() => BoxBranch(this);
+  BoxElement createElement() => BoxElement(this);
 }
 
-/// Mounted render branch for [Box]: reconciles its children inside its
+/// Mounted render element for [Box]: reconciles its children inside its
 /// render scope, flows them as lines inside the border, and paints the
 /// frame as its artifact response.
-class BoxBranch extends RenderBranch {
-  /// Creates the branch for [seed].
-  BoxBranch(Box super.seed);
+class BoxElement extends RenderElement {
+  /// Creates the element for [component].
+  BoxElement(Box super.component);
 
-  Box get _box => seed as Box;
+  Box get _box => component as Box;
 
-  List<Branch> _children = const [];
+  List<Element> _children = const [];
 
   @override
   void performRebuild() {
@@ -53,7 +53,7 @@ class BoxBranch extends RenderBranch {
   }
 
   @override
-  void visitChildren(void Function(Branch child) visitor) {
+  void visitChildren(void Function(Element child) visitor) {
     for (final child in _children) {
       visitor(child);
     }
@@ -105,3 +105,7 @@ class BoxBranch extends RenderBranch {
     super.unmount();
   }
 }
+
+/// Legacy name for [BoxElement].
+@Deprecated('Use BoxElement instead.')
+typedef BoxBranch = BoxElement;

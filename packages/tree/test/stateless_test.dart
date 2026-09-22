@@ -2,14 +2,14 @@
 import 'package:test/test.dart';
 import 'package:genesis_tree/genesis_tree.dart';
 
-class _Leaf extends Seed {
+class _Leaf extends Component {
   const _Leaf({super.key});
   @override
-  Branch createBranch() => _LeafBranch(this);
+  Element createElement() => _LeafElement(this);
 }
 
-class _LeafBranch extends Branch {
-  _LeafBranch(super.seed);
+class _LeafElement extends Element {
+  _LeafElement(super.component);
 }
 
 class _Tracker {
@@ -17,107 +17,110 @@ class _Tracker {
   String? lastValue;
 }
 
-class _ReadingS extends StatelessSeed {
+class _ReadingS extends StatelessComponent {
   _ReadingS(this.tracker);
   final _Tracker tracker;
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     tracker.builds++;
-    tracker.lastValue = context.dependOnInheritedSeedOfExactType<String>();
+    tracker.lastValue = context.dependOnInheritedValueOfExactType<String>();
     return const _Leaf();
   }
 }
 
-class _SimpleS extends StatelessSeed {
+class _SimpleS extends StatelessComponent {
   const _SimpleS({this.child = const _Leaf()});
-  final Seed child;
+  final Component child;
   @override
-  Seed build(TreeContext context) => child;
+  Component build(BuildContext context) => child;
 }
 
 void main() {
-  test('returns StatelessBranch', () {
-    expect(_SimpleS().createBranch(), isA<StatelessBranch>());
+  test('returns StatelessElement', () {
+    expect(_SimpleS().createElement(), isA<StatelessElement>());
   });
 
-  group('ComponentBranch child lifecycle', () {
-    late TreeOwner owner;
+  group('BuildableElement child lifecycle', () {
+    late BuildOwner owner;
 
     setUp(() {
-      owner = TreeOwner();
+      owner = BuildOwner();
     });
     tearDown(() => owner.dispose());
 
     test('builds its child synchronously on mount (no external dirty)', () {
       // mountRoot alone must produce the subtree — Flutter's _firstBuild.
       // No markNeedsRebuild / flush required.
-      final branch = owner.mountRoot(_SimpleS()) as StatelessBranch;
-      expect(branch.child, isNotNull);
-      expect(branch.child!.mounted, isTrue);
+      final element = owner.mountRoot(_SimpleS()) as StatelessElement;
+      expect(element.child, isNotNull);
+      expect(element.child!.mounted, isTrue);
     });
 
     test('child identity preserved across a rebuild when canUpdate=true', () {
-      final branch = owner.mountRoot(_SimpleS()) as StatelessBranch;
-      final first = branch.child;
+      final element = owner.mountRoot(_SimpleS()) as StatelessElement;
+      final first = element.child;
 
-      branch.markNeedsRebuild();
+      element.markNeedsRebuild();
       owner.flush();
-      expect(branch.child, same(first));
+      expect(element.child, same(first));
     });
 
     test('child remounted when canUpdate=false (key change)', () {
-      final branch =
+      final element =
           owner.mountRoot(_SimpleS(child: const _Leaf(key: ValueKey('a'))))
-              as StatelessBranch;
-      final oldChild = branch.child!;
+              as StatelessElement;
+      final oldChild = element.child!;
       expect(oldChild.mounted, isTrue);
 
       // A9 delta: update() alone now re-runs build and swaps the child
       // (ADR-0001 Decision 4); the explicit markNeedsRebuild + flush is kept
       // from the perception suite but is no longer required.
-      branch.update(_SimpleS(child: const _Leaf(key: ValueKey('b'))));
-      branch.markNeedsRebuild();
+      element.update(_SimpleS(child: const _Leaf(key: ValueKey('b'))));
+      element.markNeedsRebuild();
       owner.flush();
 
-      expect(branch.child, isNot(same(oldChild)));
+      expect(element.child, isNot(same(oldChild)));
       expect(oldChild.mounted, isFalse);
-      expect(branch.child!.mounted, isTrue);
+      expect(element.child!.mounted, isTrue);
     });
 
     test('unmounts child before clearing self', () {
-      final branch = owner.mountRoot(_SimpleS()) as StatelessBranch;
-      final child = branch.child!;
+      final element = owner.mountRoot(_SimpleS()) as StatelessElement;
+      final child = element.child!;
 
-      branch.unmount();
+      element.unmount();
 
       expect(child.mounted, isFalse);
-      expect(branch.mounted, isFalse);
+      expect(element.mounted, isFalse);
     });
   });
 
-  group('InheritedSeed + StatelessSeed headline', () {
-    late TreeOwner owner;
+  group('InheritedComponent + StatelessComponent headline', () {
+    late BuildOwner owner;
 
     setUp(() {
-      owner = TreeOwner();
+      owner = BuildOwner();
     });
     tearDown(() => owner.dispose());
 
     test('reads provider on mount, re-reads after provider update', () {
       final tracker = _Tracker();
-      final ipBranch =
+      final ipElement =
           owner.mountRoot(
-                InheritedSeed<String>(value: 'a', child: _ReadingS(tracker)),
+                InheritedComponent<String>(
+                  value: 'a',
+                  child: _ReadingS(tracker),
+                ),
               )
-              as InheritedBranch<String>;
+              as InheritedElement<String>;
 
       // Mounting drove the first build through the whole subtree — the
       // dependency on the provider is registered and 'a' was read.
       expect(tracker.builds, 1);
       expect(tracker.lastValue, 'a');
 
-      ipBranch.update(
-        InheritedSeed<String>(value: 'b', child: _ReadingS(tracker)),
+      ipElement.update(
+        InheritedComponent<String>(value: 'b', child: _ReadingS(tracker)),
       );
       owner.flush();
 
@@ -127,16 +130,19 @@ void main() {
 
     test('no dependent invalidation when provider value unchanged', () {
       final tracker = _Tracker();
-      final ipBranch =
+      final ipElement =
           owner.mountRoot(
-                InheritedSeed<String>(value: 'a', child: _ReadingS(tracker)),
+                InheritedComponent<String>(
+                  value: 'a',
+                  child: _ReadingS(tracker),
+                ),
               )
-              as InheritedBranch<String>;
+              as InheritedElement<String>;
 
       expect(tracker.builds, 1);
 
-      ipBranch.update(
-        InheritedSeed<String>(value: 'a', child: _ReadingS(tracker)),
+      ipElement.update(
+        InheritedComponent<String>(value: 'a', child: _ReadingS(tracker)),
       );
       // updateShouldNotify=false scheduled nothing: the flush drains empty.
       expect(owner.flush(), isEmpty);

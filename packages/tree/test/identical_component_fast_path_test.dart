@@ -1,10 +1,10 @@
-// A18 (ratified PORT, bead genesis-4m1): the identical-config fast path.
+// The ratified identical-component fast path.
 //
-// In reconciliation (Branch.updateChild, and the multichild path that now
-// delegates to it), an existing child reconciled against an *identical* seed
+// In reconciliation (Element.updateChild, and the multichild path that now
+// delegates to it), an existing child reconciled against an *identical* component
 // is returned untouched — no update(), no rebuild, no subtree cascade. The
-// skip is identity-only (`identical()`, never `Seed.operator==`) and lives in
-// reconciliation only: Branch.update keeps its A9 force semantics.
+// skip is identity-only (`identical()`, never `Component.operator==`) and lives in
+// reconciliation only: Element.update keeps its A9 force semantics.
 //
 // These are the 10 gating tests from docs/design/a9-fast-path-analysis.md §6.
 // They pin: the skip itself (#1), const pruning (#2), identity-not-value (#3),
@@ -23,12 +23,12 @@ class _Tracker {
   int builds = 0;
 }
 
-/// A stateless seed that counts its build()s and returns a const child leaf.
-class _CountingSeed extends StatelessSeed {
-  const _CountingSeed(this.tracker);
+/// A stateless component that counts its build()s and returns a const child leaf.
+class _CountingComponent extends StatelessComponent {
+  const _CountingComponent(this.tracker);
   final _Tracker tracker;
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     tracker.builds++;
     return const Leaf('counting-child');
   }
@@ -39,149 +39,153 @@ class _CountingSeed extends StatelessSeed {
 /// Across a parent rebuild the returned child is identical, so the fast path
 /// prunes the entire child subtree. The child's own builder counts via
 /// [childTracker], so a re-run would be observable.
-class _CachedParentSeed extends StatelessSeed {
-  const _CachedParentSeed(this.parentTracker, this.cachedChild);
+class _CachedParentComponent extends StatelessComponent {
+  const _CachedParentComponent(this.parentTracker, this.cachedChild);
   final _Tracker parentTracker;
-  final Seed cachedChild;
+  final Component cachedChild;
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     parentTracker.builds++;
     // Identical instance on every build → fast path skips its whole subtree.
     return cachedChild;
   }
 }
 
-/// A counting child seed whose own build returns a const grandchild Leaf.
-class _CountingChildSeed extends StatelessSeed {
-  const _CountingChildSeed(this.tracker);
+/// A counting child component whose own build returns a const grandchild Leaf.
+class _CountingChildComponent extends StatelessComponent {
+  const _CountingChildComponent(this.tracker);
   final _Tracker tracker;
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     tracker.builds++;
     return const Leaf('grandchild');
   }
 }
 
-/// A stateless seed overriding ==/hashCode to VALUE equality. Two distinct
+/// A stateless component overriding ==/hashCode to VALUE equality. Two distinct
 /// instances with the same `id` are `==` but not `identical` — the fast path
 /// must NOT skip on these (it consults identical(), never ==).
-class _ValueEqSeed extends StatelessSeed {
-  const _ValueEqSeed(this.id, this.tracker);
+class _ValueEqComponent extends StatelessComponent {
+  const _ValueEqComponent(this.id, this.tracker);
   final String id;
   final _Tracker tracker;
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     tracker.builds++;
     return const Leaf('value-eq-child');
   }
 
   @override
   bool operator ==(Object other) =>
-      other is _ValueEqSeed && other.id == id && other.tracker == tracker;
+      other is _ValueEqComponent && other.id == id && other.tracker == tracker;
 
   @override
   int get hashCode => Object.hash(id, tracker);
 }
 
-/// A stateless seed that reads a provided String and records each build.
-class _DependentSeed extends StatelessSeed {
-  _DependentSeed(this.tracker, {super.key});
+/// A stateless component that reads a provided String and records each build.
+class _DependentComponent extends StatelessComponent {
+  _DependentComponent(this.tracker, {super.key});
   final _Tracker tracker;
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     tracker.builds++;
-    context.dependOnInheritedSeedOfExactType<String>();
+    context.dependOnInheritedValueOfExactType<String>();
     return const Leaf('dependent-child');
   }
 }
 
-/// A stateful seed recording the order of didChangeDependencies / build and a
+/// A stateful component recording the order of didChangeDependencies / build and a
 /// build count — used to prove dCD fires before build under the skip.
-class _OrderSeed extends StatefulSeed {
-  const _OrderSeed(this.log);
+class _OrderComponent extends StatefulComponent {
+  const _OrderComponent(this.log);
   final List<String> log;
   @override
-  State<StatefulSeed> createState() => _OrderState();
+  State<StatefulComponent> createState() => _OrderState();
 }
 
-class _OrderState extends State<_OrderSeed> {
+class _OrderState extends State<_OrderComponent> {
   int builds = 0;
   @override
-  void didChangeDependencies() => seed.log.add('didChangeDependencies');
+  void didChangeDependencies() => component.log.add('didChangeDependencies');
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     builds++;
-    seed.log.add('build');
-    context.dependOnInheritedSeedOfExactType<String>();
+    component.log.add('build');
+    context.dependOnInheritedValueOfExactType<String>();
     return const Leaf('order-child');
   }
 }
 
-/// A non-dependent stateless seed: never reads the provider. Used to prove a
+/// A non-dependent stateless component: never reads the provider. Used to prove a
 /// non-dependent sibling inside a skipped subtree never rebuilds.
-class _NonDependentSeed extends StatelessSeed {
-  _NonDependentSeed(this.tracker);
+class _NonDependentComponent extends StatelessComponent {
+  _NonDependentComponent(this.tracker);
   final _Tracker tracker;
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     tracker.builds++;
     return const Leaf('non-dependent-child');
   }
 }
 
 /// Walks a mounted subtree depth-first and renders a stable structural
-/// snapshot (the shape a perception harvest would observe): seed tag + ordered
+/// snapshot (the shape a perception harvest would observe): component tag + ordered
 /// children. Two trees with the same shape produce byte-identical strings.
-String _harvest(Branch branch) {
+String _harvest(Element element) {
   final buffer = StringBuffer();
-  void walk(Branch b) {
-    final seed = b.seed;
-    final tag = seed is Leaf
-        ? 'Leaf(${seed.tag})'
-        : '${seed.runtimeType}'
-              '${seed.key != null ? '#${seed.key}' : ''}';
+  void walk(Element b) {
+    final component = b.component;
+    final tag = component is Leaf
+        ? 'Leaf(${component.tag})'
+        : '${component.runtimeType}'
+              '${component.key != null ? '#${component.key}' : ''}';
     buffer.write('<$tag>');
     b.visitChildren(walk);
     buffer.write('</>');
   }
 
-  walk(branch);
+  walk(element);
   return buffer.toString();
 }
 
 void main() {
   // #1 --------------------------------------------------------------------
   group('#1 skip-on-identical', () {
-    test('updateChild with an identical seed returns the same branch and does '
-        'NOT re-run the child build (build counter stays put)', () {
-      final owner = TreeOwner();
+    test(
+      'updateChild with an identical component returns the same element and does '
+      'NOT re-run the child build (build counter stays put)',
+      () {
+        final owner = BuildOwner();
+        addTearDown(owner.dispose);
+        final tracker = _Tracker();
+        final parent =
+            owner.mountRoot(_CountingComponent(tracker)) as StatelessElement;
+        final child = parent.child!;
+        expect(tracker.builds, 1, reason: 'one build on mount');
+
+        // Reconcile the parent's child against the SAME instance it already
+        // holds: identical → skip.
+        final result = parent.updateChild(child, child.component, 0);
+
+        expect(result, same(child), reason: 'same element returned as-is');
+        expect(
+          tracker.builds,
+          1,
+          reason: 'the fast path skipped update()/rebuild — no rebuild ran',
+        );
+      },
+    );
+
+    test('a bare hook element is not rebuilt when reconciled with its own '
+        'identical component (performRebuild does not run)', () {
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final tracker = _Tracker();
-      final parent = owner.mountRoot(_CountingSeed(tracker)) as StatelessBranch;
-      final child = parent.child!;
-      expect(tracker.builds, 1, reason: 'one build on mount');
-
-      // Reconcile the parent's child against the SAME instance it already
-      // holds: identical → skip.
-      final result = parent.updateChild(child, child.seed, 0);
-
-      expect(result, same(child), reason: 'same branch returned as-is');
-      expect(
-        tracker.builds,
-        1,
-        reason: 'the fast path skipped update()/rebuild — no rebuild ran',
-      );
-    });
-
-    test('a bare hook branch is not rebuilt when reconciled with its own '
-        'identical seed (performRebuild does not run)', () {
-      final owner = TreeOwner();
-      addTearDown(owner.dispose);
-      final root = owner.mountRoot(const Node('root')) as NodeBranch;
-      final hook = _HookBranch(const _HookSeed())..mount(root, 0);
+      final root = owner.mountRoot(const Node('root')) as NodeElement;
+      final hook = _HookElement(const _HookComponent())..mount(root, 0);
       expect(hook.hookRuns, 0);
 
-      final result = root.updateChild(hook, hook.seed, 0);
+      final result = root.updateChild(hook, hook.component, 0);
 
       expect(result, same(hook));
       expect(
@@ -196,29 +200,29 @@ void main() {
   group('#2 const pruning', () {
     test('a parent whose build() returns a const child — parent update() '
         're-runs the parent builder once; child + grandchild builders do NOT '
-        're-run; branch identity preserved', () {
-      final owner = TreeOwner();
+        're-run; element identity preserved', () {
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final parentTracker = _Tracker();
       final childTracker = _Tracker();
       // A single cached child instance (the const-canonicalized / prebuilt
       // pattern): identical across the parent's two builds → pruned.
-      final cachedChild = _CountingChildSeed(childTracker);
+      final cachedChild = _CountingChildComponent(childTracker);
       final parent =
-          owner.mountRoot(_CachedParentSeed(parentTracker, cachedChild))
-              as StatelessBranch;
+          owner.mountRoot(_CachedParentComponent(parentTracker, cachedChild))
+              as StatelessElement;
       expect(parentTracker.builds, 1);
       expect(
         childTracker.builds,
         1,
         reason: 'child + grandchild built once on mount',
       );
-      final childBranch = parent.child!;
+      final childElement = parent.child!;
 
-      // Force the parent to rebuild with a fresh (non-identical) parent seed:
+      // Force the parent to rebuild with a fresh (non-identical) parent component:
       // its build() re-runs and re-emits the SAME child instance, which the
       // fast path then prunes — child + grandchild builders do not re-run.
-      parent.update(_CachedParentSeed(parentTracker, cachedChild));
+      parent.update(_CachedParentComponent(parentTracker, cachedChild));
 
       expect(parentTracker.builds, 2, reason: 'parent builder re-ran once');
       expect(
@@ -230,7 +234,7 @@ void main() {
       );
       expect(
         parent.child,
-        same(childBranch),
+        same(childElement),
         reason: 'child identity preserved',
       );
     });
@@ -238,19 +242,19 @@ void main() {
 
   // #3 --------------------------------------------------------------------
   group('#3 identity-not-value', () {
-    test('a seed with value-equality ==/hashCode STILL rebuilds when a '
-        'distinct-but-==-equal seed arrives — the skip uses identical(), not '
+    test('a component with value-equality ==/hashCode STILL rebuilds when a '
+        'distinct-but-==-equal component arrives — the skip uses identical(), not '
         '==', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final tracker = _Tracker();
-      final parent = owner.mountRoot(const Node('root')) as NodeBranch;
+      final parent = owner.mountRoot(const Node('root')) as NodeElement;
 
-      final a = _ValueEqSeed('same', tracker);
-      final child = parent.updateChild(null, a, 0)! as StatelessBranch;
+      final a = _ValueEqComponent('same', tracker);
+      final child = parent.updateChild(null, a, 0)! as StatelessElement;
       expect(tracker.builds, 1);
 
-      final b = _ValueEqSeed('same', tracker);
+      final b = _ValueEqComponent('same', tracker);
       // Guard the fixture: == says equal, identical says distinct.
       expect(a == b, isTrue, reason: 'fixture: value-equal');
       expect(identical(a, b), isFalse, reason: 'fixture: distinct instances');
@@ -272,7 +276,7 @@ void main() {
         'a changed value rebuilds each dependent exactly once; '
         'didChangeDependencies fires before build; non-dependent siblings in '
         'the skipped subtree never rebuild', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       final depTracker = _Tracker();
@@ -285,17 +289,17 @@ void main() {
       final sharedChild = Node(
         'container',
         children: [
-          _DependentSeed(depTracker, key: ValueKey('dep')),
-          _NonDependentSeed(nonDepTracker),
-          _OrderSeed(orderLog),
+          _DependentComponent(depTracker, key: ValueKey('dep')),
+          _NonDependentComponent(nonDepTracker),
+          _OrderComponent(orderLog),
         ],
       );
 
       final ip =
           owner.mountRoot(
-                InheritedSeed<String>(value: 'v1', child: sharedChild),
+                InheritedComponent<String>(value: 'v1', child: sharedChild),
               )
-              as InheritedBranch<String>;
+              as InheritedElement<String>;
       // First flush settles the initial subtree build.
       owner.flush();
       expect(depTracker.builds, 1);
@@ -307,7 +311,7 @@ void main() {
       // New provider config: changed value, SAME child instance (identical →
       // the child subtree reconcile is skipped). Dependents are invalidated
       // through dependencyChanged independently of the skip.
-      ip.update(InheritedSeed<String>(value: 'v2', child: sharedChild));
+      ip.update(InheritedComponent<String>(value: 'v2', child: sharedChild));
       owner.flush();
 
       expect(depTracker.builds, 2, reason: 'dependent rebuilt exactly once');
@@ -329,7 +333,7 @@ void main() {
     test('flush() INCLUDES the drain-rebuilt dependents (and still excludes '
         'cascade force-rebuilds); onNeedsFlush fired on the empty→non-empty '
         'edge', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       var needsFlushCalls = 0;
@@ -338,25 +342,25 @@ void main() {
       final depTracker = _Tracker();
       final sharedChild = Node(
         'container',
-        children: [_DependentSeed(depTracker, key: ValueKey('dep'))],
+        children: [_DependentComponent(depTracker, key: ValueKey('dep'))],
       );
 
       final ip =
           owner.mountRoot(
-                InheritedSeed<String>(value: 'v1', child: sharedChild),
+                InheritedComponent<String>(value: 'v1', child: sharedChild),
               )
-              as InheritedBranch<String>;
+              as InheritedElement<String>;
       owner.flush();
       needsFlushCalls = 0;
 
-      // Reach the mounted dependent branch (under the Node).
-      final node = ip.childBranch! as NodeBranch;
+      // Reach the mounted dependent element (under the Node).
+      final node = ip.childElement! as NodeElement;
       final dependent = node.children.single;
       expect(depTracker.builds, 1);
 
       // Provider value changes, child reused (identical → skipped). The
       // dependent is invalidated via dependencyChanged → scheduled → dirty.
-      ip.update(InheritedSeed<String>(value: 'v2', child: sharedChild));
+      ip.update(InheritedComponent<String>(value: 'v2', child: sharedChild));
 
       expect(
         needsFlushCalls,
@@ -387,26 +391,26 @@ void main() {
     test('a provider update outside a flush with an identical child leaves '
         'dependents dirty but not rebuilt until flush(), then they rebuild '
         'exactly once', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       final depTracker = _Tracker();
       final sharedChild = Node(
         'container',
-        children: [_DependentSeed(depTracker, key: ValueKey('dep'))],
+        children: [_DependentComponent(depTracker, key: ValueKey('dep'))],
       );
 
       final ip =
           owner.mountRoot(
-                InheritedSeed<String>(value: 'v1', child: sharedChild),
+                InheritedComponent<String>(value: 'v1', child: sharedChild),
               )
-              as InheritedBranch<String>;
+              as InheritedElement<String>;
       owner.flush();
-      final dependent = (ip.childBranch! as NodeBranch).children.single;
+      final dependent = (ip.childElement! as NodeElement).children.single;
       expect(depTracker.builds, 1);
 
       // Update outside any flush; identical child → no cascade rebuild.
-      ip.update(InheritedSeed<String>(value: 'v2', child: sharedChild));
+      ip.update(InheritedComponent<String>(value: 'v2', child: sharedChild));
 
       expect(dependent.dirty, isTrue, reason: 'scheduled but not yet rebuilt');
       expect(
@@ -423,25 +427,25 @@ void main() {
   });
 
   // #7 --------------------------------------------------------------------
-  group('#7 multichild reorder under identical seed', () {
+  group('#7 multichild reorder under identical component', () {
     test(
       'updateChildren with a keyed child moved to a new position under an '
-      'IDENTICAL seed — no rebuild, identity preserved, new order reflected',
+      'IDENTICAL component — no rebuild, identity preserved, new order reflected',
       () {
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         addTearDown(owner.dispose);
 
         final trackerA = _Tracker();
         final trackerB = _Tracker();
 
         // Two keyed counting children; capture the exact instances.
-        final seedA = _CountingSeed(trackerA);
+        final seedA = _CountingComponent(trackerA);
         final keyedA = _KeyedCounting('ka', seedA);
-        final keyedB = _KeyedCounting('kb', _CountingSeed(trackerB));
+        final keyedB = _KeyedCounting('kb', _CountingComponent(trackerB));
 
         final root =
             owner.mountRoot(Node('root', children: [keyedA, keyedB]))
-                as NodeBranch;
+                as NodeElement;
         final branchA = root.children[0];
         final branchB = root.children[1];
         expect(trackerA.builds, 1);
@@ -451,13 +455,13 @@ void main() {
         root.update(Node('root', children: [keyedB, keyedA]));
 
         expect(
-          root.children[0].branchId,
-          branchB.branchId,
+          root.children[0].elementId,
+          branchB.elementId,
           reason: 'kb moved first',
         );
         expect(
-          root.children[1].branchId,
-          branchA.branchId,
+          root.children[1].elementId,
+          branchA.elementId,
           reason: 'ka now second',
         );
         expect(
@@ -468,7 +472,7 @@ void main() {
         expect(
           trackerA.builds,
           1,
-          reason: 'ka reconciled against its identical seed → no rebuild',
+          reason: 'ka reconciled against its identical component → no rebuild',
         );
         expect(root.children.every((c) => c.mounted), isTrue);
       },
@@ -477,16 +481,17 @@ void main() {
 
   // #8 --------------------------------------------------------------------
   group('#8 update() unchanged (A9 intact)', () {
-    test('branch.update(sameSeedInstance) still force-rebuilds — the skip '
+    test('element.update(sameSeedInstance) still force-rebuilds — the skip '
         'lives only in reconciliation', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final tracker = _Tracker();
-      final branch = owner.mountRoot(_CountingSeed(tracker)) as StatelessBranch;
+      final element =
+          owner.mountRoot(_CountingComponent(tracker)) as StatelessElement;
       expect(tracker.builds, 1);
 
-      final same = branch.seed;
-      branch.update(same); // direct update with the identical instance
+      final same = element.component;
+      element.update(same); // direct update with the identical instance
 
       expect(
         tracker.builds,
@@ -498,20 +503,22 @@ void main() {
 
   // #9 --------------------------------------------------------------------
   group('#9 wire-realism guard', () {
-    test('two structurally-equal but DISTINCT seed instances (double '
+    test('two structurally-equal but DISTINCT component instances (double '
         'deserialization) do NOT skip — the wire path gains nothing', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final tracker = _Tracker();
-      final parent = owner.mountRoot(const Node('root')) as NodeBranch;
+      final parent = owner.mountRoot(const Node('root')) as NodeElement;
 
       // Build with one instance; reconcile against a fresh, structurally-equal
       // but distinct instance — exactly what deserializing the same payload
       // twice produces. A counting child makes the rebuild observable.
-      final s1 = _CountingSeed(tracker);
-      final child = parent.updateChild(null, s1, 0)! as StatelessBranch;
+      final s1 = _CountingComponent(tracker);
+      final child = parent.updateChild(null, s1, 0)! as StatelessElement;
       expect(tracker.builds, 1);
-      final s2 = _CountingSeed(tracker); // distinct, same type, same (null) key
+      final s2 = _CountingComponent(
+        tracker,
+      ); // distinct, same type, same (null) key
       expect(identical(s1, s2), isFalse, reason: 'distinct instances');
 
       final result = parent.updateChild(child, s2, 0);
@@ -529,21 +536,21 @@ void main() {
   group('#10 harvest conformance over a skipped subtree', () {
     test('a harvest over a tree containing a skipped subtree yields a '
         'byte-identical structural Observation', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       final childTracker = _Tracker();
       // Parent re-emits the SAME cached child across rebuilds (pruned).
-      final cachedChild = _CountingChildSeed(childTracker);
+      final cachedChild = _CountingChildComponent(childTracker);
       final parent =
-          owner.mountRoot(_CachedParentSeed(_Tracker(), cachedChild))
-              as StatelessBranch;
+          owner.mountRoot(_CachedParentComponent(_Tracker(), cachedChild))
+              as StatelessElement;
 
       final before = _harvest(parent);
       expect(childTracker.builds, 1);
 
       // Force a parent rebuild; the child subtree is skipped.
-      parent.update(_CachedParentSeed(_Tracker(), cachedChild));
+      parent.update(_CachedParentComponent(_Tracker(), cachedChild));
       expect(childTracker.builds, 1, reason: 'child subtree pruned');
 
       final after = _harvest(parent);
@@ -559,16 +566,16 @@ void main() {
   });
 }
 
-// --- Test-local seeds/branches used above -----------------------------------
+// --- Test-local seeds/elements used above -----------------------------------
 
-class _HookSeed extends Seed {
-  const _HookSeed();
+class _HookComponent extends Component {
+  const _HookComponent();
   @override
-  _HookBranch createBranch() => _HookBranch(this);
+  _HookElement createElement() => _HookElement(this);
 }
 
-class _HookBranch extends Branch {
-  _HookBranch(super.seed);
+class _HookElement extends Element {
+  _HookElement(super.component);
   int hookRuns = 0;
   @override
   void performRebuild() {
@@ -576,11 +583,11 @@ class _HookBranch extends Branch {
   }
 }
 
-/// A keyed container-ish seed wrapping a single child seed, used to give #7 a
+/// A keyed container-ish component wrapping a single child component, used to give #7 a
 /// keyed multichild element whose own build counts.
-class _KeyedCounting extends StatelessSeed {
+class _KeyedCounting extends StatelessComponent {
   _KeyedCounting(String key, this.inner) : super(key: ValueKey(key));
-  final Seed inner;
+  final Component inner;
   @override
-  Seed build(TreeContext context) => inner;
+  Component build(BuildContext context) => inner;
 }

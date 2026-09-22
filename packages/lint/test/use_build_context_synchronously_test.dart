@@ -1,25 +1,39 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:genesis_lint/src/rules/use_tree_context_synchronously.dart';
+import 'package:genesis_lint/src/rules/use_build_context_synchronously.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
-import 'support/tree_context_rule_test.dart';
+import 'support/build_context_rule_test.dart';
 
 void main() {
   defineReflectiveSuite(() {
-    defineReflectiveTests(UseTreeContextSynchronouslyRuleTest);
+    defineReflectiveTests(UseBuildContextSynchronouslyRuleTest);
   });
 }
 
 @reflectiveTest
-final class UseTreeContextSynchronouslyRuleTest extends TreeContextRuleTest {
+final class UseBuildContextSynchronouslyRuleTest extends BuildContextRuleTest {
   @override
   void setUp() {
-    rule = UseTreeContextSynchronouslyRule();
+    rule = UseBuildContextSynchronouslyRule();
     super.setUp();
   }
 
   Future<void> test_after_await() async {
+    const source = r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+Future<void> use(BuildContext context) async {
+  await Future<void>.value();
+  context.markNeedsRebuild();
+}
+''';
+    await assertDiagnostics(source, [
+      lint(source.indexOf('context.mark'), 'context'.length),
+    ]);
+  }
+
+  Future<void> test_legacy_alias_after_await() async {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
@@ -33,11 +47,30 @@ Future<void> use(TreeContext context) async {
     ]);
   }
 
+  Future<void> test_prefixed_mixed_aliases_after_await() async {
+    const source = r'''
+import 'package:genesis_tree/genesis_tree.dart' as tree;
+
+Future<void> use(
+  tree.BuildContext canonical,
+  tree.TreeContext legacy,
+) async {
+  await Future<void>.value();
+  canonical.markNeedsRebuild();
+  legacy.markNeedsRebuild();
+}
+''';
+    await assertDiagnostics(source, [
+      lint(source.indexOf('canonical.mark'), 'canonical'.length),
+      lint(source.indexOf('legacy.mark'), 'legacy'.length),
+    ]);
+  }
+
   Future<void> test_guarded_after_await() async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Future<void> use(TreeContext context) async {
+Future<void> use(BuildContext context) async {
   await Future<void>.value();
   if (!context.mounted) return;
   context.markNeedsRebuild();
@@ -49,7 +82,7 @@ Future<void> use(TreeContext context) async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Future<void> use(TreeContext context) async {
+Future<void> use(BuildContext context) async {
   await Future<void>.value();
   if (context.mounted == false) {
     throw 'unmounted';
@@ -63,7 +96,7 @@ Future<void> use(TreeContext context) async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Future<void> use(TreeContext context) async {
+Future<void> use(BuildContext context) async {
   await Future<void>.value();
   if (context.mounted) {
     context.markNeedsRebuild();
@@ -76,7 +109,7 @@ Future<void> use(TreeContext context) async {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Future<void> use(TreeContext context) async {
+Future<void> use(BuildContext context) async {
   await Future<void>.value();
   if (!context.mounted) return;
   await Future<void>.value();
@@ -92,7 +125,7 @@ Future<void> use(TreeContext context) async {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Future<void> use(TreeContext first, TreeContext second) async {
+Future<void> use(BuildContext first, BuildContext second) async {
   await Future<void>.value();
   if (!first.mounted) return;
   second.markNeedsRebuild();
@@ -107,7 +140,7 @@ Future<void> use(TreeContext first, TreeContext second) async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Future<bool> use(TreeContext context) async {
+Future<bool> use(BuildContext context) async {
   await Future<void>.value();
   return context.mounted;
     }
@@ -118,7 +151,7 @@ Future<bool> use(TreeContext context) async {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-TreeContext acquire() => throw 'fixture';
+BuildContext acquire() => throw 'fixture';
 
 Future<void> use() async {
   await Future<void>.value();
@@ -134,7 +167,7 @@ Future<void> use() async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Future<void> use(TreeContext context) async {
+Future<void> use(BuildContext context) async {
   await Future<void>.value();
   (() => context.markNeedsRebuild())();
 }
@@ -145,7 +178,7 @@ Future<void> use(TreeContext context) async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-void use(TreeContext context) {
+void use(BuildContext context) {
   context.markNeedsRebuild();
 }
 ''');

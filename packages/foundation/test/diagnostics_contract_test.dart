@@ -68,12 +68,12 @@ void main() {
       contractVersion: 1,
       projectedAt: DateTime.utc(2026, 7, 23, 12, 30),
       root: TreeNode(
-        seedType: 'Station',
+        componentType: 'Station',
         id: 'root-1',
         properties: properties,
         children: const [
           TreeNode(
-            seedType: 'CircuitStep',
+            componentType: 'CircuitStep',
             id: 'step-1',
             key: 'specify',
             properties: [],
@@ -127,7 +127,7 @@ void main() {
 
   test('copyWith and value equality preserve the deployed immutable API', () {
     final original = TreeNode(
-      seedType: 'Station',
+      componentType: 'Station',
       id: 'root',
       properties: properties,
       children: const [],
@@ -204,11 +204,26 @@ void main() {
             as Map<String, Object?>;
     final snapshot = TreeSnapshot.fromJson(json);
     expect(snapshot.contractVersion, 1);
-    expect(snapshot.root.seedType, 'Grid');
-    expect(snapshot.root.children.single.seedType, 'Substation');
+    expect(snapshot.root.componentType, 'Grid');
+    expect(snapshot.root.children.single.componentType, 'Substation');
     final encoded = jsonEncode(snapshot.toJson());
     expect(encoded, contains('"referenceKind":"substation"'));
     expect(encoded, contains('"referenceKind":"bead"'));
     expect(encoded, contains('"referenceKind":"session"'));
+  });
+
+  test('legacy seedType source spelling preserves the version-1 wire key', () {
+    // ignore: deprecated_member_use_from_same_package
+    const node = TreeNode(
+      seedType: 'Legacy',
+      id: 'legacy',
+      properties: [],
+      children: [],
+    );
+    expect(node.componentType, 'Legacy');
+    // ignore: deprecated_member_use_from_same_package
+    expect(node.seedType, 'Legacy');
+    expect(node.toJson()['seedType'], 'Legacy');
+    expect(node.toJson(), isNot(contains('componentType')));
   });
 }

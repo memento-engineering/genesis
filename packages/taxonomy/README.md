@@ -4,7 +4,7 @@ Schema-first node vocabulary: one **catalog** classifies the node
 species of a domain; codegen emits two projections from it —
 
 1. **the typed Dart factory registry** (`.g.dart`) — a `ComponentRegistry`
-   binding wire type names to `Seed` constructors, validating at
+   binding wire type names to `Component` constructors, validating at
    construction time (unknown type, missing/mistyped/unknown prop, invalid
    enum value, children on a leaf), every failure a structured
    `TaxonomyException` an agent loop can feed back to an LLM verbatim;
@@ -45,7 +45,7 @@ A catalog is a JSON document (`*.catalog.json`):
                      "required": false, "default": "start", "description": "..." }
       },
       "dart": {
-        "class": "Gauge",                    // the Seed subclass to construct
+        "class": "Gauge",                    // the Component subclass to construct
         "import": "fixture_seeds.dart",      // package: or relative to the .g.dart
         "positionalProps": ["label"],
         "namedProps": ["value", "scale", "enabled", "align"],
@@ -116,10 +116,10 @@ builder.
 
 ## Building trees through the registry
 
-`buildSeedTree(registry, components, {rootId})` turns a flat keyed component
-list into a `Seed` tree **through a registry passed as a parameter** — it
+`buildComponentTree(registry, components, {rootId})` turns a flat keyed component
+list into a `Component` tree **through a registry passed as a parameter** — it
 never imports a generated file (the one line a consumer would otherwise have
-to fork, now a seam). Component ids become `Seed` keys, so whole-tree
+to fork, now a seam). Component ids become `Component` keys, so whole-tree
 re-emission reconciles to an identity-preserving patch. Tree-shape violations
 (duplicate id, unknown root, dangling child, cycle) throw structured
 `TreeShapeException`s. Envelope parsing (`updateComponents` itself) is wire

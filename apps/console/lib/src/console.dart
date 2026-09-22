@@ -46,7 +46,7 @@ class Console {
         'catalog/registry drift: catalog types $missing have no registry entry',
       );
     }
-    final surface = DialogueSurface(registry: registry, owner: TreeOwner());
+    final surface = DialogueSurface(registry: registry, owner: BuildOwner());
     return Console._(
       surface,
       ConsentRouter(surface: surface, catalog: catalog),
@@ -58,8 +58,8 @@ class Console {
 
   /// The live render grid as text (front buffer), or empty before mount.
   String snapshot() {
-    final root = _surface.rootBranch;
-    return root is StageBranch ? root.grid.frontToString() : '';
+    final root = _surface.rootElement;
+    return root is StageElement ? root.grid.frontToString() : '';
   }
 
   /// The number of render flush passes since mount (frame 0 excluded), or zero
@@ -67,8 +67,8 @@ class Console {
   /// is empty — this counts every pass, so it detects a rebuild that emitted no
   /// visible change (e.g. a rejection path that erroneously rebuilt the tree).
   int get flushCount {
-    final root = _surface.rootBranch;
-    return root is StageBranch ? root.flushCount : 0;
+    final root = _surface.rootElement;
+    return root is StageElement ? root.flushCount : 0;
   }
 
   /// Mounts [messageJson] on the first call, then reconciles each subsequent
@@ -105,18 +105,18 @@ class Console {
     return outcome;
   }
 
-  /// A human-readable dump of the live branch tree (key : type, mounted state).
+  /// A human-readable dump of the live element tree (key : type, mounted state).
   String treeDump() {
-    final root = _router.rootBranch;
+    final root = _router.rootElement;
     if (root == null) return '(nothing mounted)';
     final out = StringBuffer();
-    void walk(Branch branch, int depth) {
-      final tag = branch.mounted ? '' : ' (unmounted)';
+    void walk(Element element, int depth) {
+      final tag = element.mounted ? '' : ' (unmounted)';
       out.writeln(
-        '${'  ' * depth}${branch.key ?? '·'} : '
-        '${branch.seed.runtimeType}$tag',
+        '${'  ' * depth}${element.key ?? '·'} : '
+        '${element.component.runtimeType}$tag',
       );
-      branch.visitChildren((child) => walk(child, depth + 1));
+      element.visitChildren((child) => walk(child, depth + 1));
     }
 
     walk(root, 0);

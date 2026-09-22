@@ -16,23 +16,26 @@ final class _Unsupported {
   String toString() => 'unsupported';
 }
 
-/// A stateless perception that builds a fixed seed (the component-root case).
+/// A stateless perception that builds a fixed component (the component-root case).
 class _Wrap extends StatelessPerception {
   const _Wrap(this.root);
-  final Seed root;
+  final Component root;
   @override
-  Seed build(PerceptionContext ctx) => root;
+  Component build(PerceptionContext ctx) => root;
 }
 
 void main() {
   late PerceptionOwner owner;
   setUp(() => owner = PerceptionOwner());
 
-  Map<String, Object?> serialize(Seed seed) =>
-      serializePerceptionFragment(owner.mountRoot(seed));
+  Map<String, Object?> serialize(Component component) =>
+      serializePerceptionFragment(owner.mountRoot(component));
 
-  TreeSnapshot project(Seed seed, {required DateTime projectedAt}) =>
-      projectPerceptionTree(owner.mountRoot(seed), projectedAt: projectedAt);
+  TreeSnapshot project(Component component, {required DateTime projectedAt}) =>
+      projectPerceptionTree(
+        owner.mountRoot(component),
+        projectedAt: projectedAt,
+      );
 
   test('serializes Fields as name:value', () {
     final map = serialize(
@@ -96,16 +99,16 @@ void main() {
     expect(
       description,
       'NodeElement\n'
-      '  seedType: Node (info)\n'
+      '  componentType: Node (info)\n'
       '  mounted: true (info)\n'
       '  dirty: false (info)\n'
-      '  branchId: 0 (info)\n'
+      '  elementId: 0 (info)\n'
       '  first: 1 (info)\n'
       '  NodeElement\n'
-      '    seedType: Node (info)\n'
+      '    componentType: Node (info)\n'
       '    mounted: true (info)\n'
       '    dirty: false (info)\n'
-      '    branchId: 2 (info)\n'
+      '    elementId: 2 (info)\n'
       '    deep: yes (info)\n',
     );
     expect(description, isNot(contains('FieldElement')));
@@ -144,11 +147,11 @@ void main() {
 
     expect(snapshot.contractVersion, 1);
     expect(snapshot.projectedAt, DateTime.utc(2026, 8, 1, 8));
-    expect(snapshot.root.seedType, 'Node');
+    expect(snapshot.root.componentType, 'Node');
     expect(snapshot.root.id, isNotEmpty);
     expect(snapshot.root.key, "[ValueKey<String> <'root-key'>]");
     expect(snapshot.root.children, hasLength(1));
-    expect(snapshot.root.children.single.seedType, 'Node');
+    expect(snapshot.root.children.single.componentType, 'Node');
     expect(snapshot.root.properties, [
       const DiagnosticsProperty.string(
         name: 'string',

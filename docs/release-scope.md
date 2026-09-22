@@ -9,11 +9,11 @@ records what ships and what is explicitly *not yet*.
 
 | Area | Surface |
 |---|---|
-| Engine (`tree`) | `Seed`/`Branch`/`TreeContext`/`TreeOwner`, keyed reconcile, the A18 identical-skip fast path, the composition layer (`Stateless`/`Stateful`/`State`, `InheritedSeed`, `Watch`, `Sprout`) — composition layer **EXPERIMENTAL** (may change pre-1.0) |
+| Engine (`tree`) | `Component`/`Element`/`BuildContext`/`BuildOwner`, keyed reconcile, the A18 identical-skip fast path, the composition layer (`Stateless`/`Stateful`/`State`, `InheritedComponent`, `Watch`, `HookComponent`) — composition layer **EXPERIMENTAL** (may change pre-1.0) |
 | Measurement (`perception`) | `Perception`/`PerceptionContext`/`PerceptionOwner`, `Node`/`Field`, the harvest pipeline |
 | Codegen (`taxonomy`) | catalog → factory registry + LLM tool schema (one source of truth), the extension seam, structured errors, build_runner integration |
 | Wire (`dialogue`) | A2UI v0.9 `updateComponents` codec, the receive-side `DialogueSurface` (reconcile re-emissions by key), `action`-message parsing |
-| Render (`typesetting`) | bare-VM cell/ANSI render-branch backend (`Stage`/`Box`/`Text`), double-buffered diff emission |
+| Render (`typesetting`) | bare-VM cell/ANSI render-element backend (`Stage`/`Box`/`Text`), double-buffered diff emission |
 | Action substrate (`consent`) | enforce/reject hit-test against the live tree + catalog affordances, the four-kind rejection taxonomy, enforce via the target state |
 | tmux client (`tmux`) | zero-dependency (only `meta`), injection-safe tmux client for supervising long-lived agent panes — one-shot acts + a poll/control-mode observation stream behind a fakeable executor seam; off-spine, depended on by no other member (pending A44) |
 
@@ -24,12 +24,12 @@ records what ships and what is explicitly *not yet*.
 | **`dialogue` reverse-emission** (live tree → `updateComponents`) | needs a `taxonomy` reverse-describer that doesn't exist; the receive + re-emit-by-key path is what 1.0 needs (A25) |
 | **`updateDataModel` / data binding** | A2UI's JSON-Pointer data model + expression evaluation; the natural home is adopting `a2ui_core`'s `DataModel` post-stable (A26) |
 | **`createSurface` / `deleteSurface` lifecycle, streaming** | single-surface, whole-message v1 is enough for 1.0 (A25) |
-| **`genesis_expression`** (Flutter design system / windowed backend) | not a 1.0 ship target; the `expression` branch is a standalone Flutter design language that does not yet consume the genesis spine — reconciling it with a genesis-tree Flutter render backend is post-1.0 (A29 context) |
+| **`genesis_expression`** (Flutter design system / windowed backend) | not a 1.0 ship target; the `expression` Git branch is a standalone Flutter design language that does not yet consume the genesis spine — reconciling it with a genesis-tree Flutter render backend is post-1.0 (A29 context) |
 | **The agent loop** | the model↔genesis driver (author → receive → render → enforce); will adopt `genai_primitives` for the chat/tool vocabulary rather than invent it (A26 item 4) |
-| **`tree` first-class action-dispatch hook** | `consent` dispatches via the element `Actionable` seam (actions live on the element, not in `tree`; A30 made `StatefulBranch.state` `@protected`, so the earlier `state`-reach wart is resolved). A sanctioned branch-level dispatch convenience remains a possible successor (A28 flag 1 / A29 — `Sprout`'s `useAction` could subsume it) |
+| **`tree` first-class action-dispatch hook** | `consent` dispatches via the element `Actionable` seam (actions live on the element, not in `tree`; A30 made `StatefulElement.state` `@protected`, so the earlier `state`-reach wart is resolved). A sanctioned element-level dispatch convenience remains a possible successor (A28 flag 1 / A29 — `HookComponent`'s `useAction` could subsume it) |
 | **`tree` optimization** | inherited-lookup cache (O(depth)→O(1)) + lazy `_dependencies`; measure-gated, not a release blocker |
 | **`taxonomy` generated affordance map** | `consent` reads affordances from a runtime `Catalog.parse(...)` lookup; a generated `componentActions` projection is an optional optimization (A28 flag 3) |
-| **`Sprout` extras** | `useReducer`, a synchronous `useLayoutEffect`, a `PerceptionSprout` domain face — deferred until a real second consumer (A29) |
+| **`HookComponent` extras** | `useReducer`, a synchronous `useLayoutEffect`, a `PerceptionHookComponent` domain face — deferred until a real second consumer (A29) |
 
 ## Known interop posture (A26)
 
@@ -60,7 +60,7 @@ agent-loop vocabulary; `json_schema_builder` is an optional schema-emit swap.
    scrubbed of inline ADR/register numbers, spike/`NOTES.md` references,
    internal ADR-directory / "monorepo" pointers, and the unshipped
    `genesis_expression` mention; load-bearing refs rewritten as plain prose. Two user-facing
-   error-strings (`tree_context.dart`, `consent/router.dart`) also de-jargoned.
+   error-strings (`build_context.dart`, `consent/router.dart`) also de-jargoned.
    Decision: **self-contained, no design pointers** — pub.dev already links the
    repo from each pubspec's `repository:` field, so the prose carries none.
    Verified clean (internal-ref + bare-`A<n>` greps empty bar legitimate

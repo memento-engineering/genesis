@@ -1,5 +1,5 @@
-// SingleChildSeed (stateless + stateful) and Nest — the vertical single-child
-// chain vocabulary. MultiChildSeed fans out horizontally; Nest stacks a list of
+// SingleChildComponent (stateless + stateful) and Nest — the vertical single-child
+// chain vocabulary. MultiChildComponent fans out horizontally; Nest stacks a list of
 // wrapping seeds top-to-bottom down to one leaf. These tests pin: chain order,
 // standalone use, inherited-value visibility through the chain, downstream/leaf
 // change propagation through identical intermediate links, stateful state
@@ -14,35 +14,35 @@ int _wrapBuilds = 0;
 
 /// A stateless single-child link that wraps its downstream in a `Node` tagged
 /// [tag], so a tree walk can read the chain order.
-class _Wrap extends SingleChildStatelessSeed {
+class _Wrap extends SingleChildStatelessComponent {
   const _Wrap(this.tag, {super.child});
   final String tag;
   @override
-  Seed buildWithChild(TreeContext context, Seed child) {
+  Component buildWithChild(BuildContext context, Component child) {
     _wrapBuilds++;
     return Node(tag, children: [child]);
   }
 }
 
 /// A stateless link that provides a `String` to its downstream via
-/// `InheritedSeed`, to prove ambient lookup works through the chain.
-class _Provide extends SingleChildStatelessSeed {
+/// `InheritedComponent`, to prove ambient lookup works through the chain.
+class _Provide extends SingleChildStatelessComponent {
   const _Provide(this.value);
   final String value;
   @override
-  Seed buildWithChild(TreeContext context, Seed child) =>
-      InheritedSeed<String>(value: value, child: child);
+  Component buildWithChild(BuildContext context, Component child) =>
+      InheritedComponent<String>(value: value, child: child);
 }
 
 // The value the most recent _Consumer saw.
 String? _seenValue;
 
 /// A leaf that reads the ambient `String` and records it.
-class _Consumer extends StatelessSeed {
+class _Consumer extends StatelessComponent {
   const _Consumer();
   @override
-  Seed build(TreeContext context) {
-    _seenValue = context.dependOnInheritedSeedOfExactType<String>();
+  Component build(BuildContext context) {
+    _seenValue = context.dependOnInheritedValueOfExactType<String>();
     return const Leaf('consumer');
   }
 }
@@ -57,7 +57,7 @@ final Map<String, int> _trackedInits = {};
 /// `mixin on State`. This only compiles because [SingleChildState] *extends*
 /// [State] (rather than being a `mixin on State`), which keeps this
 /// composition slot open — the design point the layering guarantees.
-mixin _Tracks<T extends StatefulSeed> on State<T> {
+mixin _Tracks<T extends StatefulComponent> on State<T> {
   String get trackTag;
   @override
   void initState() {
@@ -67,7 +67,7 @@ mixin _Tracks<T extends StatefulSeed> on State<T> {
 }
 
 /// A plain stateful leaf that mixes in the shared [_Tracks] behaviour.
-class _PlainTracked extends StatefulSeed {
+class _PlainTracked extends StatefulComponent {
   const _PlainTracked();
   @override
   _PlainTrackedState createState() => _PlainTrackedState();
@@ -77,11 +77,11 @@ class _PlainTrackedState extends State<_PlainTracked> with _Tracks {
   @override
   String get trackTag => 'plain';
   @override
-  Seed build(TreeContext context) => const Leaf('plain');
+  Component build(BuildContext context) => const Leaf('plain');
 }
 
 /// A single-child link that mixes in the same shared [_Tracks] behaviour.
-class _WrapTracked extends SingleChildStatefulSeed {
+class _WrapTracked extends SingleChildStatefulComponent {
   const _WrapTracked();
   @override
   _WrapTrackedState createState() => _WrapTrackedState();
@@ -91,13 +91,13 @@ class _WrapTrackedState extends SingleChildState<_WrapTracked> with _Tracks {
   @override
   String get trackTag => 'wrap';
   @override
-  Seed buildWithChild(TreeContext context, Seed child) =>
+  Component buildWithChild(BuildContext context, Component child) =>
       Node('tracked', children: [child]);
 }
 
 /// A stateful single-child link whose count a test can drive, wrapping its
 /// downstream in a `Node` tagged with the current count.
-class _Counter extends SingleChildStatefulSeed {
+class _Counter extends SingleChildStatefulComponent {
   const _Counter({super.child});
   @override
   _CounterState createState() => _CounterState();
@@ -114,7 +114,7 @@ class _CounterState extends SingleChildState<_Counter> {
   }
 
   @override
-  Seed buildWithChild(TreeContext context, Seed child) =>
+  Component buildWithChild(BuildContext context, Component child) =>
       Node('counter:$n', children: [child]);
 
   @override
@@ -127,11 +127,11 @@ class _CounterState extends SingleChildState<_Counter> {
 }
 
 // Top-down labels for the linear spine: `node:<name>` for each Node, `leaf:<tag>`
-// for each Leaf, in tree order. Link/component branches carry no label.
-List<String> _labels(Branch root) {
+// for each Leaf, in tree order. Link/component elements carry no label.
+List<String> _labels(Element root) {
   final out = <String>[];
-  void walk(Branch b) {
-    final s = b.seed;
+  void walk(Element b) {
+    final s = b.component;
     if (s is Node) out.add('node:${s.name}');
     if (s is Leaf) out.add('leaf:${s.tag}');
     b.visitChildren(walk);
@@ -142,9 +142,9 @@ List<String> _labels(Branch root) {
 }
 
 void main() {
-  late TreeOwner owner;
+  late BuildOwner owner;
   setUp(() {
-    owner = TreeOwner();
+    owner = BuildOwner();
     _wrapBuilds = 0;
     _seenValue = null;
     _capturedCounter = null;
@@ -156,9 +156,9 @@ void main() {
     test('empty children mounts the leaf directly', () {
       final root =
           owner.mountRoot(const Nest(children: [], child: Leaf('leaf')))
-              as NestBranch;
-      expect(root.head, isA<LeafBranch>());
-      expect((root.head!.seed as Leaf).tag, 'leaf');
+              as NestElement;
+      expect(root.head, isA<LeafElement>());
+      expect((root.head!.component as Leaf).tag, 'leaf');
     });
 
     test('stacks children outermost-first down to the leaf', () {
@@ -169,7 +169,7 @@ void main() {
                   child: Leaf('z'),
                 ),
               )
-              as NestBranch;
+              as NestElement;
       expect(_labels(root), ['node:a', 'node:b', 'node:c', 'leaf:z']);
     });
 
@@ -190,7 +190,7 @@ void main() {
       const b = _Wrap('b');
       final root =
           owner.mountRoot(const Nest(children: [a, b], child: Leaf('first')))
-              as NestBranch;
+              as NestElement;
       expect(_labels(root), ['node:a', 'node:b', 'leaf:first']);
 
       // Same link instances, new leaf: the fresh-carrier refold carries the
@@ -202,11 +202,11 @@ void main() {
     test('an identical Nest is skipped — the chain is not rebuilt', () {
       const nest = Nest(children: [_Wrap('a')], child: Leaf('x'));
       final host =
-          owner.mountRoot(const Node('host', children: [nest])) as NodeBranch;
+          owner.mountRoot(const Node('host', children: [nest])) as NodeElement;
       expect(_wrapBuilds, 1);
 
       // Reconcile the host against the SAME nest instance: updateChild's
-      // identical-skip prunes the whole chain before NestBranch rebuilds.
+      // identical-skip prunes the whole chain before NestElement rebuilds.
       host.update(const Node('host', children: [nest]));
       expect(_wrapBuilds, 1, reason: 'identical Nest -> chain not rebuilt');
     });
@@ -216,7 +216,7 @@ void main() {
     test('setState rebuilds the link in place', () {
       final root =
           owner.mountRoot(const Nest(children: [_Counter()], child: Leaf('x')))
-              as NestBranch;
+              as NestElement;
       expect(_labels(root), ['node:counter:0', 'leaf:x']);
 
       _capturedCounter!.bump();
@@ -228,12 +228,12 @@ void main() {
       const counter = _Counter();
       final root =
           owner.mountRoot(const Nest(children: [counter], child: Leaf('x')))
-              as NestBranch;
+              as NestElement;
       _capturedCounter!.bump();
       owner.flush();
       final state = _capturedCounter!;
 
-      // Rebuild the Nest with a new leaf; the link branch persists, so its
+      // Rebuild the Nest with a new leaf; the link element persists, so its
       // state (n == 1) survives and only the leaf changes.
       root.update(const Nest(children: [counter], child: Leaf('y')));
       expect(identical(_capturedCounter, state), isTrue);
@@ -243,7 +243,7 @@ void main() {
     test('a node-type change at a position remounts (fresh state)', () {
       final root =
           owner.mountRoot(const Nest(children: [_Counter()], child: Leaf('x')))
-              as NestBranch;
+              as NestElement;
       final first = _capturedCounter!;
       first.bump();
       owner.flush();
@@ -266,21 +266,21 @@ void main() {
   });
 
   group('standalone single-child seeds', () {
-    test('a stateless single-child seed wraps its own child', () {
+    test('a stateless single-child component wraps its own child', () {
       final root =
           owner.mountRoot(const _Wrap('solo', child: Leaf('leaf')))
-              as SingleChildStatelessBranch;
+              as SingleChildStatelessElement;
       expect(_labels(root), ['node:solo', 'leaf:leaf']);
     });
 
-    test('a stateful single-child seed wraps its own child', () {
+    test('a stateful single-child component wraps its own child', () {
       final root =
           owner.mountRoot(const _Counter(child: Leaf('leaf')))
-              as SingleChildStatefulBranch;
+              as SingleChildStatefulElement;
       expect(_labels(root), ['node:counter:0', 'leaf:leaf']);
     });
 
-    test('a single-child seed with no child throws on build', () {
+    test('a single-child component with no child throws on build', () {
       expect(
         () => owner.mountRoot(const _Wrap('x')),
         throwsA(isA<StateError>()),
@@ -288,7 +288,7 @@ void main() {
     });
   });
 
-  group('Nest — a Nest is itself a SingleChildSeed', () {
+  group('Nest — a Nest is itself a SingleChildComponent', () {
     test('a Nest slots into another Nest as a link and flattens', () {
       final root =
           owner.mountRoot(
@@ -302,7 +302,7 @@ void main() {
                   child: Leaf('z'),
                 ),
               )
-              as NestBranch;
+              as NestElement;
       expect(_labels(root), [
         'node:outer',
         'node:inner1',
@@ -321,7 +321,7 @@ void main() {
                   child: Leaf('first'),
                 ),
               )
-              as NestBranch;
+              as NestElement;
       expect(_labels(root), ['node:outer', 'node:inner', 'leaf:first']);
 
       // Same links (incl. the inner Nest instance), new leaf: the change has to
@@ -354,7 +354,7 @@ void main() {
           owner.mountRoot(
                 const Nest(children: [_Wrap('a'), inner], child: Leaf('x')),
               )
-              as NestBranch;
+              as NestElement;
       _capturedCounter!.bump();
       owner.flush();
       final state = _capturedCounter!;
@@ -373,7 +373,7 @@ void main() {
       owner.mountRoot(const _PlainTracked());
       expect(_trackedInits['plain'], 1);
 
-      final owner2 = TreeOwner();
+      final owner2 = BuildOwner();
       addTearDown(owner2.dispose);
       owner2.mountRoot(
         const Nest(children: [_WrapTracked()], child: Leaf('x')),
@@ -388,7 +388,7 @@ void main() {
             owner.mountRoot(
                   const Nest(children: [_Counter()], child: Leaf('x')),
                 )
-                as NestBranch;
+                as NestElement;
         final state = _capturedCounter!;
         expect(state.disposed, isFalse);
         // initState ran (captured the state); dispose fires on unmount.

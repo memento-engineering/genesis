@@ -13,11 +13,11 @@ import 'perception_element.dart';
 /// Serializes the perception subtree rooted at [root] into a JSON-able map.
 ///
 /// A `StatelessPerception`/`StatefulPerception` root mounts as a
-/// [ComponentBranch]; its built child is unwrapped first, so passing either the
+/// [BuildableElement]; its built child is unwrapped first, so passing either the
 /// component root or a bare `Node` root works. A root that does not resolve to
 /// a [NodeElement] yields an empty map.
-Map<String, Object?> serializePerceptionFragment(Branch root) {
-  final node = root is ComponentBranch ? root.child : root;
+Map<String, Object?> serializePerceptionFragment(Element root) {
+  final node = root is BuildableElement ? root.child : root;
   if (node is! NodeElement) return const <String, Object?>{};
   return _serializeNode(node);
 }
@@ -28,8 +28,8 @@ Map<String, Object?> serializePerceptionFragment(Branch root) {
 /// omitted, the projection uses the current time. A component root is unwrapped
 /// once; if the resolved root is not a [NodeElement], this throws
 /// [ArgumentError] because [TreeSnapshot] requires a semantic root node.
-TreeSnapshot projectPerceptionTree(Branch root, {DateTime? projectedAt}) {
-  final node = root is ComponentBranch ? root.child : root;
+TreeSnapshot projectPerceptionTree(Element root, {DateTime? projectedAt}) {
+  final node = root is BuildableElement ? root.child : root;
   if (node is! NodeElement) {
     throw ArgumentError.value(root, 'root', 'must resolve to a NodeElement');
   }
@@ -56,16 +56,16 @@ TreeNode _snapshotNode(PerceptionElement element) {
   final described = DiagnosticsBuilder();
   element.debugFillProperties(described);
 
-  String? seedType;
+  String? componentType;
   String? id;
   String? key;
   final properties = <DiagnosticsProperty>[];
 
   for (final property in described.properties) {
     switch (property) {
-      case DiagnosticsStringProperty(name: 'seedType', :final value):
-        seedType = value;
-      case DiagnosticsStringProperty(name: 'branchId', :final value):
+      case DiagnosticsStringProperty(name: 'componentType', :final value):
+        componentType = value;
+      case DiagnosticsStringProperty(name: 'elementId', :final value):
         id = value;
       case DiagnosticsStringProperty(name: 'key', :final value):
         key = value;
@@ -84,8 +84,8 @@ TreeNode _snapshotNode(PerceptionElement element) {
   }
 
   return TreeNode(
-    seedType: seedType ?? element.seed.runtimeType.toString(),
-    id: id ?? element.branchId,
+    componentType: componentType ?? element.component.runtimeType.toString(),
+    id: id ?? element.elementId,
     key: key,
     properties: properties,
     children: children,

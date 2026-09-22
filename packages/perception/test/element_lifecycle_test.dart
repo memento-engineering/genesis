@@ -14,13 +14,13 @@ class _E extends PerceptionElement {
   _E(super.p);
   final calls = <String>[];
   @override
-  void mount(Branch? parent, Object? slot) {
+  void mount(Element? parent, Object? slot) {
     super.mount(parent, slot);
     calls.add('mount');
   }
 
   @override
-  void update(Seed p) {
+  void update(Component p) {
     super.update(p);
     calls.add('update');
   }
@@ -157,7 +157,7 @@ void main() {
         final oldId = child.perceptionId;
         final result = root.updateChild(child, _P(tag: 'b'), 0);
         expect(result, same(child));
-        expect(result!.branchId, equals(oldId));
+        expect(result!.elementId, equals(oldId));
         expect(child.calls, equals(['mount', 'update']));
       },
     );
@@ -200,9 +200,9 @@ void main() {
         _P(tag: 'b2', key: ValueKey('k-b')),
       ]);
 
-      expect(result[0].branchId, equals(ids[2])); // c reused
-      expect(result[1].branchId, equals(ids[0])); // a reused
-      expect(result[2].branchId, equals(ids[1])); // b reused
+      expect(result[0].elementId, equals(ids[2])); // c reused
+      expect(result[1].elementId, equals(ids[0])); // a reused
+      expect(result[2].elementId, equals(ids[1])); // b reused
       expect(result.every((e) => e.mounted), isTrue);
     });
 
@@ -252,8 +252,8 @@ void main() {
 
       final result = root.updateChildren(els, [_P(tag: 'a2'), _P(tag: 'b2')]);
 
-      expect(result[0].branchId, equals(ids[0]));
-      expect(result[1].branchId, equals(ids[1]));
+      expect(result[0].elementId, equals(ids[0]));
+      expect(result[1].elementId, equals(ids[1]));
     });
   });
 }

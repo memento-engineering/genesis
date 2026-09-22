@@ -1,12 +1,12 @@
 import 'package:meta/meta.dart';
 
-/// A first-class identity token for a `Seed`, used by keyed reconciliation to
-/// pair a new configuration with an existing mounted `Branch` across rebuilds.
+/// A first-class identity token for a `Component`, used by keyed reconciliation to
+/// pair a new configuration with an existing mounted `Element` across rebuilds.
 ///
-/// A `Key` is the reconciliation identity: `Seed.canUpdate` and
-/// `Branch.updateChildren` match by `runtimeType` + key equality, so a key
+/// A `Key` is the reconciliation identity: `Component.canUpdate` and
+/// `Element.updateChildren` match by `runtimeType` + key equality, so a key
 /// must define value `==`/`hashCode` (every concrete key here does). Reusing
-/// the same key on the same position across a re-emission keeps the branch —
+/// the same key on the same position across a re-emission keeps the element —
 /// and its state — alive instead of tearing it down and rebuilding.
 ///
 /// Two concrete kinds ship on the spine:
@@ -29,7 +29,7 @@ import 'package:meta/meta.dart';
 /// **refuses that** by design: there is no `GlobalKey`, and no global key
 /// registry. Cross-boundary references (e.g. a workflow step that `needs`
 /// another) pass handles down through the parent, keeping the tree one-way and
-/// honest — a branch can be reached only by walking from a root, never by a
+/// honest — a element can be reached only by walking from a root, never by a
 /// hidden global side-channel. If a genuine global-lookup need ever appears it
 /// must be a separate, explicit, opt-in mechanism, never the default `Key`.
 ///

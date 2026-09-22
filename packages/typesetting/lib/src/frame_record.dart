@@ -4,13 +4,13 @@ import 'cell.dart';
 import 'rect.dart';
 
 /// Everything recorded about one frame pass — the per-frame instrumentation
-/// surface (rebuilt branches, repainted rects, cells changed, bytes emitted)
-/// for tests and ops, reachable from the stage branch (`StageBranch.frames`).
+/// surface (rebuilt elements, repainted rects, cells changed, bytes emitted)
+/// for tests and ops, reachable from the stage element (`StageElement.frames`).
 class FrameRecord {
   /// Creates a record; all collections are stored unmodifiable.
   FrameRecord({
     required this.index,
-    required List<Branch> rebuilt,
+    required List<Element> rebuilt,
     required Set<Rect> repainted,
     required List<CellChange> changes,
     required this.bytes,
@@ -21,12 +21,12 @@ class FrameRecord {
   /// 0 = the initial full paint at mount; 1.. = flush passes.
   final int index;
 
-  /// The verbatim [TreeOwner.flush] return for this pass (empty for frame
+  /// The verbatim [BuildOwner.flush] return for this pass (empty for frame
   /// 0, which is a paint, not a flush) — the real drained dirty set, no side
   /// channel.
-  final List<Branch> rebuilt;
+  final List<Element> rebuilt;
 
-  /// The rects of the dirty render branches repainted into the back buffer
+  /// The rects of the dirty render elements repainted into the back buffer
   /// this pass.
   final Set<Rect> repainted;
 

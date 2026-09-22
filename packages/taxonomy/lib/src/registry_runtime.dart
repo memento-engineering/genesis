@@ -11,10 +11,18 @@ import 'package:genesis_tree/genesis_tree.dart';
 
 import 'errors.dart';
 
-/// Builds one `Seed` from validated wire props, already-built children, and
+/// Builds one `Component` from validated wire props, already-built children, and
 /// the reconciliation [Key].
-typedef SeedFactoryFn =
-    Seed Function(Map<String, Object?> props, List<Seed> children, Key? key);
+typedef ComponentFactoryFn =
+    Component Function(
+      Map<String, Object?> props,
+      List<Component> children,
+      Key? key,
+    );
+
+/// Legacy name for [ComponentFactoryFn].
+@Deprecated('Use ComponentFactoryFn instead.')
+typedef SeedFactoryFn = ComponentFactoryFn;
 
 /// One catalog type's runtime entry: shape flags plus the bound constructor.
 final class RegistryEntry {
@@ -32,10 +40,10 @@ final class RegistryEntry {
   final Set<String> knownProps;
 
   /// The bound Dart constructor (validates props via [Props] readers).
-  final SeedFactoryFn build;
+  final ComponentFactoryFn build;
 }
 
-/// A typed factory registry binding one catalog's wire types to `Seed`
+/// A typed factory registry binding one catalog's wire types to `Component`
 /// constructors, with construction-time validation.
 ///
 /// Instances are emitted by the registry emitter as a generated `.g.dart`
@@ -67,10 +75,10 @@ final class ComponentRegistry {
   /// [UnknownPropException], and (via the [Props] readers inside the bound
   /// constructor) [MissingRequiredPropException], [PropTypeMismatchException],
   /// or [InvalidEnumValueException].
-  Seed buildComponent(
+  Component buildComponent(
     String type,
     Map<String, Object?> props,
-    List<Seed> children,
+    List<Component> children,
     Key? key,
   ) {
     final entry = entries[type];

@@ -7,17 +7,17 @@ import 'ansi_encoder.dart';
 import 'cell_grid.dart';
 import 'frame_record.dart';
 import 'rect.dart';
-import 'render_branch.dart';
+import 'render_element.dart';
 
-/// The root render seed: a fixed [width] x [height] cell
+/// The root render component: a fixed [width] x [height] cell
 /// surface emitting ANSI bytes to [sink], stacking its [children]'s render
-/// branches top-to-bottom full-width (layout v1 flow).
+/// elements top-to-bottom full-width (layout v1 flow).
 ///
 /// Mounting a Stage is the whole entry point — the binding folds into the
 /// tree:
 ///
 /// ```dart
-/// final owner = TreeOwner();
+/// final owner = BuildOwner();
 /// owner.mountRoot(Stage(width: 80, height: 24, sink: stdout, children: [
 ///   // Watch / Stateless / perception composition over Box / Text ...
 /// ]));
@@ -27,7 +27,7 @@ import 'render_branch.dart';
 /// Write-only: the stage emits diff payloads and nothing else — no
 /// clear-screen, no cursor parking, no terminal queries. Screen setup and
 /// teardown are the embedder's choice.
-class Stage extends RenderSeed {
+class Stage extends RenderComponent {
   /// Creates the root surface configuration.
   const Stage({
     required this.width,
@@ -49,37 +49,37 @@ class Stage extends RenderSeed {
   final Sink<List<int>> sink;
 
   /// The child configurations — composition seeds and/or render seeds; the
-  /// stage flows whatever render branches they resolve to.
-  final List<Seed> children;
+  /// stage flows whatever render elements they resolve to.
+  final List<Component> children;
 
   /// Per-frame observer, called after each [FrameRecord] is recorded.
   final void Function(FrameRecord frame)? onFrame;
 
   @override
-  StageBranch createBranch() => StageBranch(this);
+  StageElement createElement() => StageElement(this);
 }
 
-/// The root render branch — the RenderView analog and the
+/// The root render element — the RenderView analog and the
 /// scheduling glue's owner. At mount it creates its [StageBinding], claims
-/// `TreeOwner.onNeedsFlush`, builds its subtree, and paints frame 0
+/// `BuildOwner.onNeedsFlush`, builds its subtree, and paints frame 0
 /// synchronously; after that, every dirty edge schedules one microtask frame
 /// pass.
 ///
 /// Per-frame instrumentation ([frames], [flushCount]) and the surface
 /// ([grid], [encoder]) are reachable from here for tests and ops.
-class StageBranch extends RenderBranch {
-  /// Creates the branch for [seed].
-  StageBranch(Stage super.seed);
+class StageElement extends RenderElement {
+  /// Creates the element for [component].
+  StageElement(Stage super.component);
 
-  Stage get _stage => seed as Stage;
+  Stage get _stage => component as Stage;
 
   StageBinding? _ownedBinding;
-  List<Branch> _children = const [];
+  List<Element> _children = const [];
 
   StageBinding get _owned {
     final binding = _ownedBinding;
     if (binding == null) {
-      throw StateError('StageBranch used before mount().');
+      throw StateError('StageElement used before mount().');
     }
     return binding;
   }
@@ -104,14 +104,14 @@ class StageBranch extends RenderBranch {
   @override
   void attachRenderParent() {
     assert(
-      dependOnInheritedSeedOfExactType<RenderParentLink>() == null,
+      dependOnInheritedValueOfExactType<RenderParentLink>() == null,
       'Stage must be the render root; it cannot be mounted inside another '
-      'render branch.',
+      'render element.',
     );
     final owner = this.owner!;
     assert(
       owner.onNeedsFlush == null,
-      'TreeOwner.onNeedsFlush is already claimed; a Stage must be the only '
+      'BuildOwner.onNeedsFlush is already claimed; a Stage must be the only '
       'flush driver on its owner.',
     );
     final binding = StageBinding._(
@@ -128,7 +128,7 @@ class StageBranch extends RenderBranch {
   }
 
   @override
-  void mount(Branch? parent, Object? slot) {
+  void mount(Element? parent, Object? slot) {
     // Base mount attaches the binding (attachRenderParent override above)
     // and runs performRebuild, mounting and adopting the whole subtree.
     super.mount(parent, slot);
@@ -146,7 +146,7 @@ class StageBranch extends RenderBranch {
   }
 
   @override
-  void visitChildren(void Function(Branch child) visitor) {
+  void visitChildren(void Function(Element child) visitor) {
     for (final child in _children) {
       visitor(child);
     }
@@ -156,7 +156,7 @@ class StageBranch extends RenderBranch {
   int get flowHeight => _stage.height;
 
   /// Layout v1 flow: stacks render children top-to-bottom, full-width, each
-  /// taking the rows its [RenderBranch.flowHeight] reports. Children past
+  /// taking the rows its [RenderElement.flowHeight] reports. Children past
   /// the bottom edge are clipped by the grid.
   @override
   void performLayout() {
@@ -179,28 +179,28 @@ class StageBranch extends RenderBranch {
   }
 }
 
-/// The thin scheduling-and-pipeline glue the stage branch owns: the
+/// The thin scheduling-and-pipeline glue the stage element owns: the
 /// BuildOwner-edge-to-PipelineOwner wiring, folded into the tree.
 ///
-/// `TreeOwner.onNeedsFlush` (the dirty set's empty -> non-empty edge) ->
+/// `BuildOwner.onNeedsFlush` (the dirty set's empty -> non-empty edge) ->
 /// one scheduled microtask -> `owner.flush()` -> the verbatim drained list
 /// -> flow relayout if anything changed shape -> repaint exactly the dirty
-/// render branches' rects -> `CellGrid.swap()` -> minimal ANSI to the sink,
+/// render elements' rects -> `CellGrid.swap()` -> minimal ANSI to the sink,
 /// recorded as a [FrameRecord]. Events arriving before the pass coalesce.
 ///
 /// The paint pass is the `PipelineOwner.flushPaint` analog — it drains the
-/// dirty set in depth order and paints each still-attached branch's subtree
+/// dirty set in depth order and paints each still-attached element's subtree
 /// (Flutter: `final List<RenderObject> dirtyNodes = _nodesNeedingPaint;`
 /// then paint each node still owned and dirty). Depth order runs parents
 /// first, so container blanking never erases freshly painted child content;
 /// overlapping repaints are deduped by the double buffer, not by skipping.
 ///
-/// Constructed only by [StageBranch] at mount; consumers reach it through
-/// the stage branch's instrumentation getters.
+/// Constructed only by [StageElement] at mount; consumers reach it through
+/// the stage element's instrumentation getters.
 class StageBinding {
   StageBinding._({
-    required StageBranch stage,
-    required TreeOwner owner,
+    required StageElement stage,
+    required BuildOwner owner,
     required int width,
     required int height,
     required Sink<List<int>> sink,
@@ -211,8 +211,8 @@ class StageBinding {
        _sink = sink,
        _onFrame = onFrame;
 
-  final StageBranch _stage;
-  final TreeOwner _owner;
+  final StageElement _stage;
+  final BuildOwner _owner;
   final Sink<List<int>> _sink;
   final void Function(FrameRecord frame)? _onFrame;
 
@@ -222,11 +222,11 @@ class StageBinding {
   /// The stateless encoder for payloads and full-redraw baselines.
   final AnsiEncoder encoder = const AnsiEncoder();
 
-  /// Dirty render branches awaiting paint, drained in depth order (parents
+  /// Dirty render elements awaiting paint, drained in depth order (parents
   /// before children) — the `_nodesNeedingPaint` analog.
-  final SplayTreeSet<RenderBranch> _needsPaint = SplayTreeSet((a, b) {
+  final SplayTreeSet<RenderElement> _needsPaint = SplayTreeSet((a, b) {
     final byDepth = a.depth.compareTo(b.depth);
-    return byDepth != 0 ? byDepth : a.branchId.compareTo(b.branchId);
+    return byDepth != 0 ? byDepth : a.elementId.compareTo(b.elementId);
   });
 
   final List<FrameRecord> _frames = [];
@@ -244,23 +244,23 @@ class StageBinding {
   /// Number of flush passes run (excludes the initial frame-0 paint).
   int get flushCount => _flushCount;
 
-  /// Adds [branch] to the dirty-paint set and requests a frame pass. Called
-  /// by [RenderBranch.markNeedsPaint].
-  void scheduleRepaint(RenderBranch branch) {
-    _needsPaint.add(branch);
+  /// Adds [element] to the dirty-paint set and requests a frame pass. Called
+  /// by [RenderElement.markNeedsPaint].
+  void scheduleRepaint(RenderElement element) {
+    _needsPaint.add(element);
     _requestFrame();
   }
 
   /// Flags the stage-rooted flow relayout and requests a frame pass. Called
-  /// by [RenderBranch.markNeedsLayout].
+  /// by [RenderElement.markNeedsLayout].
   void scheduleRelayout() {
     _needsLayout = true;
     _requestFrame();
   }
 
-  /// Notes that a layout pass moved or resized some branch's rect, so
+  /// Notes that a layout pass moved or resized some element's rect, so
   /// vacated cells must be cleared (the stage repaints). Called by
-  /// [RenderBranch.layout].
+  /// [RenderElement.layout].
   void noteRectChanged() {
     _rectChanged = true;
   }
@@ -298,7 +298,7 @@ class StageBinding {
     }
   }
 
-  void _renderFrame(List<Branch> rebuilt) {
+  void _renderFrame(List<Element> rebuilt) {
     // Layout (flow v1): recompute rects from the stage down; if any rect
     // moved, the stage repaints so vacated cells are cleared — the double
     // buffer keeps emission minimal regardless.
@@ -309,13 +309,13 @@ class StageBinding {
       if (_rectChanged) scheduleRepaint(_stage);
     }
     // Paint (flushPaint analog): drain depth-ordered, parents first.
-    final dirty = List<RenderBranch>.of(_needsPaint);
+    final dirty = List<RenderElement>.of(_needsPaint);
     _needsPaint.clear();
     final repainted = <Rect>{};
-    for (final branch in dirty) {
-      if (!branch.mounted || !identical(branch.binding, this)) continue;
-      branch.paintSubtree(grid);
-      repainted.add(branch.rect);
+    for (final element in dirty) {
+      if (!element.mounted || !identical(element.binding, this)) continue;
+      element.paintSubtree(grid);
+      repainted.add(element.rect);
     }
     // Swap, encode, emit, record.
     final changes = grid.swap();
@@ -339,3 +339,7 @@ class StageBinding {
     _needsPaint.clear();
   }
 }
+
+/// Legacy name for [StageElement].
+@Deprecated('Use StageElement instead.')
+typedef StageBranch = StageElement;

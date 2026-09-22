@@ -6,20 +6,20 @@ import 'dart:async';
 import 'package:test/test.dart';
 import 'package:genesis_tree/genesis_tree.dart';
 
-class _Leaf extends Seed {
+class _Leaf extends Component {
   const _Leaf(this.tag);
   final String tag;
   @override
-  _LeafBranch createBranch() => _LeafBranch(this);
+  _LeafElement createElement() => _LeafElement(this);
 }
 
-class _LeafBranch extends Branch {
-  _LeafBranch(super.seed);
+class _LeafElement extends Element {
+  _LeafElement(super.component);
 }
 
 void main() {
   group('Watch<T> structure', () {
-    test('createBranch returns StatefulBranch with WatchState', () {
+    test('createElement returns StatefulElement with WatchState', () {
       final ctrl = StreamController<int>(sync: true);
       addTearDown(ctrl.close);
       final w = Watch<int>(
@@ -27,12 +27,12 @@ void main() {
         (_) => const _Leaf('x'),
         initialValue: 0,
       );
-      final branch = w.createBranch();
-      expect(branch, isA<StatefulBranch>());
+      final element = w.createElement();
+      expect(element, isA<StatefulElement>());
       // mount to initialise state
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
-      final root = owner.mountRoot(w) as StatefulBranch;
+      final root = owner.mountRoot(w) as StatefulElement;
       expect(root.state, isA<WatchState<int>>());
     });
   });
@@ -41,7 +41,7 @@ void main() {
     test('builder called with initialValue before any stream emit', () {
       final ctrl = StreamController<int>(sync: true);
       addTearDown(ctrl.close);
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       final built = <int>[];
@@ -60,7 +60,7 @@ void main() {
     test('builder called with new value after emit', () {
       final ctrl = StreamController<int>(sync: true);
       addTearDown(ctrl.close);
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       final built = <int>[];
@@ -80,7 +80,7 @@ void main() {
     test('multiple emits each trigger rebuild with latest value', () {
       final ctrl = StreamController<int>(sync: true);
       addTearDown(ctrl.close);
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       final built = <int>[];
@@ -106,7 +106,7 @@ void main() {
     test('no rebuild after unmount — subscription cancelled', () {
       final ctrl = StreamController<int>(sync: true);
       addTearDown(ctrl.close);
-      final owner = TreeOwner();
+      final owner = BuildOwner();
 
       int buildCount = 0;
       owner.mountRoot(

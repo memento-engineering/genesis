@@ -1,8 +1,8 @@
 // Locks the render-scope key invariant: a render container wraps each child to
 // thread the render-parent link, and that wrapper must NOT shadow the child's
 // own key. If it did, a key-based tree lookup (e.g. an action router resolving
-// an A2UI component id to its single branch) would find two branches for one
-// id. These tests assert one-branch-per-key under Stage/Box AND that keyed
+// an A2UI component id to its single element) would find two elements for one
+// id. These tests assert one-element-per-key under Stage/Box AND that keyed
 // reconcile through the wrapper still preserves identity across a reorder.
 import 'package:genesis_tree/genesis_tree.dart';
 import 'package:genesis_typesetting/genesis_typesetting.dart';
@@ -10,9 +10,9 @@ import 'package:test/test.dart';
 
 void main() {
   group('render-scope key does not shadow the child key', () {
-    test('exactly one mounted branch answers to each child key under a '
+    test('exactly one mounted element answers to each child key under a '
         'render container', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final root = owner.mountRoot(
         Stage(
           width: 40,
@@ -30,19 +30,19 @@ void main() {
 
       final mounted = _walk(root);
 
-      // The component branches each answer to their key exactly once — the
+      // The component elements each answer to their key exactly once — the
       // render-scope wrappers carry a distinct, namespaced key.
-      expect(_countKey(mounted, 'b1'), 1, reason: 'Box branch keyed b1');
-      expect(_countKey(mounted, 't1'), 1, reason: 'Text branch keyed t1');
+      expect(_countKey(mounted, 'b1'), 1, reason: 'Box element keyed b1');
+      expect(_countKey(mounted, 't1'), 1, reason: 'Text element keyed t1');
 
-      // Sanity: the keyed branch found for each id is the real render branch,
+      // Sanity: the keyed element found for each id is the real render element,
       // not an inherited-value wrapper.
-      expect(_branchKeyed(mounted, 'b1'), isA<RenderBranch>());
-      expect(_branchKeyed(mounted, 't1'), isA<RenderBranch>());
+      expect(_branchKeyed(mounted, 'b1'), isA<RenderElement>());
+      expect(_branchKeyed(mounted, 't1'), isA<RenderElement>());
     });
 
     test('keyed children directly under the Stage are single-keyed', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final root = owner.mountRoot(
         Stage(
           width: 40,
@@ -63,9 +63,9 @@ void main() {
 
   test('keyed reconcile through the render scope preserves identity across a '
       'reorder', () {
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     final sink = _NullSink();
-    Stage scene(List<Seed> kids) =>
+    Stage scene(List<Component> kids) =>
         Stage(width: 40, height: 12, sink: sink, children: kids);
 
     final root = owner.mountRoot(
@@ -78,7 +78,7 @@ void main() {
     final beforeA = _branchKeyed(_walk(root), 'a');
     final beforeB = _branchKeyed(_walk(root), 'b');
 
-    // Reorder the two keyed children. Keyed reconcile must move each branch to
+    // Reorder the two keyed children. Keyed reconcile must move each element to
     // its new slot WITHOUT remounting — proving the namespaced wrapper key
     // still drives correct keyed matching.
     root.update(
@@ -91,17 +91,25 @@ void main() {
     final afterA = _branchKeyed(_walk(root), 'a');
     final afterB = _branchKeyed(_walk(root), 'b');
 
-    expect(identical(beforeA, afterA), isTrue, reason: 'Box a kept its branch');
-    expect(identical(beforeB, afterB), isTrue, reason: 'Box b kept its branch');
+    expect(
+      identical(beforeA, afterA),
+      isTrue,
+      reason: 'Box a kept its element',
+    );
+    expect(
+      identical(beforeB, afterB),
+      isTrue,
+      reason: 'Box b kept its element',
+    );
     expect(afterA.mounted, isTrue);
     expect(afterB.mounted, isTrue);
   });
 }
 
-/// Collects every mounted branch in [root]'s subtree, root first.
-List<Branch> _walk(Branch root) {
-  final out = <Branch>[];
-  void visit(Branch b) {
+/// Collects every mounted element in [root]'s subtree, root first.
+List<Element> _walk(Element root) {
+  final out = <Element>[];
+  void visit(Element b) {
     out.add(b);
     b.visitChildren(visit);
   }
@@ -110,11 +118,11 @@ List<Branch> _walk(Branch root) {
   return out;
 }
 
-int _countKey(List<Branch> branches, String id) =>
-    branches.where((b) => b.mounted && b.key == ValueKey(id)).length;
+int _countKey(List<Element> elements, String id) =>
+    elements.where((b) => b.mounted && b.key == ValueKey(id)).length;
 
-Branch _branchKeyed(List<Branch> branches, String id) =>
-    branches.firstWhere((b) => b.mounted && b.key == ValueKey(id));
+Element _branchKeyed(List<Element> elements, String id) =>
+    elements.firstWhere((b) => b.mounted && b.key == ValueKey(id));
 
 /// A byte sink that discards everything — these tests assert on tree shape,
 /// not emitted frames.

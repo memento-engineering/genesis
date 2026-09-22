@@ -26,7 +26,7 @@
 /// [parseUpdateComponents] and [UpdateComponents.toJson] are a lossless
 /// round-trip in both directions. The serialize direction **is** emission of
 /// an authored surface ([UpdateComponents] → wire). Reverse-emission —
-/// walking a live mounted `Seed`/`Branch` tree back into components — is
+/// walking a live mounted `Component`/`Element` tree back into components — is
 /// deliberately out of scope (it needs a taxonomy reverse-describer that does
 /// not exist as built); see the package README's deferred list.
 library;
@@ -45,7 +45,7 @@ const String a2uiVersion = 'v0.9';
 /// This is the typed mirror of the envelope. The components are
 /// `genesis_taxonomy`'s [ComponentInstance] — dialogue does not redefine the
 /// instance shape; it parses the wire into it and hands it to
-/// `buildSeedTree`.
+/// `buildComponentTree`.
 final class UpdateComponents {
   /// Creates a parsed message. Prefer [parseUpdateComponents] from the wire.
   const UpdateComponents({required this.surfaceId, required this.components});
@@ -99,7 +99,7 @@ final class UpdateComponents {
 /// - duplicate component id → [DuplicateEnvelopeIdException].
 ///
 /// It does **not** check dangling child ids, unknown types, or cycles — those
-/// are `buildSeedTree`/registry invariants raised when the parsed instances
+/// are `buildComponentTree`/registry invariants raised when the parsed instances
 /// are built into a tree.
 UpdateComponents parseUpdateComponents(Object json) {
   if (json is! Map) {

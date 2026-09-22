@@ -1,12 +1,12 @@
-// MultiChildSeed/MultiChildBranch — the composition-layer container that
-// keyed-reconciles a config-declared List<Seed> of children (the
+// MultiChildComponent/MultiChildElement — the composition-layer container that
+// keyed-reconciles a config-declared List<Component> of children (the
 // MultiChildRenderObjectElement analogue). The keyed-reconcile engine itself
-// (Branch.updateChildren) is proven separately via the Node test fixture; these
+// (Element.updateChildren) is proven separately via the Node test fixture; these
 // tests pin the public composition-layer surface: mount-all / order,
 // visitChildren, stable identity for matched children across rebuilds,
 // mount-new / unmount-removed, the identical-skip fast path, the nested topology
 // the_grid adopts (Grid -> Rig -> ...), and transparent composition with the
-// single-child component branches.
+// single-child component elements.
 import 'package:genesis_tree/genesis_tree.dart';
 import 'package:test/test.dart';
 
@@ -15,15 +15,15 @@ import 'src/fixtures.dart';
 /// A container whose children are declared directly in config — the generic
 /// composition-layer multi-child shape, here standing in for a the_grid
 /// topology node.
-class _Container extends MultiChildSeed {
-  const _Container(List<Seed> children, {super.key})
+class _Container extends MultiChildComponent {
+  const _Container(List<Component> children, {super.key})
     : super(children: children);
 }
 
 /// A second container kind — distinct `runtimeType`, so it must NOT reconcile
 /// into a [_Container] even at the same slot/key.
-class _OtherContainer extends MultiChildSeed {
-  const _OtherContainer(List<Seed> children, {super.key})
+class _OtherContainer extends MultiChildComponent {
+  const _OtherContainer(List<Component> children, {super.key})
     : super(children: children);
 }
 
@@ -33,22 +33,22 @@ int _builds = 0;
 
 /// A stateless component child that records each build — lets a test observe
 /// whether a reconcile rebuilt the subtree or skipped it.
-class _Counting extends StatelessSeed {
+class _Counting extends StatelessComponent {
   const _Counting(this.tag, {super.key});
   final String tag;
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     _builds++;
     return Leaf(tag);
   }
 }
 
 // Captures the live State of the most recently mounted [_Bump] so a test can
-// drive setState without reaching into the (protected) branch state.
+// drive setState without reaching into the (protected) element state.
 _BumpState? _capturedBump;
 
 /// A stateful component child whose state a test can poke via [_capturedBump].
-class _Bump extends StatefulSeed {
+class _Bump extends StatefulComponent {
   const _Bump({super.key});
   @override
   _BumpState createState() => _BumpState();
@@ -63,51 +63,51 @@ class _BumpState extends State<_Bump> {
   }
 
   @override
-  Seed build(TreeContext context) => Leaf('n$n');
+  Component build(BuildContext context) => Leaf('n$n');
 
   void bump() => setState(() => n++);
 }
 
-List<Branch> _directChildren(Branch branch) {
-  final children = <Branch>[];
-  branch.visitChildren(children.add);
+List<Element> _directChildren(Element element) {
+  final children = <Element>[];
+  element.visitChildren(children.add);
   return children;
 }
 
-List<String> _tags(List<Branch> branches) =>
-    branches.map((b) => (b.seed as Leaf).tag).toList();
+List<String> _tags(List<Element> elements) =>
+    elements.map((b) => (b.component as Leaf).tag).toList();
 
 void main() {
-  late TreeOwner owner;
+  late BuildOwner owner;
   setUp(() {
-    owner = TreeOwner();
+    owner = BuildOwner();
     _builds = 0;
   });
   tearDown(() => owner.dispose());
 
   group('mount', () {
     test(
-      'mounts every declared child, in tree order, as a MultiChildBranch',
+      'mounts every declared child, in tree order, as a MultiChildElement',
       () {
         final root = owner.mountRoot(
           const _Container([Leaf('a'), Leaf('b'), Leaf('c')]),
         );
-        expect(root, isA<MultiChildBranch>());
-        final mc = root as MultiChildBranch;
+        expect(root, isA<MultiChildElement>());
+        final mc = root as MultiChildElement;
         expect(_tags(_directChildren(mc)), equals(['a', 'b', 'c']));
-        expect(mc.children.every((Branch b) => b.mounted), isTrue);
+        expect(mc.children.every((Element b) => b.mounted), isTrue);
       },
     );
 
     test('an empty container mounts with no children', () {
-      final root = owner.mountRoot(const _Container([])) as MultiChildBranch;
+      final root = owner.mountRoot(const _Container([])) as MultiChildElement;
       expect(root.children, isEmpty);
       expect(_directChildren(root), isEmpty);
     });
   });
 
   group('keyed reconcile', () {
-    test('reordering keyed children preserves branch identity and order', () {
+    test('reordering keyed children preserves element identity and order', () {
       final root =
           owner.mountRoot(
                 const _Container([
@@ -116,7 +116,7 @@ void main() {
                   Leaf('c', key: ValueKey('kc')),
                 ]),
               )
-              as MultiChildBranch;
+              as MultiChildElement;
       final a = root.children[0];
       final b = root.children[1];
       final c = root.children[2];
@@ -129,7 +129,7 @@ void main() {
         ]),
       );
 
-      // Same three branch instances, reordered — not rebuilt-from-scratch.
+      // Same three element instances, reordered — not rebuilt-from-scratch.
       expect(root.children, equals([c, a, b]));
       expect(identical(root.children[0], c), isTrue);
       expect(identical(root.children[1], a), isTrue);
@@ -145,7 +145,7 @@ void main() {
                   Leaf('b', key: ValueKey('kb')),
                 ]),
               )
-              as MultiChildBranch;
+              as MultiChildElement;
       final a = root.children[0];
       final b = root.children[1];
 
@@ -159,7 +159,7 @@ void main() {
       expect(identical(root.children[0], a), isTrue, reason: 'ka preserved');
       expect(b.mounted, isFalse, reason: 'kb dropped -> unmounted');
       expect(root.children.length, 2);
-      expect((root.children[1].seed as Leaf).tag, 'c');
+      expect((root.children[1].component as Leaf).tag, 'c');
       expect(root.children[1].mounted, isTrue);
       expect(identical(root.children[1], b), isFalse, reason: 'kc is fresh');
     });
@@ -167,37 +167,42 @@ void main() {
     test('a matched key whose runtimeType changed is replaced, not updated', () {
       final root =
           owner.mountRoot(const _Container([Leaf('a', key: ValueKey('k'))]))
-              as MultiChildBranch;
+              as MultiChildElement;
       final original = root.children.single;
-      expect(original, isA<LeafBranch>());
+      expect(original, isA<LeafElement>());
 
-      // Same key, different seed runtimeType (Leaf -> _Container) => canUpdate
+      // Same key, different component runtimeType (Leaf -> _Container) => canUpdate
       // is false => unmount + mount-fresh.
       root.update(const _Container([_Container([], key: ValueKey('k'))]));
 
       expect(original.mounted, isFalse);
-      expect(root.children.single, isA<MultiChildBranch>());
+      expect(root.children.single, isA<MultiChildElement>());
       expect(identical(root.children.single, original), isFalse);
     });
 
-    test('two MultiChildSeed kinds are distinct reconcile tags at one key', () {
-      // The seed's runtimeType is the reconcile tag, so a _Container and an
-      // _OtherContainer never update into one another even at the same key —
-      // the reason MultiChildSeed is abstract (one subclass per container kind).
-      final root =
-          owner.mountRoot(
-                const _Container([_Container([], key: ValueKey('k'))]),
-              )
-              as MultiChildBranch;
-      final original = root.children.single;
-      expect(original, isA<MultiChildBranch>());
+    test(
+      'two MultiChildComponent kinds are distinct reconcile tags at one key',
+      () {
+        // The component's runtimeType is the reconcile tag, so a _Container and an
+        // _OtherContainer never update into one another even at the same key —
+        // the reason MultiChildComponent is abstract (one subclass per container kind).
+        final root =
+            owner.mountRoot(
+                  const _Container([_Container([], key: ValueKey('k'))]),
+                )
+                as MultiChildElement;
+        final original = root.children.single;
+        expect(original, isA<MultiChildElement>());
 
-      root.update(const _Container([_OtherContainer([], key: ValueKey('k'))]));
+        root.update(
+          const _Container([_OtherContainer([], key: ValueKey('k'))]),
+        );
 
-      expect(original.mounted, isFalse, reason: 'kind changed -> unmounted');
-      expect(root.children.single, isA<MultiChildBranch>());
-      expect(identical(root.children.single, original), isFalse);
-    });
+        expect(original.mounted, isFalse, reason: 'kind changed -> unmounted');
+        expect(root.children.single, isA<MultiChildElement>());
+        expect(identical(root.children.single, original), isFalse);
+      },
+    );
   });
 
   group('unkeyed (positional) reconcile', () {
@@ -206,11 +211,11 @@ void main() {
       () {
         final root =
             owner.mountRoot(const _Container([Leaf('a'), Leaf('b')]))
-                as MultiChildBranch;
+                as MultiChildElement;
         final first = root.children[0];
         final second = root.children[1];
 
-        // Grow to three: positions 0 and 1 are updated in place (same branches,
+        // Grow to three: positions 0 and 1 are updated in place (same elements,
         // new tags), position 2 is fresh.
         root.update(const _Container([Leaf('x'), Leaf('y'), Leaf('z')]));
         expect(identical(root.children[0], first), isTrue);
@@ -218,7 +223,7 @@ void main() {
         expect(_tags(_directChildren(root)), equals(['x', 'y', 'z']));
         final third = root.children[2];
 
-        // Shrink to one: the trailing unkeyed branches unmount.
+        // Shrink to one: the trailing unkeyed elements unmount.
         root.update(const _Container([Leaf('only')]));
         expect(identical(root.children.single, first), isTrue);
         expect(second.mounted, isFalse);
@@ -233,17 +238,17 @@ void main() {
       const x = _Counting('x', key: ValueKey('kx'));
       const y = _Counting('y', key: ValueKey('ky'));
       final root =
-          owner.mountRoot(const _Container([x, y])) as MultiChildBranch;
+          owner.mountRoot(const _Container([x, y])) as MultiChildElement;
       expect(_builds, 2, reason: 'each child built once on mount');
       final bx = root.children[0];
 
-      // New container instance, SAME child seed instances => updateChild takes
+      // New container instance, SAME child component instances => updateChild takes
       // the identical-skip path: no child rebuild.
       root.update(const _Container([x, y]));
       expect(_builds, 2, reason: 'identical child seeds skipped');
       expect(identical(root.children[0], bx), isTrue);
 
-      // Swap kx for a non-identical (but canUpdate-compatible) seed => that
+      // Swap kx for a non-identical (but canUpdate-compatible) component => that
       // child rebuilds; the untouched ky still skips.
       root.update(const _Container([_Counting('x2', key: ValueKey('kx')), y]));
       expect(_builds, 3, reason: 'only the changed child rebuilt');
@@ -264,8 +269,8 @@ void main() {
                   Leaf('b', key: ValueKey('kb')),
                 ]),
               )
-              as MultiChildBranch;
-      final children = List<Branch>.of(root.children);
+              as MultiChildElement;
+      final children = List<Element>.of(root.children);
 
       owner.unmountRoot();
 
@@ -275,7 +280,7 @@ void main() {
   });
 
   group('nested topology (the_grid Grid -> Rig -> Step shape)', () {
-    test('mounts the whole tree and a fresh walk reaches every branch', () {
+    test('mounts the whole tree and a fresh walk reaches every element', () {
       final root = owner.mountRoot(
         const _Container([
           _Container([Leaf('s1'), Leaf('s2')], key: ValueKey('rig-1')),
@@ -284,7 +289,7 @@ void main() {
       );
 
       var count = 0;
-      void walk(Branch b) {
+      void walk(Element b) {
         count++;
         b.visitChildren(walk);
       }
@@ -306,8 +311,8 @@ void main() {
                     ], key: ValueKey('rig-1')),
                   ]),
                 )
-                as MultiChildBranch;
-        final rig = root.children.single as MultiChildBranch;
+                as MultiChildElement;
+        final rig = root.children.single as MultiChildElement;
         final s1 = rig.children[0];
         final s2 = rig.children[1];
 
@@ -320,7 +325,7 @@ void main() {
           ]),
         );
 
-        // The rig branch is preserved (key rig-1), and its inner steps are the
+        // The rig element is preserved (key rig-1), and its inner steps are the
         // same instances, reordered — identity survives two reconcile levels.
         expect(identical(root.children.single, rig), isTrue);
         expect(identical(rig.children[0], s2), isTrue);
@@ -329,7 +334,7 @@ void main() {
     );
   });
 
-  group('composition with component branches', () {
+  group('composition with component elements', () {
     test(
       'a stateless component child composes transparently under the container',
       () {
@@ -338,10 +343,10 @@ void main() {
         );
         final direct = _directChildren(root);
         expect(direct.length, 2);
-        // The second direct child is the component branch; recursion reaches its
+        // The second direct child is the component element; recursion reaches its
         // built leaf.
         final componentChild = direct[1];
-        expect(componentChild, isA<StatelessBranch>());
+        expect(componentChild, isA<StatelessElement>());
         expect(_tags(_directChildren(componentChild)), equals(['built']));
       },
     );
@@ -356,22 +361,22 @@ void main() {
                     _Bump(key: ValueKey('kb')),
                   ]),
                 )
-                as MultiChildBranch;
+                as MultiChildElement;
         final sibling = root.children[0];
-        final bumpBranch = root.children[1];
+        final bumpElement = root.children[1];
 
         // Drive the stateful child's setState, then flush: only it is rebuilt.
         _capturedBump!.bump();
         final rebuilt = owner.flush();
 
-        expect(rebuilt, contains(bumpBranch));
+        expect(rebuilt, contains(bumpElement));
         expect(
           rebuilt,
           isNot(contains(sibling)),
           reason: 'an unrelated sibling is not rebuilt',
         );
         expect(identical(root.children[0], sibling), isTrue);
-        expect(_tags(_directChildren(bumpBranch)), equals(['n1']));
+        expect(_tags(_directChildren(bumpElement)), equals(['n1']));
       },
     );
   });

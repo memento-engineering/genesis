@@ -11,8 +11,8 @@ import '../test/src/fixtures.dart';
 
 Future<void> main() async {
   final fx = LocalityFixture(sink: RecordingSink());
-  final owner = TreeOwner();
-  final stage = owner.mountRoot(fx.stageSeed) as StageBranch;
+  final owner = BuildOwner();
+  final stage = owner.mountRoot(fx.stageSeed) as StageElement;
   stdout.writeln('--- initialSnapshot ---');
   stdout.writeln(stage.grid.frontToString().trimRight());
 

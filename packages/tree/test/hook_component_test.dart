@@ -1,5 +1,5 @@
-// Sprout — the hooks-style stateful primitive (register A29). Proves the
-// hook dispatch, the rules of hooks, reconcile identity via the Sprout
+// HookComponent — the hooks-style stateful primitive. Proves the
+// hook dispatch, the rules of hooks, reconcile identity via the HookComponent
 // subclass tag, A8 throw-after-unmount, microtask-passive effects, and that a
 // counter needs no State class / Watch collapses to one useStream line.
 import 'dart:async';
@@ -14,17 +14,17 @@ late List<String> renderLog;
 late List<String> effectLog;
 StateCell<int>? capturedCell;
 int? capturedStream;
-SproutContext? capturedCtx;
+HookBuildContext? capturedCtx;
 int memoComputes = 0;
 
 // --- test sprouts (each a single class, state inline — the whole point) ----
 
 /// A counter with NO separate State class (the proof artifact).
-class _Counter extends Sprout {
+class _Counter extends HookComponent {
   const _Counter({this.start = 0});
   final int start;
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     final count = context.useState(start);
     capturedCell = count;
     renderLog.add('c${count.value}');
@@ -33,12 +33,12 @@ class _Counter extends Sprout {
 }
 
 /// `Watch` re-expressed as one `useStream` line (the collapse proof).
-class _Streamer extends Sprout {
+class _Streamer extends HookComponent {
   const _Streamer(this.stream, {this.initial = 0});
   final Stream<int> stream;
   final int initial;
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     final v = context.useStream(stream, initial: initial);
     capturedStream = v;
     renderLog.add('s$v');
@@ -47,11 +47,11 @@ class _Streamer extends Sprout {
 }
 
 /// useEffect with a logged run + cleanup, keyed by [keys].
-class _Effector extends Sprout {
+class _Effector extends HookComponent {
   const _Effector(this.keys);
   final List<Object?>? keys;
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     context.useEffect(() {
       effectLog.add('run');
       return () => effectLog.add('cleanup');
@@ -61,10 +61,10 @@ class _Effector extends Sprout {
 }
 
 /// An effect that bumps a state cell on mount — exercises the flush invariant.
-class _EffectBumper extends Sprout {
+class _EffectBumper extends HookComponent {
   const _EffectBumper();
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     final count = context.useState(0);
     capturedCell = count;
     context.useEffect(() {
@@ -76,11 +76,11 @@ class _EffectBumper extends Sprout {
   }
 }
 
-class _Memoizer extends Sprout {
+class _Memoizer extends HookComponent {
   const _Memoizer(this.key0);
   final Object key0;
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     final v = context.useMemo(() {
       memoComputes++;
       return '$key0'.length;
@@ -91,11 +91,11 @@ class _Memoizer extends Sprout {
 }
 
 /// Calls a variable number of hooks — for count-drift detection.
-class _Drift extends Sprout {
+class _Drift extends HookComponent {
   const _Drift(this.extra);
   final bool extra;
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     context.useState(0);
     if (extra) context.useState(1);
     return const Leaf('d');
@@ -103,11 +103,11 @@ class _Drift extends Sprout {
 }
 
 /// Calls hooks in a swappable order — for order/type-drift detection.
-class _Order extends Sprout {
+class _Order extends HookComponent {
   const _Order(this.swap);
   final bool swap;
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     if (swap) {
       context.useMemo(() => 1, const []);
       context.useState(0);
@@ -119,11 +119,11 @@ class _Order extends Sprout {
   }
 }
 
-/// Captures its [SproutContext] so a test can call a hook outside build.
-class _Capture extends Sprout {
+/// Captures its [HookBuildContext] so a test can call a hook outside build.
+class _Capture extends HookComponent {
   const _Capture();
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     capturedCtx = context;
     context.useState(0);
     return const Leaf('cap');
@@ -132,11 +132,11 @@ class _Capture extends Sprout {
 
 /// Hook 0 = a stream (must still cancel); hook 1 = an effect whose cleanup
 /// throws — exercises the guarded-unmount invariant.
-class _ThrowOnCleanup extends Sprout {
+class _ThrowOnCleanup extends HookComponent {
   const _ThrowOnCleanup(this.stream);
   final Stream<int> stream;
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     context.useStream(stream, initial: 0);
     context.useEffect(
       () =>
@@ -148,11 +148,11 @@ class _ThrowOnCleanup extends Sprout {
 }
 
 /// Two keyed effects — proves the two-phase (all cleanups, then all effects).
-class _TwoEffects extends Sprout {
+class _TwoEffects extends HookComponent {
   const _TwoEffects(this.key0);
   final Object key0;
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     context.useEffect(() {
       effectLog.add('runA');
       return () => effectLog.add('cleanA');
@@ -166,10 +166,10 @@ class _TwoEffects extends Sprout {
 }
 
 /// Illegally sets a cell during build (should assert).
-class _SetDuringBuild extends Sprout {
+class _SetDuringBuild extends HookComponent {
   const _SetDuringBuild();
   @override
-  Seed build(SproutContext context) {
+  Component build(HookBuildContext context) {
     context.useState(0).value = 1;
     return const Leaf('x');
   }
@@ -187,7 +187,7 @@ void main() {
 
   group('useState', () {
     test('setting value marks a rebuild; flush re-runs build', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       owner.mountRoot(const _Counter());
       expect(renderLog, ['c0']);
@@ -198,7 +198,7 @@ void main() {
     });
 
     test('functional set applies to the previous value', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       owner.mountRoot(const _Counter(start: 1));
       capturedCell!.set((p) => p + 10);
@@ -207,7 +207,7 @@ void main() {
     });
 
     test('value persists across a config update (A9); new initial ignored', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final root = owner.mountRoot(const _Counter(start: 0));
       capturedCell!.value = 7;
@@ -224,7 +224,7 @@ void main() {
     test('returns initial before first emit, then latest after emit+flush', () {
       final ctrl = StreamController<int>(sync: true);
       addTearDown(ctrl.close);
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(_Streamer(ctrl.stream, initial: 42));
@@ -245,7 +245,7 @@ void main() {
       final b = StreamController<int>(sync: true, onListen: () => listensB++);
       addTearDown(a.close);
       addTearDown(b.close);
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       final root = owner.mountRoot(_Streamer(a.stream));
@@ -276,7 +276,7 @@ void main() {
           onCancel: () => cancels++,
         );
         addTearDown(c.close);
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         addTearDown(owner.dispose);
 
         final root = owner.mountRoot(_Streamer(c.stream));
@@ -289,7 +289,7 @@ void main() {
       var cancels = 0;
       final c = StreamController<int>(sync: true, onCancel: () => cancels++);
       addTearDown(c.close);
-      final owner = TreeOwner();
+      final owner = BuildOwner();
 
       owner.mountRoot(_Streamer(c.stream));
       owner.unmountRoot();
@@ -303,7 +303,7 @@ void main() {
 
   group('useEffect (microtask-passive)', () {
     test('runs after mount, in a microtask (not synchronously)', () async {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       owner.mountRoot(const _Effector([]));
       expect(effectLog, isEmpty, reason: 'effect is deferred, not synchronous');
@@ -315,7 +315,7 @@ void main() {
     test(
       're-runs on key change (cleanup first), not on unrelated rebuild',
       () async {
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         addTearDown(owner.dispose);
         final root = owner.mountRoot(const _Effector([1]));
         await Future<void>.delayed(Duration.zero);
@@ -332,7 +332,7 @@ void main() {
     );
 
     test('teardown runs on unmount', () async {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       owner.mountRoot(const _Effector([]));
       await Future<void>.delayed(Duration.zero);
       effectLog.clear();
@@ -344,7 +344,7 @@ void main() {
     test(
       "an effect's markNeedsRebuild does not trip the flush assert",
       () async {
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         addTearDown(owner.dispose);
         owner.mountRoot(const _EffectBumper()); // build 0; effect scheduled
         expect(renderLog, ['b0']);
@@ -359,8 +359,8 @@ void main() {
       },
     );
 
-    test('deferred effect is skipped if the branch unmounts first', () async {
-      final owner = TreeOwner();
+    test('deferred effect is skipped if the element unmounts first', () async {
+      final owner = BuildOwner();
       owner.mountRoot(const _Effector([]));
       owner.unmountRoot(); // before the microtask drains
       await Future<void>.delayed(Duration.zero);
@@ -370,7 +370,7 @@ void main() {
     test(
       'two-phase: all cleanups run before all effects on a key change',
       () async {
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         addTearDown(owner.dispose);
         final root = owner.mountRoot(const _TwoEffects('x'));
         await Future<void>.delayed(Duration.zero);
@@ -393,7 +393,7 @@ void main() {
         var cancels = 0;
         final c = StreamController<int>(sync: true, onCancel: () => cancels++);
         addTearDown(c.close);
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         owner.mountRoot(_ThrowOnCleanup(c.stream));
         await Future<void>.delayed(
           Duration.zero,
@@ -415,7 +415,7 @@ void main() {
 
   group('useMemo', () {
     test('recomputes only when keys change', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final root = owner.mountRoot(const _Memoizer('aa'));
       expect(memoComputes, 1);
@@ -431,21 +431,21 @@ void main() {
 
   group('rules of hooks', () {
     test('calling MORE hooks than last build throws', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final root = owner.mountRoot(const _Drift(false));
       expect(() => root.update(const _Drift(true)), throwsStateError);
     });
 
     test('calling FEWER hooks throws (always-on, not debug-only)', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final root = owner.mountRoot(const _Drift(true));
       expect(() => root.update(const _Drift(false)), throwsStateError);
     });
 
     test('setting a StateCell during build asserts', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       expect(
         () => owner.mountRoot(const _SetDuringBuild()),
@@ -454,27 +454,27 @@ void main() {
     });
 
     test('changing hook order/type throws', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final root = owner.mountRoot(const _Order(false));
       expect(() => root.update(const _Order(true)), throwsStateError);
     });
 
     test('calling a hook outside build asserts', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       owner.mountRoot(const _Capture());
       expect(() => capturedCtx!.useState(0), throwsA(isA<AssertionError>()));
     });
   });
 
-  group('reconcile identity (the Sprout subclass is the tag)', () {
+  group('reconcile identity (the HookComponent subclass is the tag)', () {
     test('same subclass + slot updates in place; state persists', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final root =
           owner.mountRoot(Node('root', children: const [_Counter()]))
-              as NodeBranch;
+              as NodeElement;
       final before = root.children.single;
       capturedCell!.value = 3;
       owner.flush();
@@ -488,57 +488,60 @@ void main() {
     test('different subclass at the same slot is replaced', () {
       final ctrl = StreamController<int>(sync: true);
       addTearDown(ctrl.close);
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final root =
           owner.mountRoot(Node('root', children: const [_Counter()]))
-              as NodeBranch;
+              as NodeElement;
       final before = root.children.single;
 
       root.update(Node('root', children: [_Streamer(ctrl.stream)]));
       final after = root.children.single;
       expect(before.mounted, isFalse);
-      expect(after, isA<SproutBranch>());
+      expect(after, isA<HookElement>());
       expect(identical(after, before), isFalse);
     });
   });
 
   group('A8 handle', () {
-    test('SproutContext is a handle, not the branch', () {
-      final owner = TreeOwner();
+    test('HookBuildContext is a handle, not the element', () {
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       owner.mountRoot(const _Capture());
-      expect(capturedCtx, isA<TreeContext>());
-      expect(capturedCtx, isNot(isA<Branch>()));
+      expect(capturedCtx, isA<BuildContext>());
+      expect(capturedCtx, isNot(isA<Element>()));
     });
 
-    test('SproutContext.markNeedsRebuild throws after unmount', () {
-      final owner = TreeOwner();
+    test('HookBuildContext.markNeedsRebuild throws after unmount', () {
+      final owner = BuildOwner();
       owner.mountRoot(const _Capture());
       final ctx = capturedCtx!;
       owner.unmountRoot();
       expect(ctx.markNeedsRebuild, throwsStateError);
     });
 
-    test('SproutContext delegates getInheritedSeedOfExactType (no dep)', () {
-      final owner = TreeOwner();
-      addTearDown(owner.dispose);
-      final root =
-          owner.mountRoot(
-                InheritedSeed<String>(
-                  value: 'ambient',
-                  child: const _Capture(),
-                ),
-              )
-              as InheritedBranch<String>;
-      expect(capturedCtx!.getInheritedSeedOfExactType<String>(), 'ambient');
-      expect(root.dependents, isEmpty);
-    });
+    test(
+      'HookBuildContext delegates getInheritedValueOfExactType (no dep)',
+      () {
+        final owner = BuildOwner();
+        addTearDown(owner.dispose);
+        final root =
+            owner.mountRoot(
+                  InheritedComponent<String>(
+                    value: 'ambient',
+                    child: const _Capture(),
+                  ),
+                )
+                as InheritedElement<String>;
+        expect(capturedCtx!.getInheritedValueOfExactType<String>(), 'ambient');
+        expect(root.dependents, isEmpty);
+      },
+    );
   });
 
-  group('TreeOwner integration (ADR-0005 test b2)', () {
+  group('BuildOwner integration (ADR-0005 test b2)', () {
     test('a state change auto-flushes via onNeedsFlush microtask', () async {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       owner.onNeedsFlush = () => scheduleMicrotask(owner.flush);
       owner.mountRoot(const _Counter());

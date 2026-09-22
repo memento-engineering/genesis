@@ -25,7 +25,7 @@ the 1.0 boundary; this doc governs the releases in between.)
   resolver — the `0.1.3`/`0.1.4` breaking-in-patch releases predate outside
   adoption and are grandfathered, not precedent.
 - **Adding a member to an exported abstract interface is breaking** for
-  external implementers (the `TreeContext` lesson), even when every in-repo
+  external implementers (the `BuildContext` lesson), even when every in-repo
   handle just delegates.
 - **Cross-package coherence:** when a sibling consumes API introduced in
   version X, tighten the sibling's constraint to `^X` in the same change

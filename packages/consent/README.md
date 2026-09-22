@@ -36,14 +36,14 @@ switch (outcome) {
 Drive emissions through `router.mount` / `router.apply` (not the surface's
 directly): the router keeps the ledger the hit-test needs — the ids ever seen,
 and the current id→type map — which dialogue's surface does not track. A
-renderer can still share the surface's `TreeOwner` to draw the same tree.
+renderer can still share the surface's `BuildOwner` to draw the same tree.
 
 ## The three gates
 
 An incoming `ActionEvent` is validated by hit-testing the **live** mounted tree,
-walked fresh on every `route` call (no cached branch refs):
+walked fresh on every `route` call (no cached element refs):
 
-1. **exists/mounted** — `sourceComponentId` resolves to a mounted branch by
+1. **exists/mounted** — `sourceComponentId` resolves to a mounted element by
    key; otherwise `staleUnmounted` (ever-seen) or `unknownComponent` (never
    seen);
 2. **catalog-declared** — the live component's wire type declares the action in
@@ -63,7 +63,7 @@ is the feedback channel back to the actor.
 
 A component affords client actions when its catalog type declares them
 (`"actions": { ... }`) **and** its **element** implements `Actionable`. consent
-hit-tests the live tree and dispatches through `branch is Actionable`, so the
+hit-tests the live tree and dispatches through `element is Actionable`, so the
 seam sits on the element — a component's `State` is `@protected` and out of the
 router's reach. The element forwards to its state, which holds the logic:
 
@@ -74,12 +74,12 @@ class Counter extends StatefulPerception {
   @override
   CounterState createState() => CounterState();
   @override
-  CounterElement createBranch() => CounterElement(this);
+  CounterElement createElement() => CounterElement(this);
 }
 
 // The element is the seam: it implements Actionable and forwards to its state.
 class CounterElement extends StatefulPerceptionElement implements Actionable {
-  CounterElement(Counter super.seed);
+  CounterElement(Counter super.component);
   CounterState get _state => state as CounterState;
 
   @override
@@ -142,7 +142,7 @@ merge semantics) is a separate, explicitly-funded requirement.
 - **Single surface, v1.** A `surfaceId` mismatch folds into `unknownComponent`
   (the component is not on this surface).
 - **Dispatch seam.** consent dispatches through the `Actionable` interface a
-  component's element implements (`branch is Actionable`), so the tree core
+  component's element implements (`element is Actionable`), so the tree core
   carries no action vocabulary. A sanctioned action-dispatch hook in the tree core
   is a possible future refinement (deferred).
 - Tests consume `genesis_perception`'s `Node`/`Field` plus a stateful `Counter`

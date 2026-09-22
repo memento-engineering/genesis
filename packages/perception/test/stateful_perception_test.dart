@@ -34,7 +34,7 @@ class _TrackedState extends PerceptionState<_TrackedPerception> {
   void didChangeDependencies() => calls.add('dcd');
 
   @override
-  Seed build(PerceptionContext context) {
+  Component build(PerceptionContext context) {
     calls.add('build');
     return const _Leaf();
   }
@@ -56,11 +56,11 @@ class _ReaderState extends PerceptionState<_ReaderPerception> {
   @override
   void didChangeDependencies() {
     calls.add('dcd');
-    lastValue = context.dependOnInheritedSeedOfExactType<int>();
+    lastValue = context.dependOnInheritedValueOfExactType<int>();
   }
 
   @override
-  Seed build(PerceptionContext context) {
+  Component build(PerceptionContext context) {
     calls.add('build');
     return const _Leaf();
   }
@@ -70,9 +70,9 @@ class _ReaderState extends PerceptionState<_ReaderPerception> {
 
 void main() {
   group('StatefulPerception', () {
-    test('createBranch returns StatefulPerceptionElement', () {
+    test('createElement returns StatefulPerceptionElement', () {
       expect(
-        const _TrackedPerception().createBranch(),
+        const _TrackedPerception().createElement(),
         isA<StatefulPerceptionElement>(),
       );
     });
@@ -112,11 +112,11 @@ void main() {
         // The handle carries the domain capabilities and delegates to the
         // element...
         expect(context, isA<PerceptionContext>());
-        expect(context.perceptionId, equals(el.branchId));
+        expect(context.perceptionId, equals(el.elementId));
         // ...but is never the element itself (A8: the separate-handle fork —
         // lenny asserted `state.context` WAS the element here).
         expect(context, isNot(same(el)));
-        expect(context, isNot(isA<Branch>()));
+        expect(context, isNot(isA<Element>()));
       },
     );
   });
@@ -194,7 +194,7 @@ void main() {
               )
               as InheritedPerceptionElement<int>;
 
-      final readerEl = root.childBranch as StatefulPerceptionElement;
+      final readerEl = root.childElement as StatefulPerceptionElement;
       final state = readerEl.state as _ReaderState;
 
       // Initial mount: dcd called with value=1
@@ -225,7 +225,7 @@ void main() {
               )
               as InheritedPerceptionElement<int>;
 
-      final readerEl = root.childBranch as StatefulPerceptionElement;
+      final readerEl = root.childElement as StatefulPerceptionElement;
       final state = readerEl.state as _ReaderState;
       state.calls.clear();
 

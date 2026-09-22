@@ -4,111 +4,124 @@ library;
 
 import 'package:meta/meta.dart';
 
-import 'branch.dart';
-import 'seed.dart';
+import 'element.dart';
+import 'component.dart';
 
 /// Provides an ambient value of type [T] to all descendants in the tree —
 /// the InheritedWidget analogue.
 ///
 /// Usage:
-///   `InheritedSeed<String>(value: 'hello', child: MySeed())`
+///   `InheritedComponent<String>(value: 'hello', child: MyComponent())`
 ///
 /// Descendants subscribe with
-///   `context.dependOnInheritedSeedOfExactType<String>()`
+///   `context.dependOnInheritedValueOfExactType<String>()`
 /// or take a dependency-free snapshot with
-///   `context.getInheritedSeedOfExactType<String>()`.
+///   `context.getInheritedValueOfExactType<String>()`.
 ///
-/// Every dependent of an `InheritedSeed` is invalidated whenever
+/// Every dependent of an `InheritedComponent` is invalidated whenever
 /// [updateShouldNotify] is true. When dependents care about DIFFERENT parts
 /// of one value and should not rebuild for each other's changes, use
-/// [InheritedModelSeed] instead: it scopes each dependency to an aspect.
-class InheritedSeed<T extends Object> extends Seed {
+/// [InheritedModel] instead: it scopes each dependency to an aspect.
+class InheritedComponent<T extends Object> extends Component {
   /// Creates a provider of [value] over [child].
-  const InheritedSeed({required this.value, required this.child, super.key});
+  const InheritedComponent({
+    required this.value,
+    required this.child,
+    super.key,
+  });
 
   /// The provided value.
   final T value;
 
   /// The subtree within which [value] is visible.
-  final Seed child;
+  final Component child;
 
-  /// Returns true when [oldSeed]'s value differs from the new [value].
+  /// Returns true when [oldComponent]'s value differs from the new [value].
   /// Subclasses may override for custom equality.
-  bool updateShouldNotify(InheritedSeed<T> oldSeed) => value != oldSeed.value;
+  bool updateShouldNotify(InheritedComponent<T> oldComponent) =>
+      value != oldComponent.value;
 
   @override
-  InheritedBranch<T> createBranch() => InheritedBranch<T>(this);
+  InheritedElement<T> createElement() => InheritedElement<T>(this);
+
+  @override
+  @Deprecated('Use createElement instead.')
+  InheritedElement<T> createBranch() => createElement();
 }
 
-/// Mounted branch for [InheritedSeed]. Owns the dependent set, reconciles the
+/// Mounted element for [InheritedComponent]. Owns the dependent set, reconciles the
 /// single child via the rebuild hook, and invalidates dependents through
-/// [Branch.dependencyChanged] when the value changes.
-class InheritedBranch<T extends Object> extends InheritedBranchBase {
-  /// Creates the branch for [seed].
-  InheritedBranch(InheritedSeed<T> super.seed);
+/// [Element.dependencyChanged] when the value changes.
+class InheritedElement<T extends Object> extends InheritedElementBase {
+  /// Creates the element for [component].
+  InheritedElement(InheritedComponent<T> super.component);
 
-  final Set<Branch> _dependents = {};
-  Branch? _child;
+  final Set<Element> _dependents = {};
+  Element? _child;
 
-  InheritedSeed<T> get _typed => seed as InheritedSeed<T>;
+  InheritedComponent<T> get _typed => component as InheritedComponent<T>;
 
   /// The currently provided value.
   T get value => _typed.value;
 
-  // --- InheritedBranchBase ---
+  // --- InheritedElementBase ---
 
   @override
   U? getValueAs<U extends Object>() => T == U ? value as U : null;
 
   @override
-  void addDependent(Branch branch, {Object? aspect}) {
+  void addDependent(Element element, {Object? aspect}) {
     if (aspect != null) {
       throw ArgumentError.value(
         aspect,
         'aspect',
-        'InheritedSeed<$T> provides no aspects — an aspect-scoped dependency '
-            'needs an InheritedModelSeed<$T, A> provider. Depend without an '
-            'aspect, or provide the value with an InheritedModelSeed.',
+        'InheritedComponent<$T> provides no aspects — an aspect-scoped '
+            'dependency needs an InheritedModel<$T, A> provider. Depend '
+            'without an aspect, or provide the value with an InheritedModel.',
       );
     }
-    _dependents.add(branch);
+    _dependents.add(element);
   }
 
   @override
-  void removeDependent(Branch branch) {
-    if (_dependents.remove(branch)) {
-      branch.removeDependency(this);
+  void removeDependent(Element element) {
+    if (_dependents.remove(element)) {
+      element.removeDependency(this);
     }
   }
 
-  /// Dependents registered via dependOnInheritedSeedOfExactType.
+  /// Dependents registered via dependOnInheritedValueOfExactType.
   /// Exposed for testing. Do not use in production code.
-  Set<Branch> get dependents => _dependents;
+  Set<Element> get dependents => _dependents;
 
-  /// The mounted child branch. Exposed for testing.
+  /// The mounted child element. Exposed for testing.
   /// Do not use in production code.
-  Branch? get childBranch => _child;
+  Element? get childElement => _child;
+
+  /// Legacy spelling for [childElement].
+  @Deprecated('Use childElement instead.')
+  Element? get childBranch => childElement;
 
   // --- Lifecycle ---
 
   @override
-  void mount(Branch? parent, Object? slot) {
+  void mount(Element? parent, Object? slot) {
     super.mount(parent, slot);
     performRebuild();
   }
 
-  /// The rebuild hook of an inherited branch: reconcile the single child
-  /// against the current seed's child config.
+  /// The rebuild hook of an inherited element: reconcile the single child
+  /// against the current component's child config.
   @override
   void performRebuild() {
     _child = updateChild(_child, _typed.child, 0);
   }
 
   @override
-  void update(Seed newSeed) {
+  void update(Component newComponent) {
     assert(
-      Seed.canUpdate(seed, newSeed),
-      'update() called with a Seed that fails canUpdate; '
+      Component.canUpdate(component, newComponent),
+      'update() called with a Component that fails canUpdate; '
       'use unmount() + mount() for type/key changes.',
     );
     final old = _typed;
@@ -117,27 +130,29 @@ class InheritedBranch<T extends Object> extends InheritedBranchBase {
     // child subtree is then force-rebuilt exactly once during reconciliation
     // (clearing its dirty flag) instead of rebuilding a second time when the
     // owner drains the dirty set.
-    notifyDependents(old, newSeed as InheritedSeed<T>);
-    super.update(newSeed);
+    notifyDependents(old, newComponent as InheritedComponent<T>);
+    super.update(newComponent);
   }
 
-  /// Invalidates the dependents affected by the config change from [oldSeed]
-  /// to [newSeed].
+  /// Invalidates dependents affected by [oldComponent] → [newComponent].
   ///
   /// The base rule is InheritedWidget's: when
-  /// [InheritedSeed.updateShouldNotify] is true, EVERY dependent is
-  /// invalidated. [InheritedModelBranch] overrides this to consult each
+  /// [InheritedComponent.updateShouldNotify] is true, EVERY dependent is
+  /// invalidated. [InheritedModelElement] overrides this to consult each
   /// dependent's recorded aspects.
   @protected
-  void notifyDependents(InheritedSeed<T> oldSeed, InheritedSeed<T> newSeed) {
-    if (!newSeed.updateShouldNotify(oldSeed)) return;
+  void notifyDependents(
+    InheritedComponent<T> oldComponent,
+    InheritedComponent<T> newComponent,
+  ) {
+    if (!newComponent.updateShouldNotify(oldComponent)) return;
     for (final dep in List.of(_dependents)) {
       dep.dependencyChanged();
     }
   }
 
   @override
-  void visitChildren(void Function(Branch child) visitor) {
+  void visitChildren(void Function(Element child) visitor) {
     final child = _child;
     if (child != null) visitor(child);
   }
@@ -157,108 +172,112 @@ class InheritedBranch<T extends Object> extends InheritedBranchBase {
 /// single ASPECT of it — the InheritedModel analogue.
 ///
 /// A dependent subscribes with
-///   `context.dependOnInheritedSeedOfExactType<T>(aspect: someAspect)`
+///   `context.dependOnInheritedValueOfExactType<T>(aspect: someAspect)`
 /// and is invalidated only when [updateShouldNotifyDependent] reports the
 /// change as affecting one of the aspects it asked for. A dependent that
 /// omits the aspect depends on the whole value, exactly as under
-/// [InheritedSeed].
+/// [InheritedComponent].
 ///
 /// Lookup is unchanged — the parent walk still matches the nearest provider
 /// of exact value-type [T] — so a plain
-/// `dependOnInheritedSeedOfExactType<T>()` finds an
-/// `InheritedModelSeed<T, A>` too and gets a whole-value dependency.
+/// `dependOnInheritedValueOfExactType<T>()` finds an
+/// `InheritedModel<T, A>` too and gets a whole-value dependency.
 ///
 /// The house shape for a consumer is its own static `of`:
 ///
 /// ```dart
-/// static Environment? of(TreeContext context, {Lane? aspect}) =>
-///     context.dependOnInheritedSeedOfExactType<Environment>(aspect: aspect);
+/// static Environment? of(BuildContext context, {Lane? aspect}) =>
+///     context.dependOnInheritedValueOfExactType<Environment>(aspect: aspect);
 /// ```
-class InheritedModelSeed<T extends Object, A extends Object>
-    extends InheritedSeed<T> {
+class InheritedModel<T extends Object, A extends Object>
+    extends InheritedComponent<T> {
   /// Creates an aspect-scoped provider of [value] over [child].
-  const InheritedModelSeed({
-    required super.value,
-    required super.child,
-    super.key,
-  });
+  const InheritedModel({required super.value, required super.child, super.key});
 
   /// Whether a dependent that subscribed to [dependencies] must rebuild now
-  /// that this seed has replaced [oldSeed].
+  /// that this component has replaced [oldComponent].
   ///
   /// Called once per aspect-scoped dependent, and only after
-  /// [InheritedSeed.updateShouldNotify] already returned true — so the
+  /// [InheritedComponent.updateShouldNotify] already returned true — so the
   /// default (`true`) makes a subclass that ignores aspects behave exactly
-  /// like an [InheritedSeed]. [dependencies] is never empty: a dependent that
+  /// like an [InheritedComponent]. [dependencies] is never empty: a dependent that
   /// asked for no aspect depends on the whole value and is invalidated
   /// without consulting this hook.
   bool updateShouldNotifyDependent(
-    covariant InheritedModelSeed<T, A> oldSeed,
+    covariant InheritedModel<T, A> oldComponent,
     Set<A> dependencies,
   ) => true;
 
   @override
-  InheritedModelBranch<T, A> createBranch() => InheritedModelBranch<T, A>(this);
+  InheritedModelElement<T, A> createElement() =>
+      InheritedModelElement<T, A>(this);
+
+  @override
+  @Deprecated('Use createElement instead.')
+  InheritedModelElement<T, A> createBranch() => createElement();
 }
 
-/// Mounted branch for [InheritedModelSeed]: [InheritedBranch] plus
+/// Mounted element for [InheritedModel]: [InheritedElement] plus
 /// per-dependent aspect bookkeeping. [notifyDependents] consults
-/// [InheritedModelSeed.updateShouldNotifyDependent] with the aspects each
+/// [InheritedModel.updateShouldNotifyDependent] with the aspects each
 /// dependent asked for and invalidates only those it reports as affected.
 ///
 /// Recorded limitation (it matches the plain provider): a dependency is
 /// recorded at lookup and cleared only by [removeDependent] or unmount — the
-/// spine never resets dependencies between rebuilds. A branch that asks for
+/// spine never resets dependencies between rebuilds. A element that asks for
 /// different aspects across successive builds therefore ACCUMULATES them and
 /// is over-notified, never under-notified. Narrowing would need a per-build
-/// dependency reset on `Branch`, which the spine deliberately does not have.
-class InheritedModelBranch<T extends Object, A extends Object>
-    extends InheritedBranch<T> {
-  /// Creates the branch for [seed].
-  InheritedModelBranch(InheritedModelSeed<T, A> super.seed);
+/// dependency reset on `Element`, which the spine deliberately does not have.
+class InheritedModelElement<T extends Object, A extends Object>
+    extends InheritedElement<T> {
+  /// Creates the element for [component].
+  InheritedModelElement(InheritedModel<T, A> super.component);
 
   // Per-dependent aspect subscriptions. An EMPTY set means "the whole value"
   // (the dependent asked without an aspect); it is sticky, so a later
-  // aspect-scoped lookup by the same branch cannot narrow a whole-value
+  // aspect-scoped lookup by the same element cannot narrow a whole-value
   // dependency.
-  final Map<Branch, Set<A>> _aspects = {};
+  final Map<Element, Set<A>> _aspects = {};
 
-  /// The aspects [branch] subscribed to, or null when it is not a dependent;
+  /// The aspects [element] subscribed to, or null when it is not a dependent;
   /// an empty set means a whole-value dependency. Exposed for testing.
   /// Do not use in production code.
-  Set<A>? aspectsOf(Branch branch) => _aspects[branch];
+  Set<A>? aspectsOf(Element element) => _aspects[element];
 
   @override
-  void addDependent(Branch branch, {Object? aspect}) {
+  void addDependent(Element element, {Object? aspect}) {
     if (aspect != null && aspect is! A) {
       throw ArgumentError.value(
         aspect,
         'aspect',
-        'InheritedModelSeed<$T, $A> scopes dependencies by $A; got a '
+        'InheritedModel<$T, $A> scopes dependencies by $A; got a '
             '${aspect.runtimeType}. Pass an aspect of type $A, or none to depend '
             'on the whole value.',
       );
     }
-    super.addDependent(branch);
-    final existing = _aspects[branch];
+    super.addDependent(element);
+    final existing = _aspects[element];
     if (existing != null && existing.isEmpty) return; // whole-value is sticky
     if (aspect == null) {
-      _aspects[branch] = <A>{};
+      _aspects[element] = <A>{};
       return;
     }
-    (_aspects[branch] ??= <A>{}).add(aspect as A);
+    (_aspects[element] ??= <A>{}).add(aspect as A);
   }
 
   @override
-  void removeDependent(Branch branch) {
-    _aspects.remove(branch);
-    super.removeDependent(branch);
+  void removeDependent(Element element) {
+    _aspects.remove(element);
+    super.removeDependent(element);
   }
 
   @override
-  void notifyDependents(InheritedSeed<T> oldSeed, InheritedSeed<T> newSeed) {
-    final newModel = newSeed as InheritedModelSeed<T, A>;
-    final oldModel = oldSeed as InheritedModelSeed<T, A>;
+  void notifyDependents(
+    InheritedComponent<T> oldComponent,
+    InheritedComponent<T> newComponent,
+  ) {
+    final newModel = newComponent as InheritedModel<T, A>;
+    final oldModel = oldComponent as InheritedModel<T, A>;
     if (!newModel.updateShouldNotify(oldModel)) return;
     for (final dep in List.of(_dependents)) {
       final aspects = _aspects[dep];
@@ -276,3 +295,21 @@ class InheritedModelBranch<T extends Object, A extends Object>
     _aspects.clear();
   }
 }
+
+/// Legacy name for [InheritedComponent].
+@Deprecated('Use InheritedComponent instead.')
+typedef InheritedSeed<T extends Object> = InheritedComponent<T>;
+
+/// Legacy name for [InheritedElement].
+@Deprecated('Use InheritedElement instead.')
+typedef InheritedBranch<T extends Object> = InheritedElement<T>;
+
+/// Legacy name for [InheritedModel].
+@Deprecated('Use InheritedModel instead.')
+typedef InheritedModelSeed<T extends Object, A extends Object> =
+    InheritedModel<T, A>;
+
+/// Legacy name for [InheritedModelElement].
+@Deprecated('Use InheritedModelElement instead.')
+typedef InheritedModelBranch<T extends Object, A extends Object> =
+    InheritedModelElement<T, A>;

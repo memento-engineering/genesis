@@ -23,26 +23,26 @@ class _ReadingP extends StatelessPerception {
   _ReadingP(this.tracker);
   final _Tracker tracker;
   @override
-  Seed build(PerceptionContext context) {
+  Component build(PerceptionContext context) {
     tracker.builds++;
-    tracker.lastValue = context.dependOnInheritedSeedOfExactType<String>();
+    tracker.lastValue = context.dependOnInheritedValueOfExactType<String>();
     return const _Leaf();
   }
 }
 
 class _SimpleP extends StatelessPerception {
   const _SimpleP({this.child = const _Leaf()});
-  final Seed child;
+  final Component child;
   @override
-  Seed build(PerceptionContext context) => child;
+  Component build(PerceptionContext context) => child;
 }
 
 void main() {
   test('returns StatelessPerceptionElement', () {
-    expect(_SimpleP().createBranch(), isA<StatelessPerceptionElement>());
+    expect(_SimpleP().createElement(), isA<StatelessPerceptionElement>());
   });
 
-  group('ComponentBranch child lifecycle', () {
+  group('BuildableElement child lifecycle', () {
     late PerceptionOwner owner;
 
     setUp(() {

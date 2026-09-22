@@ -20,7 +20,7 @@ class _LeafElement extends PerceptionElement {
 
 void main() {
   group('Watch<T> structure', () {
-    test('createBranch returns StatefulBranch with WatchState', () {
+    test('createElement returns StatefulElement with WatchState', () {
       final ctrl = StreamController<int>(sync: true);
       addTearDown(ctrl.close);
       final w = Watch<int>(
@@ -28,12 +28,12 @@ void main() {
         (_) => const _Leaf('x'),
         initialValue: 0,
       );
-      final el = w.createBranch();
-      expect(el, isA<StatefulBranch>());
+      final el = w.createElement();
+      expect(el, isA<StatefulElement>());
       // mount to initialise state
       final owner = PerceptionOwner();
       addTearDown(owner.dispose);
-      final root = owner.mountRoot(w) as StatefulBranch;
+      final root = owner.mountRoot(w) as StatefulElement;
       expect(root.state, isA<WatchState<int>>());
     });
   });

@@ -2,14 +2,14 @@ import 'package:genesis_tree/genesis_tree.dart';
 
 /// Provides an ambient value of type [T] to all descendants in the
 /// perception tree — the perception-domain face of the tree composition
-/// layer's [InheritedSeed].
+/// layer's [InheritedComponent].
 ///
 /// Usage:
 ///   `InheritedPerception<String>(value: 'hello', child: MyNode())`
 ///
 /// Descendants call:
-///   `context.dependOnInheritedSeedOfExactType<String>()`
-class InheritedPerception<T extends Object> extends InheritedSeed<T> {
+///   `context.dependOnInheritedValueOfExactType<String>()`
+class InheritedPerception<T extends Object> extends InheritedComponent<T> {
   /// Creates a provider of `value` over `child`.
   const InheritedPerception({
     required super.value,
@@ -25,14 +25,14 @@ class InheritedPerception<T extends Object> extends InheritedSeed<T> {
       super.updateShouldNotify(oldPerception);
 
   @override
-  InheritedPerceptionElement<T> createBranch() =>
+  InheritedPerceptionElement<T> createElement() =>
       InheritedPerceptionElement<T>(this);
 }
 
-/// Mounted element for [InheritedPerception]: tree's [InheritedBranch] —
+/// Mounted element for [InheritedPerception]: tree's [InheritedElement] —
 /// dependent set, single-child reconciliation through the rebuild hook, and
 /// notify-before-reconcile update ordering are all inherited.
-class InheritedPerceptionElement<T extends Object> extends InheritedBranch<T> {
-  /// Creates the element for [seed].
-  InheritedPerceptionElement(InheritedPerception<T> super.seed);
+class InheritedPerceptionElement<T extends Object> extends InheritedElement<T> {
+  /// Creates the element for [component].
+  InheritedPerceptionElement(InheritedPerception<T> super.component);
 }

@@ -4,45 +4,53 @@ library;
 
 import 'package:meta/meta.dart';
 
-import 'component_branch.dart';
-import 'seed.dart';
-import 'tree_context.dart';
+import 'buildable_element.dart';
+import 'component.dart';
+import 'build_context.dart';
 import 'tree_lifecycle_phase.dart';
-import 'tree_owner.dart';
+import 'build_owner.dart';
 
-/// A [Seed] whose branch owns mutable [State] — the StatefulWidget analogue.
-abstract class StatefulSeed extends Seed {
-  /// Creates a stateful seed, optionally [key]ed.
-  const StatefulSeed({super.key});
+/// A [Component] whose element owns mutable [State] — the StatefulWidget analogue.
+abstract class StatefulComponent extends Component {
+  /// Creates a stateful component, optionally [key]ed.
+  const StatefulComponent({super.key});
 
-  /// Creates the mutable state for a branch of this seed.
+  /// Creates the mutable state for a element of this component.
   @factory
-  State<StatefulSeed> createState();
+  State<StatefulComponent> createState();
 
   @override
-  StatefulBranch createBranch() => StatefulBranch(this);
+  StatefulElement createElement() => StatefulElement(this);
+
+  @override
+  @Deprecated('Use createElement instead.')
+  StatefulElement createBranch() => createElement();
 }
 
-/// Mutable state owned by a [StatefulBranch], with the
+/// Mutable state owned by a [StatefulElement], with the
 /// initState/didChangeDependencies/build/dispose lifecycle.
-abstract class State<T extends StatefulSeed> {
-  /// The current [StatefulSeed] configuration of the owning branch.
-  T get seed => _branch!.seed as T;
+abstract class State<T extends StatefulComponent> {
+  /// The current [StatefulComponent] configuration of the owning element.
+  T get component => _element!.component as T;
 
-  /// The owning branch's capability handle: a separate object, never
-  /// the branch itself; throws [StateError] when used after unmount.
-  TreeContext get context {
-    assert(_branch != null, 'context accessed outside branch lifecycle');
-    return _branch!.context;
+  /// Legacy spelling for [component].
+  @Deprecated('Use component instead.')
+  T get seed => component;
+
+  /// The owning element's capability handle: a separate object, never
+  /// the element itself; throws [StateError] when used after unmount.
+  BuildContext get context {
+    assert(_element != null, 'context accessed outside element lifecycle');
+    return _element!.context;
   }
 
-  StatefulBranch? _branch;
+  StatefulElement? _element;
 
   /// Called exactly once, before the first build.
   ///
   /// Inherited lookups here must be dependency-free — use
-  /// `context.getInheritedSeedOfExactType<T>()`. Registering a dependency
-  /// (`dependOnInheritedSeedOfExactType`) asserts in debug mode: initState
+  /// `context.getInheritedValueOfExactType<T>()`. Registering a dependency
+  /// (`dependOnInheritedValueOfExactType`) asserts in debug mode: initState
   /// never re-runs, so the natural move of caching the returned value goes
   /// stale when the provider changes. Cache-and-track belongs in
   /// [didChangeDependencies], which re-runs on every change.
@@ -55,50 +63,50 @@ abstract class State<T extends StatefulSeed> {
   void didChangeDependencies() {}
 
   /// Describes the child subtree for the current configuration and state.
-  Seed build(TreeContext context);
+  Component build(BuildContext context);
 
-  /// Called when the owning branch unmounts, before the subtree is released.
+  /// Called when the owning element unmounts, before the subtree is released.
   @protected
   void dispose() {}
 
-  /// The setState analogue: applies [fn], then marks the owning branch as
+  /// The setState analogue: applies [fn], then marks the owning element as
   /// needing rebuild.
   void setState(VoidCallback fn) {
     fn();
-    _branch!.markNeedsRebuild();
+    _element!.markNeedsRebuild();
   }
 }
 
-/// Mounted branch for a [StatefulSeed]: creates and owns the [State], drives
+/// Mounted element for a [StatefulComponent]: creates and owns the [State], drives
 /// its lifecycle, and delegates [build] to it.
-class StatefulBranch extends ComponentBranch {
-  /// Creates the branch and its [State] for [seed].
-  StatefulBranch(StatefulSeed seed) : super(seed) {
-    _state = seed.createState();
-    _state._branch = this;
+class StatefulElement extends BuildableElement {
+  /// Creates the element and its [State] for [component].
+  StatefulElement(StatefulComponent component) : super(component) {
+    _state = component.createState();
+    _state._element = this;
   }
 
-  late final State<StatefulSeed> _state;
+  late final State<StatefulComponent> _state;
   bool _firstBuild = true;
   bool _needsDidChangeDependencies = false;
 
-  /// The mutable state owned by this branch.
+  /// The mutable state owned by this element.
   ///
-  /// `@protected`: only this branch and its subclasses reach it (a domain
+  /// `@protected`: only this element and its subclasses reach it (a domain
   /// element upgrades the return type; an actionable element forwards to it).
-  /// It is **not** public API — external layers must not reach into a branch's
+  /// It is **not** public API — external layers must not reach into a element's
   /// `State`. Tests that need it access it with an
   /// `invalid_use_of_protected_member` ignore.
   @protected
-  State<StatefulSeed> get state => _state;
+  State<StatefulComponent> get state => _state;
 
   @override
-  Seed build(TreeContext context) => _state.build(context);
+  Component build(BuildContext context) => _state.build(context);
 
   @override
-  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) {
-    owner!.lifecyclePhaseGuard.checkCanDependOnInheritedSeedOfExactType<T>();
-    return super.dependOnInheritedSeedOfExactType<T>(aspect: aspect);
+  T? dependOnInheritedValueOfExactType<T extends Object>({Object? aspect}) {
+    owner!.lifecyclePhaseGuard.checkCanDependOnInheritedValueOfExactType<T>();
+    return super.dependOnInheritedValueOfExactType<T>(aspect: aspect);
   }
 
   @override
@@ -139,3 +147,11 @@ class StatefulBranch extends ComponentBranch {
     super.unmount();
   }
 }
+
+/// Legacy name for [StatefulComponent].
+@Deprecated('Use StatefulComponent instead.')
+typedef StatefulSeed = StatefulComponent;
+
+/// Legacy name for [StatefulElement].
+@Deprecated('Use StatefulElement instead.')
+typedef StatefulBranch = StatefulElement;

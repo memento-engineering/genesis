@@ -1,12 +1,12 @@
 /// Measurement domain on the tree spine.
 ///
-/// `Perception extends Seed`, `PerceptionElement extends Branch`,
-/// `PerceptionContext` is a capability extension of `TreeContext`, and
-/// `PerceptionOwner` builds on `TreeOwner`.
+/// `Perception extends Component`, `PerceptionElement extends Element`,
+/// `PerceptionContext` is a capability extension of `BuildContext`, and
+/// `PerceptionOwner` builds on `BuildOwner`.
 ///
 /// The tree spine is re-exported in full: perception's public signatures
-/// deliberately surface tree types, so consumers get `Seed`/`Branch`/
-/// `TreeContext`/`TreeOwner` — and the composition layer, including
+/// deliberately surface tree types, so consumers get `Component`/`Element`/
+/// `BuildContext`/`BuildOwner` — and the composition layer, including
 /// `Watch<T>`, which lives in tree's composition layer and perception consumes
 /// via this re-export — from this one import.
 library;

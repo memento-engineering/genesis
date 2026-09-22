@@ -82,7 +82,7 @@ class CatalogProp {
   final List<String>? enumValues;
 }
 
-/// How a catalog type binds to a Dart `Seed` constructor.
+/// How a catalog type binds to a Dart `Component` constructor.
 class DartBinding {
   /// Creates a binding; [childrenParam] is non-null iff the owning type is a
   /// container.
@@ -94,7 +94,7 @@ class DartBinding {
     this.childrenParam,
   });
 
-  /// The Dart class to construct (a `Seed` subclass).
+  /// The Dart class to construct (a `Component` subclass).
   final String className;
 
   /// Import URI for [className] — `package:` or relative to the generated

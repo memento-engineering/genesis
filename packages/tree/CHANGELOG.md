@@ -1,8 +1,15 @@
+# Changelog
+
+## 0.5.0
+
+- **Breaking:** the canonical spine vocabulary is now `Component` → `Element`, with separate `BuildContext`, `BuildOwner`, and `BuildableElement`; migrate `Seed`/`Branch`/`TreeContext`/`TreeOwner`/`ComponentBranch` and their family descendants to the new names. Deprecated typedefs preserve type identity, constructors, subclassing, and static dispatch.
+- **Breaking:** migrate members such as `createBranch()` → `createElement()`, `seed` → `component`, `branchId` → `elementId`, `State.seed` → `State.component`, and inherited lookup verbs to `dependOnInheritedValueOfExactType` / `getInheritedValueOfExactType`. Deprecated forwarding members remain for a separately approved removal release.
+- **Breaking:** the hooks family is now `HookComponent`/`HookBuildContext`/`HookElement` (from `Sprout`/`SproutContext`/`SproutBranch`), and provider context extensions use `ProviderBuildContext`. Normal `context.watch`/`context.read` calls remain source-compatible; explicitly naming the old extension cannot be bridged without ambiguous extension resolution.
+- **Breaking:** an external class using `implements TreeContext` must implement the new canonical members because a Dart interface alias cannot synthesize renamed instance members. `Element` and `BuildContext` remain unrelated types, and reconciliation, inherited propagation, provider ownership, hooks, and lifecycle guards are unchanged.
+
 ## 0.4.0
 
 Stable promotion of `0.4.0-dev.1`: the same content, published on the stable rung on Nico's promotion call (2026-09-12). The wave is additive over 0.3.1; the `0.4.0-dev.1` entry below carries the full list.
-
-# Changelog
 
 ## 0.4.0-dev.1
 

@@ -79,7 +79,7 @@ a2ui_core, so it is genuinely ours to build:
    gets unmounted, so a previously-valid intent can never be detected as
    pointing at a vanished component.
 
-genesis hit-tests a previously valid intent against the **live** Seed/Branch
+genesis hit-tests a previously valid intent against the **live** Component/Element
 tree, walked fresh per route call (no cached refs — the A8 rule). Keyed
 reconcile unmounts exactly the removed component while survivors keep identity
 *and* live state, which is precisely what makes `staleUnmounted` a first-class,
@@ -119,7 +119,7 @@ to the future agent-loop package, not consent.
 | Layer | Verdict |
 |---|---|
 | Action message vocabulary (`ActionEvent` ↔ `A2uiClientAction`) | **Interop — already aligned in dialogue (A25).** Two ends of one wire. Add a round-trip test; no dependency. |
-| Enforce/reject hit-test vs the live Seed/Branch tree + `x-actions` affordances; 4-kind rejection taxonomy; byte-for-byte-untouched; `staleUnmounted` (A8 bridge); enforce via `perceived()` | **Genesis-native — the moat.** a2ui_core has no element tree, no lifecycle, no rejection model. Build it here. |
+| Enforce/reject hit-test vs the live Component/Element tree + `x-actions` affordances; 4-kind rejection taxonomy; byte-for-byte-untouched; `staleUnmounted` (A8 bridge); enforce via `perceived()` | **Genesis-native — the moat.** a2ui_core has no element tree, no lifecycle, no rejection model. Build it here. |
 | Reactive `DataModel` + expressions + binder | **Not consent's.** It is the data-binding alternative to setState-enforcement and the home for dialogue's deferred `updateDataModel` half (A26 dialogue concern). |
 | `ToolDefinition` | **Not consent's.** Agent-loop wrapper (A26 item 4); wrong granularity for affordances. |
 | Multi-party consensus | **Parked, lean LWW** (ADR-0005 Decision 6; spike-5 probe). Unchanged. |

@@ -5,7 +5,7 @@ import 'package:genesis_console/genesis_console.dart';
 import 'package:test/test.dart';
 
 void main() {
-  // A path guaranteed not to exist, so the secrets-file branch is skipped.
+  // A path guaranteed not to exist, so the secrets-file element is skipped.
   final missing = File(
     '${Directory.systemTemp.path}/genesis-console-no-such.json',
   );

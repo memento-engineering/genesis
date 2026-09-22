@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- **Breaking:** `DialogueSurface` now owns a `BuildOwner`, reconciles `Component`/`Element` values through `buildComponentTree`, and exposes `rootElement`; migrate `rootBranch` to `rootElement`. The deprecated forwarding getter remains, and A2UI fields and reconcile semantics are unchanged.
+
 ## 0.1.2
 
 - `DialogueSurface.apply` verifies root compatibility itself and **release builds now enforce** it: a message whose root component id resolves to a different component type throws `StateError` before the mounted tree is touched, instead of relying on a stripped assertion. Surface metadata (`surfaceId`) is committed only after the root update succeeds, so a failed apply no longer leaves the surface describing a message its tree never took. No API change.
