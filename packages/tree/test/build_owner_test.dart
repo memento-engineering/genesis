@@ -1,35 +1,35 @@
-// Port of perception's perception_owner_test.dart to tree vocabulary.
+// Build-owner scheduling and flush coverage.
 import 'package:test/test.dart';
 import 'package:genesis_tree/genesis_tree.dart';
 
-class _FakeS extends Seed {
+class _FakeS extends Component {
   const _FakeS({this.childConfig});
-  final Seed? childConfig;
+  final Component? childConfig;
   @override
-  _FakeB createBranch() => _FakeB(this);
+  _FakeB createElement() => _FakeB(this);
 }
 
-class _FakeB extends Branch {
-  _FakeB(_FakeS super.seed);
+class _FakeB extends Element {
+  _FakeB(_FakeS super.component);
   int buildCount = 0;
-  Branch? childBranch;
+  Element? childElement;
 
   @override
   void performRebuild() {
     buildCount++;
-    final child = (seed as _FakeS).childConfig;
-    childBranch = updateChild(childBranch, child, 0);
+    final child = (component as _FakeS).childConfig;
+    childElement = updateChild(childElement, child, 0);
   }
 }
 
-class _RedirtyS extends Seed {
+class _RedirtyS extends Component {
   const _RedirtyS();
   @override
-  _RedirtyB createBranch() => _RedirtyB(this);
+  _RedirtyB createElement() => _RedirtyB(this);
 }
 
-class _RedirtyB extends Branch {
-  _RedirtyB(super.seed);
+class _RedirtyB extends Element {
+  _RedirtyB(super.component);
 
   @override
   void performRebuild() {
@@ -37,38 +37,38 @@ class _RedirtyB extends Branch {
   }
 }
 
-class _ObservingS extends Seed {
+class _ObservingS extends Component {
   const _ObservingS();
   @override
-  _ObservingB createBranch() => _ObservingB(this);
+  _ObservingB createElement() => _ObservingB(this);
 }
 
-class _ObservingB extends Branch {
-  _ObservingB(super.seed);
+class _ObservingB extends Element {
+  _ObservingB(super.component);
   int? lastValue;
 
   @override
   void performRebuild() {
-    lastValue = dependOnInheritedSeedOfExactType<int>();
+    lastValue = dependOnInheritedValueOfExactType<int>();
   }
 }
 
-class _CascadeSeed extends Seed {
-  const _CascadeSeed();
+class _CascadeComponent extends Component {
+  const _CascadeComponent();
 
   @override
-  _CascadeBranch createBranch() => _CascadeBranch(this);
+  _CascadeElement createElement() => _CascadeElement(this);
 }
 
-class _CascadeBranch extends Branch {
-  _CascadeBranch(super.seed);
+class _CascadeElement extends Element {
+  _CascadeElement(super.component);
 
-  final List<Branch> _children = [];
-  List<Seed> nextChildSeeds = const [];
+  final List<Element> _children = [];
+  List<Component> nextChildSeeds = const [];
   void Function()? postReconcile;
   int buildCount = 0;
 
-  List<Branch> get mountedChildren => List.unmodifiable(_children);
+  List<Element> get mountedChildren => List.unmodifiable(_children);
 
   @override
   void performRebuild() {
@@ -81,7 +81,7 @@ class _CascadeBranch extends Branch {
   }
 
   @override
-  void visitChildren(void Function(Branch child) visitor) {
+  void visitChildren(void Function(Element child) visitor) {
     _children.forEach(visitor);
   }
 
@@ -96,9 +96,9 @@ class _CascadeBranch extends Branch {
 }
 
 void main() {
-  group('TreeOwner.mountRoot', () {
-    test('assigns owner to root branch before mount', () {
-      final owner = TreeOwner();
+  group('BuildOwner.mountRoot', () {
+    test('assigns owner to root element before mount', () {
+      final owner = BuildOwner();
       final root = owner.mountRoot(_FakeS()) as _FakeB;
       expect(root.owner, same(owner));
       expect(root.depth, 0);
@@ -106,16 +106,16 @@ void main() {
     });
 
     test('child mounted via updateChild inherits owner and depth=1', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final root = owner.mountRoot(_FakeS(childConfig: _FakeS())) as _FakeB;
       root.performRebuild(); // mounts child
-      expect(root.childBranch?.owner, same(owner));
-      expect(root.childBranch?.depth, 1);
+      expect(root.childElement?.owner, same(owner));
+      expect(root.childElement?.depth, 1);
       owner.dispose();
     });
 
     test('throws if mountRoot called twice', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       owner.mountRoot(_FakeS());
       expect(() => owner.mountRoot(_FakeS()), throwsA(isA<AssertionError>()));
       owner.dispose();
@@ -124,7 +124,7 @@ void main() {
 
   group('scheduleRebuildFor + onNeedsFlush', () {
     test('fires onNeedsFlush exactly once on empty->non-empty', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final root = owner.mountRoot(_FakeS()) as _FakeB;
       int fired = 0;
       owner.onNeedsFlush = () => fired++;
@@ -136,10 +136,10 @@ void main() {
     });
 
     test('fires again after flush empties dirty set', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final root = owner.mountRoot(_FakeS(childConfig: _FakeS())) as _FakeB;
       root.performRebuild();
-      final child = root.childBranch!;
+      final child = root.childElement!;
       int fired = 0;
       owner.onNeedsFlush = () => fired++;
 
@@ -153,19 +153,19 @@ void main() {
 
   group('flush', () {
     test(
-      'end-to-end: InheritedSeed value change -> rebuild reads new value',
+      'end-to-end: InheritedComponent value change -> rebuild reads new value',
       () {
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         final fakeS = _ObservingS();
         final root = owner.mountRoot(
-          InheritedSeed<int>(value: 5, child: fakeS),
+          InheritedComponent<int>(value: 5, child: fakeS),
         );
-        final ipBranch = root as InheritedBranch<int>;
-        final fakeBranch = ipBranch.childBranch as _ObservingB;
-        fakeBranch.performRebuild(); // register dependency
-        root.update(InheritedSeed<int>(value: 7, child: fakeS));
+        final ipElement = root as InheritedElement<int>;
+        final fakeElement = ipElement.childElement as _ObservingB;
+        fakeElement.performRebuild(); // register dependency
+        root.update(InheritedComponent<int>(value: 7, child: fakeS));
         owner.flush();
-        expect(fakeBranch.lastValue, 7);
+        expect(fakeElement.lastValue, 7);
         owner.dispose();
       },
     );
@@ -173,17 +173,17 @@ void main() {
     test(
       'depth ordering: parent rebuilt before child, no redundant child rebuild',
       () {
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         final child = _FakeS();
         final root = owner.mountRoot(_FakeS(childConfig: child)) as _FakeB;
         root.performRebuild(); // establish child
-        final childBranch = root.childBranch! as _FakeB;
+        final childElement = root.childElement! as _FakeB;
 
         root.markNeedsRebuild();
-        childBranch.markNeedsRebuild();
+        childElement.markNeedsRebuild();
 
         final rootBuildsBefore = root.buildCount;
-        final childBuildsBefore = childBranch.buildCount;
+        final childBuildsBefore = childElement.buildCount;
         owner.flush();
         // Root must have been rebuilt exactly once during flush
         expect(root.buildCount - rootBuildsBefore, 1);
@@ -191,7 +191,7 @@ void main() {
         // (under A9, the root's reconcile force-rebuilds the child once and
         // clears its dirty flag, so the drain skips it).
         expect(
-          childBranch.buildCount - childBuildsBefore,
+          childElement.buildCount - childBuildsBefore,
           lessThanOrEqualTo(1),
         );
         owner.dispose();
@@ -199,14 +199,15 @@ void main() {
     );
 
     test('restored root may dirty an identical-skipped descendant', () {
-      final owner = TreeOwner();
-      final root = owner.mountRoot(const _CascadeSeed()) as _CascadeBranch;
-      root.nextChildSeeds = [_CascadeSeed(), _CascadeSeed()];
+      final owner = BuildOwner();
+      final root =
+          owner.mountRoot(const _CascadeComponent()) as _CascadeElement;
+      root.nextChildSeeds = [_CascadeComponent(), _CascadeComponent()];
       root.rebuild(force: true);
-      final first = root.mountedChildren[0] as _CascadeBranch;
-      final target = root.mountedChildren[1] as _CascadeBranch;
+      final first = root.mountedChildren[0] as _CascadeElement;
+      final target = root.mountedChildren[1] as _CascadeElement;
 
-      root.nextChildSeeds = [_CascadeSeed(), target.seed];
+      root.nextChildSeeds = [_CascadeComponent(), target.component];
       root.postReconcile = target.markNeedsRebuild;
       root.markNeedsRebuild();
 
@@ -220,22 +221,23 @@ void main() {
     });
 
     test('deeper cousin dirty from a later cascade sibling is rejected', () {
-      final owner = TreeOwner();
-      final root = owner.mountRoot(const _CascadeSeed()) as _CascadeBranch;
-      root.nextChildSeeds = [_CascadeSeed(), _CascadeSeed()];
+      final owner = BuildOwner();
+      final root =
+          owner.mountRoot(const _CascadeComponent()) as _CascadeElement;
+      root.nextChildSeeds = [_CascadeComponent(), _CascadeComponent()];
       root.rebuild(force: true);
-      final first = root.mountedChildren[0] as _CascadeBranch;
-      final laterSibling = root.mountedChildren[1] as _CascadeBranch;
-      first.nextChildSeeds = [_CascadeSeed()];
+      final first = root.mountedChildren[0] as _CascadeElement;
+      final laterSibling = root.mountedChildren[1] as _CascadeElement;
+      first.nextChildSeeds = [_CascadeComponent()];
       first.rebuild(force: true);
-      final target = first.mountedChildren.single as _CascadeBranch;
+      final target = first.mountedChildren.single as _CascadeElement;
 
       // The depth-2 target is force-updated earlier in this same cascade. It
       // would look valid against the depth-0 drained root, but it is not a
       // descendant of the later depth-1 sibling whose build dirties it.
-      first.nextChildSeeds = [_CascadeSeed()];
+      first.nextChildSeeds = [_CascadeComponent()];
       laterSibling.postReconcile = target.markNeedsRebuild;
-      root.nextChildSeeds = [_CascadeSeed(), _CascadeSeed()];
+      root.nextChildSeeds = [_CascadeComponent(), _CascadeComponent()];
       root.markNeedsRebuild();
 
       expect(
@@ -245,8 +247,8 @@ void main() {
             (error) => error.message,
             'message',
             allOf(
-              contains('branch ${target.branchId}'),
-              contains('branch ${laterSibling.branchId}'),
+              contains('element ${target.elementId}'),
+              contains('element ${laterSibling.elementId}'),
               contains('descendant'),
               contains('may not be visited in this flush pass'),
             ),
@@ -260,7 +262,7 @@ void main() {
     test(
       'pathological re-dirty: performRebuild re-dirties self throws StateError',
       () {
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         final root = owner.mountRoot(_RedirtyS());
         root.markNeedsRebuild();
         expect(() => owner.flush(), throwsA(isA<StateError>()));
@@ -269,7 +271,7 @@ void main() {
     );
 
     test('flush is a no-op when dirty set is empty', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       owner.mountRoot(_FakeS());
       expect(() => owner.flush(), returnsNormally);
       expect(owner.flush(), isEmpty);
@@ -278,15 +280,15 @@ void main() {
   });
 
   group('dispose / unmountRoot', () {
-    test('unmountRoot unmounts the root branch', () {
-      final owner = TreeOwner();
+    test('unmountRoot unmounts the root element', () {
+      final owner = BuildOwner();
       final root = owner.mountRoot(_FakeS());
       owner.unmountRoot();
       expect(root.mounted, isFalse);
     });
 
     test('dispose unmounts root and clears dirty set', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       final root = owner.mountRoot(_FakeS());
       root.markNeedsRebuild();
       owner.dispose();

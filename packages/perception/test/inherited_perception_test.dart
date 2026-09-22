@@ -22,20 +22,20 @@ class _E extends PerceptionElement {
 }
 
 InheritedPerceptionElement<String> _mountInherited(
-  Branch parent,
+  Element parent,
   String value,
 ) {
   final ip = InheritedPerception<String>(value: value, child: _P());
-  final el = ip.createBranch();
+  final el = ip.createElement();
   el.mount(parent, 0);
   return el;
 }
 
 void main() {
   group('InheritedPerception construction', () {
-    test('createBranch returns InheritedPerceptionElement<T>', () {
+    test('createElement returns InheritedPerceptionElement<T>', () {
       final ip = InheritedPerception<String>(value: 'x', child: _P());
-      expect(ip.createBranch(), isA<InheritedPerceptionElement<String>>());
+      expect(ip.createElement(), isA<InheritedPerceptionElement<String>>());
     });
 
     test('value and child are preserved', () {
@@ -46,7 +46,7 @@ void main() {
     });
   });
 
-  group('dependOnInheritedSeedOfExactType — lookup', () {
+  group('dependOnInheritedValueOfExactType — lookup', () {
     late PerceptionOwner testOwner;
     late _E root;
     setUp(() {
@@ -59,7 +59,7 @@ void main() {
       final ip = _mountInherited(root, 'hello');
       final leaf = _E(_P())..mount(ip, 0);
 
-      expect(leaf.dependOnInheritedSeedOfExactType<String>(), 'hello');
+      expect(leaf.dependOnInheritedValueOfExactType<String>(), 'hello');
     });
 
     test('returns value from grandparent provider (O(n) walk)', () {
@@ -67,26 +67,26 @@ void main() {
       final mid = _E(_P())..mount(ip, 0);
       final leaf = _E(_P())..mount(mid, 0);
 
-      expect(leaf.dependOnInheritedSeedOfExactType<String>(), 'deep');
+      expect(leaf.dependOnInheritedValueOfExactType<String>(), 'deep');
     });
 
     test('returns null when no ancestor of type T exists', () {
       final leaf = _E(_P())..mount(root, 0);
-      expect(leaf.dependOnInheritedSeedOfExactType<String>(), isNull);
+      expect(leaf.dependOnInheritedValueOfExactType<String>(), isNull);
     });
 
     test('skips InheritedPerception<OtherType> and finds correct type', () {
       final intIp = InheritedPerception<int>(value: 7, child: _P());
-      final intEl = intIp.createBranch();
+      final intEl = intIp.createElement();
       intEl.mount(root, 0);
 
       final strIp = InheritedPerception<String>(value: 'found', child: _P());
-      final strEl = strIp.createBranch();
+      final strEl = strIp.createElement();
       strEl.mount(intEl, 0);
 
       final leaf = _E(_P())..mount(strEl, 0);
-      expect(leaf.dependOnInheritedSeedOfExactType<String>(), 'found');
-      expect(leaf.dependOnInheritedSeedOfExactType<int>(), 7);
+      expect(leaf.dependOnInheritedValueOfExactType<String>(), 'found');
+      expect(leaf.dependOnInheritedValueOfExactType<int>(), 7);
     });
   });
 
@@ -105,18 +105,18 @@ void main() {
     tearDown(() => testOwner.dispose());
 
     test('lookup registers the caller as a dependent', () {
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
       expect(ip.dependents, contains(leaf));
     });
 
     test('registration is idempotent — two calls, one entry', () {
-      leaf.dependOnInheritedSeedOfExactType<String>();
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
       expect(ip.dependents.length, 1);
     });
 
     test('leaf dependencies contains the provider', () {
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
       expect(leaf.dependencies, contains(ip));
     });
   });
@@ -132,7 +132,7 @@ void main() {
       root = testOwner.mountRoot(_P()) as _E;
       ip = _mountInherited(root, 'old');
       leaf = _E(_P())..mount(ip, 0);
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
     });
     tearDown(() => testOwner.dispose());
 
@@ -155,10 +155,10 @@ void main() {
 
     test('custom updateShouldNotify is honoured', () {
       const nn = _NeverNotify('a');
-      final nnEl = nn.createBranch();
+      final nnEl = nn.createElement();
       nnEl.mount(root, 1);
       final l2 = _E(_P())..mount(nnEl, 0);
-      l2.dependOnInheritedSeedOfExactType<String>();
+      l2.dependOnInheritedValueOfExactType<String>();
 
       nnEl.update(const _NeverNotify('b'));
       expect(l2.harvested, isFalse);
@@ -176,7 +176,7 @@ void main() {
       root = testOwner.mountRoot(_P()) as _E;
       ip = _mountInherited(root, 'v');
       leaf = _E(_P())..mount(ip, 0);
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
     });
     tearDown(() => testOwner.dispose());
 
@@ -204,7 +204,7 @@ void main() {
       root = testOwner.mountRoot(_P()) as _E;
       ip = _mountInherited(root, 'v');
       leaf = _E(_P())..mount(ip, 0);
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
     });
     tearDown(() => testOwner.dispose());
 
@@ -225,14 +225,14 @@ void main() {
   });
 
   group('Tree-spine guard', () {
-    test('InheritedPerceptionElement is a tree Branch (A12 layering)', () {
+    test('InheritedPerceptionElement is a tree Element (A12 layering)', () {
       // A12 delta: lenny asserted isA<PerceptionElement> here. Composition
       // elements are tree types now (ADR-0001 Decision 3); only artifact
       // elements extend PerceptionElement.
       final ip = InheritedPerception<String>(value: 'x', child: _P());
-      final el = ip.createBranch();
-      expect(el, isA<InheritedBranch<String>>());
-      expect(el, isA<Branch>());
+      final el = ip.createElement();
+      expect(el, isA<InheritedElement<String>>());
+      expect(el, isA<Element>());
     });
   });
 }

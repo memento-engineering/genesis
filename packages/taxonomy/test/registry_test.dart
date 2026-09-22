@@ -3,7 +3,7 @@ import 'package:genesis_tree/genesis_tree.dart';
 import 'package:test/test.dart';
 
 import 'src/fixture.g.dart';
-import 'src/fixture_seeds.dart';
+import 'src/fixture_components.dart';
 
 void main() {
   group('registry round-trip', () {
@@ -14,7 +14,7 @@ void main() {
     });
 
     test('every prop kind constructs (string/number/integer/boolean/enum)', () {
-      final seed =
+      final component =
           componentRegistry.buildComponent(
                 'gauge',
                 {
@@ -28,16 +28,16 @@ void main() {
                 ValueKey('g1'),
               )
               as Gauge;
-      expect(seed.label, 'Fuel');
-      expect(seed.value, 7.5);
-      expect(seed.scale, 20);
-      expect(seed.enabled, isFalse);
-      expect(seed.align, 'center');
-      expect(seed.key, const ValueKey('g1'));
+      expect(component.label, 'Fuel');
+      expect(component.value, 7.5);
+      expect(component.scale, 20);
+      expect(component.enabled, isFalse);
+      expect(component.align, 'center');
+      expect(component.key, const ValueKey('g1'));
     });
 
     test('omitted optional props take their catalog defaults', () {
-      final seed =
+      final component =
           componentRegistry.buildComponent(
                 'gauge',
                 {'label': 'Fuel', 'value': 1.0},
@@ -45,13 +45,13 @@ void main() {
                 ValueKey('g1'),
               )
               as Gauge;
-      expect(seed.scale, 10);
-      expect(seed.enabled, isTrue);
-      expect(seed.align, 'start');
+      expect(component.scale, 10);
+      expect(component.enabled, isTrue);
+      expect(component.align, 'start');
     });
 
     test('explicit null on an optional prop takes the default', () {
-      final seed =
+      final component =
           componentRegistry.buildComponent(
                 'gauge',
                 {'label': 'Fuel', 'value': 1.0, 'align': null},
@@ -59,11 +59,11 @@ void main() {
                 ValueKey('g1'),
               )
               as Gauge;
-      expect(seed.align, 'start');
+      expect(component.align, 'start');
     });
 
     test('integral JSON numbers widen to double for number props', () {
-      final seed =
+      final component =
           componentRegistry.buildComponent(
                 'gauge',
                 {'label': 'Fuel', 'value': 7},
@@ -71,7 +71,7 @@ void main() {
                 ValueKey('g1'),
               )
               as Gauge;
-      expect(seed.value, 7.0);
+      expect(component.value, 7.0);
     });
 
     test('containers receive children; named string props bind', () {

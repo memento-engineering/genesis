@@ -14,7 +14,7 @@ import 'package:genesis_typesetting/genesis_typesetting.dart';
 /// The A22+A23 adapter: maps a perception [Node] (with [Field] leaves) into
 /// a [Box] of `name: value` [Text] lines — domain vocabulary composing
 /// render seeds, exactly as widgets compose RenderObjectWidgets.
-class NodeBox extends StatelessSeed {
+class NodeBox extends StatelessComponent {
   const NodeBox(this.node, {this.accent = -1, super.key});
 
   /// The perception subtree to typeset.
@@ -24,7 +24,7 @@ class NodeBox extends StatelessSeed {
   final int accent;
 
   @override
-  Seed build(TreeContext context) => Box(
+  Component build(BuildContext context) => Box(
     title: node.name,
     accent: accent,
     children: [
@@ -37,13 +37,13 @@ class NodeBox extends StatelessSeed {
 
 /// Static subtree that counts its builds — instrumentation for the
 /// "static subtree never rebuilt" assertion.
-class CountingStaticBox extends StatelessSeed {
+class CountingStaticBox extends StatelessComponent {
   const CountingStaticBox({required this.onBuild, super.key});
 
   final void Function() onBuild;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     onBuild();
     return const NodeBox(
       Node(

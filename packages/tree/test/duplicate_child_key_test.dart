@@ -10,7 +10,7 @@ import 'src/fixtures.dart';
 
 void main() {
   test('duplicate sibling keys trip the guard at mount, naming the key', () {
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     expect(
       () => owner.mountRoot(
         const Node(
@@ -33,7 +33,7 @@ void main() {
 
   test('distinct keys and multiple unkeyed siblings reconcile fine', () {
     final root =
-        TreeOwner().mountRoot(
+        BuildOwner().mountRoot(
               const Node(
                 'parent',
                 children: [
@@ -44,16 +44,16 @@ void main() {
                 ],
               ),
             )
-            as NodeBranch;
+            as NodeElement;
     expect(root.children.length, 4);
   });
 
   test('an update that introduces a duplicate key also trips the guard', () {
     final root =
-        TreeOwner().mountRoot(
+        BuildOwner().mountRoot(
               const Node('parent', children: [Leaf('a', key: ValueKey('k1'))]),
             )
-            as NodeBranch;
+            as NodeElement;
     expect(
       () => root.update(
         const Node(

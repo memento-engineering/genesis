@@ -1,15 +1,15 @@
-// InheritedModelSeed — aspect-scoped inherited dependencies.
+// InheritedModel — aspect-scoped inherited dependencies.
 import 'package:genesis_tree/genesis_tree.dart';
 import 'package:test/test.dart';
 
-class _S extends Seed {
+class _S extends Component {
   const _S();
   @override
-  _B createBranch() => _B(this);
+  _B createElement() => _B(this);
 }
 
-class _B extends Branch {
-  _B(_S super.seed);
+class _B extends Element {
+  _B(_S super.component);
   bool marked = false;
   @override
   void markNeedsRebuild() {
@@ -34,35 +34,36 @@ class _Routing {
 }
 
 /// A model that reports a change per lane — the committee-routing shape.
-class _RoutingModel extends InheritedModelSeed<_Routing, _Lane> {
+class _RoutingModel extends InheritedModel<_Routing, _Lane> {
   const _RoutingModel({required super.value, required super.child});
 
   @override
   bool updateShouldNotifyDependent(
-    covariant _RoutingModel oldSeed,
+    covariant _RoutingModel oldComponent,
     Set<_Lane> dependencies,
   ) => dependencies.any(
     (lane) => switch (lane) {
-      _Lane.adrAlignment => value.adrAlignment != oldSeed.value.adrAlignment,
-      _Lane.coherence => value.coherence != oldSeed.value.coherence,
+      _Lane.adrAlignment =>
+        value.adrAlignment != oldComponent.value.adrAlignment,
+      _Lane.coherence => value.coherence != oldComponent.value.coherence,
     },
   );
 }
 
 const _v0 = _Routing(adrAlignment: 'opus', coherence: 'sonnet');
 
-InheritedModelBranch<_Routing, _Lane> _mountModel(Branch parent, _Routing v) {
-  final branch = _RoutingModel(value: v, child: const _S()).createBranch();
-  branch.mount(parent, 0);
-  return branch;
+InheritedModelElement<_Routing, _Lane> _mountModel(Element parent, _Routing v) {
+  final element = _RoutingModel(value: v, child: const _S()).createElement();
+  element.mount(parent, 0);
+  return element;
 }
 
 void main() {
-  late TreeOwner owner;
+  late BuildOwner owner;
   late _B root;
 
   setUp(() {
-    owner = TreeOwner();
+    owner = BuildOwner();
     root = owner.mountRoot(const _S()) as _B;
   });
   tearDown(() => owner.dispose());
@@ -72,10 +73,10 @@ void main() {
       final model = _mountModel(root, _v0);
       final adr = _B(const _S())..mount(model, 0);
       final coh = _B(const _S())..mount(model, 1);
-      adr.dependOnInheritedSeedOfExactType<_Routing>(
+      adr.dependOnInheritedValueOfExactType<_Routing>(
         aspect: _Lane.adrAlignment,
       );
-      coh.dependOnInheritedSeedOfExactType<_Routing>(aspect: _Lane.coherence);
+      coh.dependOnInheritedValueOfExactType<_Routing>(aspect: _Lane.coherence);
 
       model.update(
         const _RoutingModel(
@@ -91,7 +92,7 @@ void main() {
     test('a no-aspect dependent is invalidated by any change', () {
       final model = _mountModel(root, _v0);
       final whole = _B(const _S())..mount(model, 0);
-      whole.dependOnInheritedSeedOfExactType<_Routing>();
+      whole.dependOnInheritedValueOfExactType<_Routing>();
 
       model.update(
         const _RoutingModel(
@@ -108,10 +109,10 @@ void main() {
       final model = _mountModel(root, _v0);
       final adr = _B(const _S())..mount(model, 0);
       final whole = _B(const _S())..mount(model, 1);
-      adr.dependOnInheritedSeedOfExactType<_Routing>(
+      adr.dependOnInheritedValueOfExactType<_Routing>(
         aspect: _Lane.adrAlignment,
       );
-      whole.dependOnInheritedSeedOfExactType<_Routing>();
+      whole.dependOnInheritedValueOfExactType<_Routing>();
 
       model.update(const _RoutingModel(value: _v0, child: _S()));
 
@@ -120,13 +121,13 @@ void main() {
     });
 
     test('the default updateShouldNotifyDependent notifies every aspect', () {
-      const seed = InheritedModelSeed<String, _Lane>(value: 'a', child: _S());
-      final model = seed.createBranch()..mount(root, 0);
+      const component = InheritedModel<String, _Lane>(value: 'a', child: _S());
+      final model = component.createElement()..mount(root, 0);
       final dep = _B(const _S())..mount(model, 0);
-      dep.dependOnInheritedSeedOfExactType<String>(aspect: _Lane.coherence);
+      dep.dependOnInheritedValueOfExactType<String>(aspect: _Lane.coherence);
 
       model.update(
-        const InheritedModelSeed<String, _Lane>(value: 'b', child: _S()),
+        const InheritedModel<String, _Lane>(value: 'b', child: _S()),
       );
 
       expect(dep.marked, isTrue);
@@ -136,14 +137,14 @@ void main() {
       final model = _mountModel(root, _v0);
       final dep = _B(const _S())..mount(model, 0);
 
-      expect(dep.dependOnInheritedSeedOfExactType<_Routing>(), _v0);
+      expect(dep.dependOnInheritedValueOfExactType<_Routing>(), _v0);
     });
 
-    test('the TreeContext handle forwards the aspect', () {
+    test('the BuildContext handle forwards the aspect', () {
       final model = _mountModel(root, _v0);
       final dep = _B(const _S())..mount(model, 0);
 
-      dep.context.dependOnInheritedSeedOfExactType<_Routing>(
+      dep.context.dependOnInheritedValueOfExactType<_Routing>(
         aspect: _Lane.coherence,
       );
 
@@ -155,11 +156,11 @@ void main() {
     test('a no-aspect lookup widens and cannot be re-narrowed', () {
       final model = _mountModel(root, _v0);
       final dep = _B(const _S())..mount(model, 0);
-      dep.dependOnInheritedSeedOfExactType<_Routing>(
+      dep.dependOnInheritedValueOfExactType<_Routing>(
         aspect: _Lane.adrAlignment,
       );
-      dep.dependOnInheritedSeedOfExactType<_Routing>();
-      dep.dependOnInheritedSeedOfExactType<_Routing>(aspect: _Lane.coherence);
+      dep.dependOnInheritedValueOfExactType<_Routing>();
+      dep.dependOnInheritedValueOfExactType<_Routing>(aspect: _Lane.coherence);
 
       expect(model.aspectsOf(dep), isEmpty);
 
@@ -174,15 +175,15 @@ void main() {
   });
 
   group('loud guards', () {
-    test('an aspect against a plain InheritedSeed throws', () {
-      final plain = const InheritedSeed<String>(
+    test('an aspect against a plain InheritedComponent throws', () {
+      final plain = const InheritedComponent<String>(
         value: 'x',
         child: _S(),
-      ).createBranch()..mount(root, 0);
+      ).createElement()..mount(root, 0);
       final dep = _B(const _S())..mount(plain, 0);
 
       expect(
-        () => dep.dependOnInheritedSeedOfExactType<String>(
+        () => dep.dependOnInheritedValueOfExactType<String>(
           aspect: _Lane.coherence,
         ),
         throwsArgumentError,
@@ -194,8 +195,9 @@ void main() {
       final dep = _B(const _S())..mount(model, 0);
 
       expect(
-        () =>
-            dep.dependOnInheritedSeedOfExactType<_Routing>(aspect: 'coherence'),
+        () => dep.dependOnInheritedValueOfExactType<_Routing>(
+          aspect: 'coherence',
+        ),
         throwsArgumentError,
       );
       expect(model.aspectsOf(dep), isNull);
@@ -207,7 +209,7 @@ void main() {
     test('removeDependent clears the aspect entry', () {
       final model = _mountModel(root, _v0);
       final dep = _B(const _S())..mount(model, 0);
-      dep.dependOnInheritedSeedOfExactType<_Routing>(aspect: _Lane.coherence);
+      dep.dependOnInheritedValueOfExactType<_Routing>(aspect: _Lane.coherence);
 
       model.removeDependent(dep);
 
@@ -219,7 +221,7 @@ void main() {
     test('dependent unmount clears the aspect entry', () {
       final model = _mountModel(root, _v0);
       final dep = _B(const _S())..mount(model, 0);
-      dep.dependOnInheritedSeedOfExactType<_Routing>(aspect: _Lane.coherence);
+      dep.dependOnInheritedValueOfExactType<_Routing>(aspect: _Lane.coherence);
 
       dep.unmount();
 
@@ -230,7 +232,7 @@ void main() {
     test('provider unmount clears all aspect entries', () {
       final model = _mountModel(root, _v0);
       final dep = _B(const _S())..mount(model, 0);
-      dep.dependOnInheritedSeedOfExactType<_Routing>(aspect: _Lane.coherence);
+      dep.dependOnInheritedValueOfExactType<_Routing>(aspect: _Lane.coherence);
 
       model.unmount();
 
@@ -240,10 +242,10 @@ void main() {
     });
   });
 
-  group('the StatefulBranch override forwards the aspect', () {
+  group('the StatefulElement override forwards the aspect', () {
     test('a State build with an aspect registers exactly that aspect', () {
       final model = _mountModel(root, _v0);
-      final host = _AspectSeed().createBranch()..mount(model, 0);
+      final host = _AspectComponent().createElement()..mount(model, 0);
       owner.flush();
 
       expect(model.aspectsOf(host), {_Lane.coherence});
@@ -251,15 +253,17 @@ void main() {
   });
 }
 
-class _AspectSeed extends StatefulSeed {
+class _AspectComponent extends StatefulComponent {
   @override
-  State<_AspectSeed> createState() => _AspectState();
+  State<_AspectComponent> createState() => _AspectState();
 }
 
-class _AspectState extends State<_AspectSeed> {
+class _AspectState extends State<_AspectComponent> {
   @override
-  Seed build(TreeContext context) {
-    context.dependOnInheritedSeedOfExactType<_Routing>(aspect: _Lane.coherence);
+  Component build(BuildContext context) {
+    context.dependOnInheritedValueOfExactType<_Routing>(
+      aspect: _Lane.coherence,
+    );
     return const _S();
   }
 }

@@ -127,7 +127,7 @@ void main() {
       final event = parseActionEvent(goodAction());
       expect(event.sourceComponentId, 'f_name');
 
-      // No mutation: same Branch, same value, still mounted.
+      // No mutation: same Element, same value, still mounted.
       expect(identical(root.children.single, fieldBefore), isTrue);
       expect(fieldBefore.field.value, 'Nico');
       expect(fieldBefore.mounted, isTrue);

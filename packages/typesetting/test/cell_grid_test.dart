@@ -1,6 +1,6 @@
 /// The spike-2 property suite as real tests (ADR-0004 Decision 2): diff
 /// correctness, diff minimality, idempotence, and emission economy — all
-/// deterministic (constant RNG seed).
+/// deterministic (constant RNG component).
 library;
 
 import 'dart:math';
@@ -11,7 +11,7 @@ import 'package:test/test.dart';
 void main() {
   group('double-buffer diff', () {
     test('correctness: replaying the change list onto the old front buffer '
-        'reproduces the back buffer (8 randomized rounds, seed 42)', () {
+        'reproduces the back buffer (8 randomized rounds, component 42)', () {
       const rounds = 8;
       final rng = Random(42);
       final grid = CellGrid(40, 12);
@@ -38,7 +38,7 @@ void main() {
     });
 
     test('minimality: change count == ground-truth differing cells; '
-        'no-op rewrites never appear (8 randomized rounds, seed 42)', () {
+        'no-op rewrites never appear (8 randomized rounds, component 42)', () {
       const rounds = 8;
       final rng = Random(42);
       final grid = CellGrid(40, 12);

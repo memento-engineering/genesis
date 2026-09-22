@@ -49,13 +49,13 @@ final class _DisposeSpy {
 }
 
 /// Watches the owned `_Value` and the adopted `_DisposeSpy` — the dependent
-/// that keeps both providers' branches genuinely load-bearing while mounted.
-final class _SpyWatch extends StatelessSeed {
+/// that keeps both providers' elements genuinely load-bearing while mounted.
+final class _SpyWatch extends StatelessComponent {
   const _SpyWatch(this.values);
   final List<Object?> values;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     values
       ..add(context.watch<_Value>()?.name)
       ..add(context.watch<_DisposeSpy>() != null);
@@ -68,23 +68,23 @@ final class _SpyWatch extends StatelessSeed {
 /// announcing flush, so tests pump, then flush again to observe the rebuild.
 Future<void> _pump() => Future<void>.delayed(Duration.zero);
 
-final class _Watch extends StatelessSeed {
+final class _Watch extends StatelessComponent {
   const _Watch(this.values);
   final List<String?> values;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     values.add(context.watch<_Value>()?.name);
     return const _Leaf();
   }
 }
 
-final class _WatchBoth extends StatelessSeed {
+final class _WatchBoth extends StatelessComponent {
   const _WatchBoth(this.values);
   final List<Object?> values;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     values
       ..add(context.watch<_Value>()?.name)
       ..add(context.watch<_Other>()?.name);
@@ -93,16 +93,16 @@ final class _WatchBoth extends StatelessSeed {
 }
 
 /// Depends with an aspect and records the substrate's rejection instead of
-/// propagating it, so the mount completes and the provider branch's
+/// propagating it, so the mount completes and the provider element's
 /// bookkeeping stays observable.
-final class _AspectWatch extends StatelessSeed {
+final class _AspectWatch extends StatelessComponent {
   const _AspectWatch(this.errors);
   final List<ArgumentError> errors;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     try {
-      context.dependOnInheritedSeedOfExactType<_Value>(aspect: 'name');
+      context.dependOnInheritedValueOfExactType<_Value>(aspect: 'name');
     } on ArgumentError catch (error) {
       errors.add(error);
     }
@@ -110,16 +110,16 @@ final class _AspectWatch extends StatelessSeed {
   }
 }
 
-/// The registry-branch counterpart of [_AspectWatch]: an aspect-scoped depend
+/// The registry-element counterpart of [_AspectWatch]: an aspect-scoped depend
 /// on the scope's own provided value.
-final class _RegistryAspectWatch extends StatelessSeed {
+final class _RegistryAspectWatch extends StatelessComponent {
   const _RegistryAspectWatch(this.errors);
   final List<ArgumentError> errors;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     try {
-      context.dependOnInheritedSeedOfExactType<AvailabilityRegistry>(
+      context.dependOnInheritedValueOfExactType<AvailabilityRegistry>(
         aspect: 'name',
       );
     } on ArgumentError catch (error) {
@@ -129,23 +129,23 @@ final class _RegistryAspectWatch extends StatelessSeed {
   }
 }
 
-final class _Leaf extends Seed {
+final class _Leaf extends Component {
   const _Leaf();
   @override
-  Branch createBranch() => _LeafBranch(this);
+  Element createElement() => _LeafElement(this);
 }
 
-final class _LeafBranch extends Branch {
-  _LeafBranch(_Leaf super.seed);
+final class _LeafElement extends Element {
+  _LeafElement(_Leaf super.component);
 }
 
 /// A rebuild/swap harness: [poke] forces a rebuild of the CURRENT subtree
 /// description; [swap] replaces the described subtree entirely.
-final class _Host extends StatefulSeed {
+final class _Host extends StatefulComponent {
   const _Host({required this.onCreate, required this.describe});
 
   final void Function(_HostState state) onCreate;
-  final Seed Function() describe;
+  final Component Function() describe;
 
   @override
   State<_Host> createState() {
@@ -156,24 +156,25 @@ final class _Host extends StatefulSeed {
 }
 
 final class _HostState extends State<_Host> {
-  Seed Function()? _override;
+  Component Function()? _override;
 
   void poke() => setState(() {});
 
-  void swap(Seed Function() describe) => setState(() => _override = describe);
+  void swap(Component Function() describe) =>
+      setState(() => _override = describe);
 
   @override
-  Seed build(TreeContext context) => (_override ?? seed.describe)();
+  Component build(BuildContext context) => (_override ?? component.describe)();
 }
 
-final class _Slots extends MultiChildSeed {
-  _Slots(List<Seed> children) : super(children: children);
+final class _Slots extends MultiChildComponent {
+  _Slots(List<Component> children) : super(children: children);
 }
 
-/// A watcher whose OWN branch can be dirtied directly ([poke]) — the shape
-/// that lands the watch-calling branch itself in the owner's drained set, as
+/// A watcher whose OWN element can be dirtied directly ([poke]) — the shape
+/// that lands the watch-calling element itself in the owner's drained set, as
 /// opposed to being force-rebuilt by a parent's update cascade.
-final class _PokableWatch extends StatefulSeed {
+final class _PokableWatch extends StatefulComponent {
   const _PokableWatch({required this.onCreate, required this.values});
 
   final void Function(_PokableWatchState state) onCreate;
@@ -191,8 +192,8 @@ final class _PokableWatchState extends State<_PokableWatch> {
   void poke() => setState(() {});
 
   @override
-  Seed build(TreeContext context) {
-    seed.values.add(context.watch<_Value>()?.name);
+  Component build(BuildContext context) {
+    component.values.add(context.watch<_Value>()?.name);
     return const _Leaf();
   }
 }
@@ -200,7 +201,7 @@ final class _PokableWatchState extends State<_PokableWatch> {
 /// A watcher whose interest set CHANGES across rebuilds: it watches both
 /// types until [retarget], only `_Other` after — the shape that leaves a
 /// stale parked registration behind unless the release semantics consume it.
-final class _RetargetingWatch extends StatefulSeed {
+final class _RetargetingWatch extends StatefulComponent {
   const _RetargetingWatch({required this.onCreate, required this.values});
 
   final void Function(_RetargetingWatchState state) onCreate;
@@ -220,17 +221,17 @@ final class _RetargetingWatchState extends State<_RetargetingWatch> {
   void retarget() => setState(() => _watchValue = false);
 
   @override
-  Seed build(TreeContext context) {
-    if (_watchValue) seed.values.add(context.watch<_Value>()?.name);
-    seed.values.add(context.watch<_Other>()?.name);
+  Component build(BuildContext context) {
+    if (_watchValue) component.values.add(context.watch<_Value>()?.name);
+    component.values.add(context.watch<_Other>()?.name);
     return const _Leaf();
   }
 }
 
-/// A bare mounted-looking [Branch] fake for driving [AvailabilityRegistry]
+/// A bare mounted-looking [Element] fake for driving [AvailabilityRegistry]
 /// directly: records [dependencyChanged] instead of scheduling, and reports
 /// whatever mountedness the test sets (a Fake, not a mock — house rules).
-final class _RecordingDependent extends Branch {
+final class _RecordingDependent extends Element {
   _RecordingDependent() : super(const _Leaf());
 
   bool isMounted = true;
@@ -245,7 +246,7 @@ final class _RecordingDependent extends Branch {
 
 /// A Fake dependent whose [dependencyChanged] THROWS — the batch-poisoning
 /// shape for the delivery isolation tests.
-final class _ThrowingDependent extends Branch {
+final class _ThrowingDependent extends Element {
   _ThrowingDependent() : super(const _Leaf());
 
   int pings = 0;
@@ -260,7 +261,7 @@ final class _ThrowingDependent extends Branch {
   }
 }
 
-final class _DependencyProbe extends StatefulSeed {
+final class _DependencyProbe extends StatefulComponent {
   const _DependencyProbe(this.values, this.dependencyChanges);
 
   final List<String?> values;
@@ -273,17 +274,17 @@ final class _DependencyProbe extends StatefulSeed {
 final class _DependencyProbeState extends State<_DependencyProbe> {
   @override
   void didChangeDependencies() {
-    seed.dependencyChanges.add(seed.dependencyChanges.length + 1);
+    component.dependencyChanges.add(component.dependencyChanges.length + 1);
   }
 
   @override
-  Seed build(TreeContext context) {
-    seed.values.add(context.watch<_Value>()?.name);
+  Component build(BuildContext context) {
+    component.values.add(context.watch<_Value>()?.name);
     return const _Leaf();
   }
 }
 
-final class _OtherDependencyProbe extends StatefulSeed {
+final class _OtherDependencyProbe extends StatefulComponent {
   const _OtherDependencyProbe(this.values, this.dependencyChanges);
 
   final List<String?> values;
@@ -296,21 +297,21 @@ final class _OtherDependencyProbe extends StatefulSeed {
 final class _OtherDependencyProbeState extends State<_OtherDependencyProbe> {
   @override
   void didChangeDependencies() {
-    seed.dependencyChanges.add(seed.dependencyChanges.length + 1);
+    component.dependencyChanges.add(component.dependencyChanges.length + 1);
   }
 
   @override
-  Seed build(TreeContext context) {
-    seed.values.add(context.watch<_Other>()?.name);
+  Component build(BuildContext context) {
+    component.values.add(context.watch<_Other>()?.name);
     return const _Leaf();
   }
 }
 
-final class _ProbeChildren extends MultiChildSeed {
-  _ProbeChildren(List<Seed> children) : super(children: children);
+final class _ProbeChildren extends MultiChildComponent {
+  _ProbeChildren(List<Component> children) : super(children: children);
 }
 
-final class _ReadProbe extends StatefulSeed {
+final class _ReadProbe extends StatefulComponent {
   const _ReadProbe({required this.onCreate, required this.builds});
 
   final void Function(_ReadProbeState state) onCreate;
@@ -328,8 +329,8 @@ final class _ReadProbeState extends State<_ReadProbe> {
   String? readValue() => context.read<_Value>()?.name;
 
   @override
-  Seed build(TreeContext context) {
-    seed.builds.add(seed.builds.length + 1);
+  Component build(BuildContext context) {
+    component.builds.add(component.builds.length + 1);
     return const _Leaf();
   }
 }
@@ -338,7 +339,7 @@ final class _ReadProbeState extends State<_ReadProbe> {
 /// substrate-endorsed get-lookup from `State.dispose` ("a last read during
 /// teardown", stateful.dart's dispose guard), which must observe a value the
 /// tree has NOT yet disposed.
-final class _TeardownRead extends StatefulSeed {
+final class _TeardownRead extends StatefulComponent {
   const _TeardownRead(this.events);
   final List<String> events;
 
@@ -348,21 +349,21 @@ final class _TeardownRead extends StatefulSeed {
 
 final class _TeardownReadState extends State<_TeardownRead> {
   @override
-  Seed build(TreeContext context) => const _Leaf();
+  Component build(BuildContext context) => const _Leaf();
 
   @override
   void dispose() {
-    seed.events.add('teardown read ${context.read<_Value>()?.name}');
+    component.events.add('teardown read ${context.read<_Value>()?.name}');
   }
 }
 
 /// Re-provides a mutable `.value` pair on every [update] — the reconcile-in-
 /// place surface for the notification tests.
-final class _ValueHost extends StatefulSeed {
+final class _ValueHost extends StatefulComponent {
   const _ValueHost({required this.onCreate, required this.child});
 
   final void Function(_ValueHostState state) onCreate;
-  final Seed child;
+  final Component child;
 
   @override
   State<_ValueHost> createState() {
@@ -378,12 +379,12 @@ final class _ValueHostState extends State<_ValueHost> {
   void update(_Value value) => setState(() => _value = value);
 
   @override
-  Seed build(TreeContext context) => Nest(
+  Component build(BuildContext context) => Nest(
     children: [
       Provider<_Value>.value(_value),
       Provider<_Other>.value(const _Other('stable')),
     ],
-    child: seed.child,
+    child: component.child,
   );
 }
 
@@ -393,7 +394,7 @@ void main() {
       var created = 0;
       final values = <String?>[];
       late _HostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -423,7 +424,7 @@ void main() {
 
     test('create(context) constructs from an ancestor-provided value', () {
       final values = <Object?>[];
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -448,7 +449,7 @@ void main() {
       // that wrongly disposed an adopted value WOULD record — the assertion
       // after unmount is falsifiable, not vacuous.
       final spy = _DisposeSpy(events);
-      final owner = TreeOwner();
+      final owner = BuildOwner();
 
       owner.mountRoot(
         Nest(
@@ -485,7 +486,7 @@ void main() {
 
     test('owned values dispose AFTER the subtree, inner before outer', () {
       final events = <String>[];
-      final owner = TreeOwner();
+      final owner = BuildOwner();
 
       owner.mountRoot(
         Nest(
@@ -531,10 +532,10 @@ void main() {
       final disposed = <String>[];
       final values = <String?>[];
       late _HostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
-      Seed Function() describe(String key) =>
+      Component Function() describe(String key) =>
           () => Provider<_Value>(
             key: ValueKey(key),
             create: (_) {
@@ -570,14 +571,14 @@ void main() {
   group('failed mount unwind', () {
     test('a throwing create disposes the chain values already created — '
         'reverse creation order — and rethrows', () {
-      // The substrate strands every branch mounted within the failed
+      // The substrate strands every element mounted within the failed
       // reconcile (updateChild propagates before the child-slot assignment,
       // so unmount — the disposal site — never runs). The provider unwind
       // must dispose each already-created owned value as the error passes
       // its mount frame: innermost link first, the old ProviderScope
       // reverse-order contract.
       final events = <String>[];
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose); // The root never mounted; dispose is a no-op.
 
       expect(
@@ -617,9 +618,9 @@ void main() {
         'value exactly once', () {
       final events = <String>[];
       late _HostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       // Deliberately NO owner.dispose teardown: a failed mid-flush reconcile
-      // leaves the host's child slot pointing at the branch it already
+      // leaves the host's child slot pointing at the element it already
       // unmounted (the assignment was skipped), so a root unmount cascade
       // would trip the substrate's double-unmount assert. The exactly-once
       // claim is carried by the events list instead.
@@ -647,7 +648,7 @@ void main() {
 
     test('a create that throws on its own leaves nothing to dispose and '
         'rethrows the original error', () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       expect(
         () => owner.mountRoot(
@@ -666,7 +667,7 @@ void main() {
         'StateError', () {
       final values = <String?>[];
       late _HostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -696,7 +697,7 @@ void main() {
         'StateError', () {
       final values = <String?>[];
       late _HostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -724,7 +725,7 @@ void main() {
       final events = <String>[];
       final values = <String?>[];
       late _HostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
 
       owner.mountRoot(
         _Host(
@@ -739,8 +740,8 @@ void main() {
       expect(values, ['owned']);
 
       // The kind flip throws INSIDE the attached provider's rebuild frame.
-      // The mount-only guard ([_ProviderBranch._mountBuild]) must keep the
-      // unwind out of this path: disposing here would leave the branch
+      // The mount-only guard ([_ProviderElement._mountBuild]) must keep the
+      // unwind out of this path: disposing here would leave the element
       // attached over a dead value AND double-dispose at the real unmount.
       host.swap(
         () => Provider<_Value>.value(
@@ -766,7 +767,7 @@ void main() {
     test('a watch miss with no ProviderScope ancestor asserts, naming '
         'ProviderScope; read stays a silent null', () {
       final values = <String?>[];
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       // The debug guard (watch<T> miss, no availability registry to park
       // with) fails LOUD in development; deleting the assert would leave a
@@ -786,7 +787,7 @@ void main() {
       // one-shot snapshot has nothing to park and nothing to assert.
       final builds = <int>[];
       late _ReadProbeState reader;
-      final readOwner = TreeOwner();
+      final readOwner = BuildOwner();
       addTearDown(readOwner.dispose);
       readOwner.mountRoot(
         _ReadProbe(onCreate: (state) => reader = state, builds: builds),
@@ -796,51 +797,48 @@ void main() {
   });
 
   group('reconcile notification', () {
-    test(
-      '.value update notifies dependents once; an equal value is silent',
-      () {
-        final valueValues = <String?>[];
-        final valueDependencyChanges = <int>[];
-        final otherValues = <String?>[];
-        final otherDependencyChanges = <int>[];
-        late _ValueHostState host;
-        final owner = TreeOwner();
-        addTearDown(owner.dispose);
+    test('.value update notifies dependents once; an equal value is silent', () {
+      final valueValues = <String?>[];
+      final valueDependencyChanges = <int>[];
+      final otherValues = <String?>[];
+      final otherDependencyChanges = <int>[];
+      late _ValueHostState host;
+      final owner = BuildOwner();
+      addTearDown(owner.dispose);
 
-        owner.mountRoot(
-          _ValueHost(
-            onCreate: (state) => host = state,
-            child: _ProbeChildren([
-              _DependencyProbe(valueValues, valueDependencyChanges),
-              _OtherDependencyProbe(otherValues, otherDependencyChanges),
-            ]),
-          ),
-        );
-        expect(valueValues, ['one']);
-        expect(valueDependencyChanges, [1]);
-        expect(otherValues, ['stable']);
-        expect(otherDependencyChanges, [1]);
+      owner.mountRoot(
+        _ValueHost(
+          onCreate: (state) => host = state,
+          child: _ProbeChildren([
+            _DependencyProbe(valueValues, valueDependencyChanges),
+            _OtherDependencyProbe(otherValues, otherDependencyChanges),
+          ]),
+        ),
+      );
+      expect(valueValues, ['one']);
+      expect(valueDependencyChanges, [1]);
+      expect(otherValues, ['stable']);
+      expect(otherDependencyChanges, [1]);
 
-        host.update(_Value('one'));
-        owner.flush();
-        // Value-equal re-provide: InheritedSeed.updateShouldNotify declines.
-        expect(valueDependencyChanges, [1]);
-        expect(otherDependencyChanges, [1]);
+      host.update(_Value('one'));
+      owner.flush();
+      // Value-equal re-provide: InheritedComponent.updateShouldNotify declines.
+      expect(valueDependencyChanges, [1]);
+      expect(otherDependencyChanges, [1]);
 
-        host.update(const _Value('two'));
-        owner.flush();
-        expect(valueDependencyChanges, [1, 2]);
-        expect(valueValues.last, 'two');
-        expect(otherDependencyChanges, [1]);
-        expect(otherValues, ['stable']);
-      },
-    );
+      host.update(const _Value('two'));
+      owner.flush();
+      expect(valueDependencyChanges, [1, 2]);
+      expect(valueValues.last, 'two');
+      expect(otherDependencyChanges, [1]);
+      expect(otherValues, ['stable']);
+    });
   });
 
   group('availability', () {
     test('watch is null when absent and the nearest provider shadows', () {
       final shadowed = <String?>[];
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       owner.mountRoot(
         Nest(
           children: [
@@ -854,7 +852,7 @@ void main() {
       owner.dispose();
 
       final absent = <String?>[];
-      final absentOwner = TreeOwner();
+      final absentOwner = BuildOwner();
       absentOwner.mountRoot(ProviderScope(child: _Watch(absent)));
       expect(absent, [null]);
       absentOwner.dispose();
@@ -864,7 +862,7 @@ void main() {
         'every later provider mount', () async {
       final values = <String?>[];
       late _HostState slot;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -884,7 +882,7 @@ void main() {
       // A Provider<_Value> mounts in the SIBLING slot. The scope's pending
       // registration is the ONLY edge that can reach the parked watcher —
       // nothing in its own ancestry changed. Notification is DEFERRED past
-      // the announcing flush (the mount runs mid-flush; re-dirtying a branch
+      // the announcing flush (the mount runs mid-flush; re-dirtying a element
       // that pass already built would trip the substrate invariant), so the
       // rebuild lands in the NEXT flush after the microtask delivers. It
       // rebuilds; resolution stays ancestral (nearest provider), so the
@@ -925,7 +923,7 @@ void main() {
         'type leaves a parked watcher untouched', () async {
       final values = <String?>[];
       late _HostState slot;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -967,16 +965,16 @@ void main() {
     test('a provider mount later in the SAME flush that already rebuilt a '
         'parked watcher defers the ping instead of re-dirtying it', () async {
       // Regression for the substrate flush invariant
-      // (TreeOwner.scheduleRebuildFor: a branch must not be re-dirtied after
+      // (BuildOwner.scheduleRebuildFor: a element must not be re-dirtied after
       // it was built in the in-progress pass). The watcher's own setState and
-      // the provider-mounting swap land in ONE flush; depth/branchId order
+      // the provider-mounting swap land in ONE flush; depth/elementId order
       // drains the watcher first, so a synchronous pending-notify from the
-      // provider's mount would re-dirty an already-built branch and crash
+      // provider's mount would re-dirty an already-built element and crash
       // every asserts-enabled run.
       final values = <String?>[];
       late _PokableWatchState watcher;
       late _HostState slot;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1016,16 +1014,16 @@ void main() {
       () async {
         // Honest scope note: swapping the child between `watcher` and
         // `Provider(child: watcher)` changes the runtimeType at the slot, so
-        // the substrate unmounts the old _Watch branch and mounts a FRESH one
+        // the substrate unmounts the old _Watch element and mounts a FRESH one
         // each time (canUpdate false). Every transition below is an initial
-        // build of a new branch; on this no-reparent substrate a watcher can
-        // never keep its branch across its provider's (un)mount, so this IS the
+        // build of a new element; on this no-reparent substrate a watcher can
+        // never keep its element across its provider's (un)mount, so this IS the
         // path a null-to-value or value-to-null transition actually rides. The
         // registry's genuine notification mechanism is pinned by the pending-
         // registration tests above and the direct-seam tests below.
         final values = <String?>[];
         late _HostState host;
-        final owner = TreeOwner();
+        final owner = BuildOwner();
         addTearDown(owner.dispose);
 
         final watcher = _Watch(values);
@@ -1064,7 +1062,7 @@ void main() {
       final left = <String?>[];
       final right = <String?>[];
       late _HostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1083,9 +1081,9 @@ void main() {
       final registry = host.context.read<AvailabilityRegistry>()!;
       expect(registry.debugNotifying, isEmpty);
 
-      // Swap the provider subtree out. The provider branch must hand the
+      // Swap the provider subtree out. The provider element must hand the
       // registry the live dependents it mirrored through addDependent: both
-      // watcher branches land in the deferred delivery queue, observable
+      // watcher elements land in the deferred delivery queue, observable
       // between the announcing flush and the delivery microtask.
       host.swap(() => const _Leaf());
       owner.flush();
@@ -1095,7 +1093,7 @@ void main() {
         reason: 'both live dependents were announced',
       );
       expect(
-        registry.debugNotifying.any((branch) => branch.mounted),
+        registry.debugNotifying.any((element) => element.mounted),
         isFalse,
         reason:
             'recipients went down with the subtree (no-reparent '
@@ -1113,11 +1111,11 @@ void main() {
       // Leak regression: the old unmount announcement re-parked live
       // dependents into the pending map directly; a dependent that then
       // unmounted with the subtree released its PROVIDER edge, not a registry
-      // edge, so the dead branch (and everything its State captured) stayed
+      // edge, so the dead element (and everything its State captured) stayed
       // in the scope-lifetime pending map forever.
       final values = <String?>[];
       late _HostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1135,7 +1133,7 @@ void main() {
       final registry = host.context.read<AvailabilityRegistry>()!;
       expect(registry.debugPendingOf(_Value), isEmpty);
 
-      // The watcher holds a LIVE edge on the provider branch and unmounts
+      // The watcher holds a LIVE edge on the provider element and unmounts
       // with it when the subtree swaps out.
       host.swap(() => const _Leaf());
       owner.flush();
@@ -1149,15 +1147,15 @@ void main() {
     });
 
     test('a parked watcher that unmounts is released from the pending map — '
-        'the registry-branch dependency release', () {
+        'the registry-element dependency release', () {
       // The release path rides the substrate's own unmount bookkeeping: the
-      // watch miss registered a dependency on the registry branch, so the
-      // watcher's unmount reaches _RegistryBranch.removeDependent, which
-      // drops the branch from every bucket (release semantics rule 3).
+      // watch miss registered a dependency on the registry element, so the
+      // watcher's unmount reaches _RegistryElement.removeDependent, which
+      // drops the element from every bucket (release semantics rule 3).
       final values = <String?>[];
       late _HostState slot;
       late _HostState watcherSlot;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1179,7 +1177,7 @@ void main() {
       expect(registry.debugPendingOf(_Value), hasLength(1));
 
       // Unmount ONLY the watcher (the scope stays up): the parked
-      // registration must not survive the branch it belongs to.
+      // registration must not survive the element it belongs to.
       watcherSlot.swap(() => const _Leaf());
       owner.flush();
       expect(
@@ -1191,13 +1189,13 @@ void main() {
 
     test('a delivered ping consumes ALL of the recipient\'s parked '
         'registrations; its rebuild re-files only current interests', () async {
-      // Release semantics rule 2, pinning the under-specified case: a branch
+      // Release semantics rule 2, pinning the under-specified case: a element
       // that rebuilt WITHOUT re-issuing watch<_Value> must not linger in the
       // _Value bucket past its next notification.
       final values = <Object?>[];
       late _RetargetingWatchState watcher;
       late _HostState slot;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1229,7 +1227,7 @@ void main() {
 
       // ...but the next delivered ping consumes it: a Provider<_Other> mount
       // in the sibling slot pings the watcher (parked under _Other), delivery
-      // drops the branch from EVERY bucket, and the triggered rebuild
+      // drops the element from EVERY bucket, and the triggered rebuild
       // re-files only what the build still watches.
       slot.swap(
         () => Provider<_Other>.value(
@@ -1262,7 +1260,7 @@ void main() {
       // re-files it.
       final values = <String?>[];
       late _HostState slot;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1309,7 +1307,7 @@ void main() {
       final builds = <int>[];
       late _ReadProbeState reader;
       late _HostState slot;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1347,7 +1345,7 @@ void main() {
       final builds = <int>[];
       late _ValueHostState host;
       late _ReadProbeState reader;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1373,7 +1371,7 @@ void main() {
   group('composition', () {
     test('two providers under one Nest both resolve for the child', () {
       final values = <Object?>[];
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1416,7 +1414,7 @@ void main() {
 
       // Leak fix pinned at the unit level: the announcement re-parks NOTHING.
       // A genuine survivor re-registers pending through its own rebuild's
-      // watch miss, which rides the registry-branch dependency path that IS
+      // watch miss, which rides the registry-element dependency path that IS
       // released at unmount.
       expect(registry.debugPendingOf(_Value), isEmpty);
     });
@@ -1472,7 +1470,7 @@ void main() {
   group('aspect forwarding (genesis_tree 0.3.0)', () {
     test('a Provider REJECTS an aspect — the override reached super', () {
       final errors = <ArgumentError>[];
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1488,9 +1486,9 @@ void main() {
       expect(errors.single.name, 'aspect');
     });
 
-    test('the REGISTRY branch rejects an aspect too', () {
+    test('the REGISTRY element rejects an aspect too', () {
       final errors = <ArgumentError>[];
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(ProviderScope(child: _RegistryAspectWatch(errors)));
@@ -1503,7 +1501,7 @@ void main() {
       final errors = <ArgumentError>[];
       final values = <String?>[];
       late _HostState host;
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
 
       owner.mountRoot(
@@ -1528,7 +1526,7 @@ void main() {
         hasLength(1),
         reason:
             'only the aspect-free watcher became a dependent; the refused '
-            'branch must never have entered _live',
+            'element must never have entered _live',
       );
     });
   });

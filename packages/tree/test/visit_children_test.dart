@@ -1,4 +1,4 @@
-// ADR-0001 Decision 5 obligation: Branch carries a real traversal contract —
+// ADR-0001 Decision 5 obligation: Element carries a real traversal contract —
 // visitChildren over direct children — replacing the spike-era practice of
 // dispatching on concrete element shapes via test-only getters.
 import 'package:test/test.dart';
@@ -6,43 +6,43 @@ import 'package:genesis_tree/genesis_tree.dart';
 
 import 'src/fixtures.dart';
 
-class _WrapperSeed extends StatelessSeed {
-  const _WrapperSeed(this.child);
-  final Seed child;
+class _WrapperComponent extends StatelessComponent {
+  const _WrapperComponent(this.child);
+  final Component child;
   @override
-  Seed build(TreeContext context) => child;
+  Component build(BuildContext context) => child;
 }
 
-class _StatefulWrapperSeed extends StatefulSeed {
-  const _StatefulWrapperSeed(this.child);
-  final Seed child;
+class _StatefulWrapperComponent extends StatefulComponent {
+  const _StatefulWrapperComponent(this.child);
+  final Component child;
   @override
   _StatefulWrapperState createState() => _StatefulWrapperState();
 }
 
-class _StatefulWrapperState extends State<_StatefulWrapperSeed> {
+class _StatefulWrapperState extends State<_StatefulWrapperComponent> {
   @override
-  Seed build(TreeContext context) => seed.child;
+  Component build(BuildContext context) => component.child;
 }
 
-List<Branch> _directChildren(Branch branch) {
-  final children = <Branch>[];
-  branch.visitChildren(children.add);
+List<Element> _directChildren(Element element) {
+  final children = <Element>[];
+  element.visitChildren(children.add);
   return children;
 }
 
 void main() {
   group('visitChildren — per-kind contracts', () {
-    late TreeOwner owner;
-    setUp(() => owner = TreeOwner());
+    late BuildOwner owner;
+    setUp(() => owner = BuildOwner());
     tearDown(() => owner.dispose());
 
-    test('bare leaf branch visits nothing (base implementation)', () {
+    test('bare leaf element visits nothing (base implementation)', () {
       final root = owner.mountRoot(const Leaf('only'));
       expect(_directChildren(root), isEmpty);
     });
 
-    test('NodeBranch visits its direct children, in tree order', () {
+    test('NodeElement visits its direct children, in tree order', () {
       final root = owner.mountRoot(
         Node(
           'root',
@@ -52,32 +52,34 @@ void main() {
       final children = _directChildren(root);
       expect(children.length, 3);
       expect(
-        children.map((b) => (b.seed as Leaf).tag).toList(),
+        children.map((b) => (b.component as Leaf).tag).toList(),
         equals(['a', 'b', 'c']),
       );
     });
 
-    test('ComponentBranch (stateless) visits its single built child', () {
-      final root = owner.mountRoot(const _WrapperSeed(Leaf('inner')));
+    test('BuildableElement (stateless) visits its single built child', () {
+      final root = owner.mountRoot(const _WrapperComponent(Leaf('inner')));
       final children = _directChildren(root);
       expect(children.length, 1);
-      expect((children.single.seed as Leaf).tag, 'inner');
+      expect((children.single.component as Leaf).tag, 'inner');
     });
 
-    test('ComponentBranch (stateful) visits its single built child', () {
-      final root = owner.mountRoot(const _StatefulWrapperSeed(Leaf('inner')));
-      final children = _directChildren(root);
-      expect(children.length, 1);
-      expect((children.single.seed as Leaf).tag, 'inner');
-    });
-
-    test('InheritedBranch visits its child', () {
+    test('BuildableElement (stateful) visits its single built child', () {
       final root = owner.mountRoot(
-        InheritedSeed<String>(value: 'v', child: const Leaf('inner')),
+        const _StatefulWrapperComponent(Leaf('inner')),
       );
       final children = _directChildren(root);
       expect(children.length, 1);
-      expect((children.single.seed as Leaf).tag, 'inner');
+      expect((children.single.component as Leaf).tag, 'inner');
+    });
+
+    test('InheritedElement visits its child', () {
+      final root = owner.mountRoot(
+        InheritedComponent<String>(value: 'v', child: const Leaf('inner')),
+      );
+      final children = _directChildren(root);
+      expect(children.length, 1);
+      expect((children.single.component as Leaf).tag, 'inner');
     });
 
     test('visitChildren reflects reconciled children after update', () {
@@ -91,46 +93,46 @@ void main() {
                   ],
                 ),
               )
-              as NodeBranch;
+              as NodeElement;
       root.update(
         Node('root', children: [const Leaf('b', key: ValueKey('kb'))]),
       );
       final children = _directChildren(root);
       expect(children.length, 1);
-      expect((children.single.seed as Leaf).tag, 'b');
+      expect((children.single.component as Leaf).tag, 'b');
     });
   });
 
   group('visitChildren — recursive traversal (the spike-5 consumer shape)', () {
-    test('a fresh walk from the root reaches every mounted branch and '
-        'resolves ids without holding branch references', () {
-      final owner = TreeOwner();
+    test('a fresh walk from the root reaches every mounted element and '
+        'resolves ids without holding element references', () {
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final root =
           owner.mountRoot(
                 Node(
                   'root',
                   children: [
-                    const _WrapperSeed(Leaf('w-inner')),
-                    InheritedSeed<String>(
+                    const _WrapperComponent(Leaf('w-inner')),
+                    InheritedComponent<String>(
                       value: 'v',
-                      child: const _StatefulWrapperSeed(Leaf('s-inner')),
+                      child: const _StatefulWrapperComponent(Leaf('s-inner')),
                     ),
                     const Leaf('plain', key: ValueKey('kp')),
                   ],
                 ),
               )
-              as NodeBranch;
+              as NodeElement;
 
-      Branch? findById(String id) {
-        Branch? found;
-        void walk(Branch branch) {
+      Element? findById(String id) {
+        Element? found;
+        void walk(Element element) {
           if (found != null) return;
-          if (branch.branchId == id) {
-            found = branch;
+          if (element.elementId == id) {
+            found = element;
             return;
           }
-          branch.visitChildren(walk);
+          element.visitChildren(walk);
         }
 
         walk(root);
@@ -139,14 +141,14 @@ void main() {
 
       // Hit-test fresh against the live tree: resolve a leaf by id.
       final target = root.children[2];
-      expect(findById(target.branchId), same(target));
+      expect(findById(target.elementId), same(target));
 
       // Count the whole tree: root + 3 children + wrapper child +
       // inherited child + stateful child = 7.
       var count = 0;
-      void countWalk(Branch branch) {
+      void countWalk(Element element) {
         count++;
-        branch.visitChildren(countWalk);
+        element.visitChildren(countWalk);
       }
 
       countWalk(root);
@@ -154,15 +156,15 @@ void main() {
 
       // After a re-emission drops the keyed leaf, a fresh walk no longer
       // resolves it — "the projection moved under the actor" is detectable.
-      final staleId = target.branchId;
+      final staleId = target.elementId;
       root.update(
         Node(
           'root',
           children: [
-            const _WrapperSeed(Leaf('w-inner')),
-            InheritedSeed<String>(
+            const _WrapperComponent(Leaf('w-inner')),
+            InheritedComponent<String>(
               value: 'v',
-              child: const _StatefulWrapperSeed(Leaf('s-inner')),
+              child: const _StatefulWrapperComponent(Leaf('s-inner')),
             ),
           ],
         ),

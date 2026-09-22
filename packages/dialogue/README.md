@@ -42,7 +42,7 @@ The envelope, exactly mirrored:
 | `component` | string type discriminator | `ComponentInstance.type` → registry key |
 | props at top level | flat v0.9 prop style | `ComponentInstance.props` |
 | `children` | ordered array of component-id strings (containers only) | `ComponentInstance.childIds` |
-| `id` | stable component id | `ComponentInstance.id` → **`Seed.key`** |
+| `id` | stable component id | `ComponentInstance.id` → **`Component.key`** |
 | root | the component with `id == "root"` | no `rootId` field on the wire |
 
 The client→server **action** message:
@@ -63,8 +63,8 @@ half already exists in `genesis_taxonomy`:
 
 - `ComponentInstance` — the registry-facing flat shape. dialogue's codec parses
   the wire **into** this type; it does not redefine it.
-- `buildSeedTree(registry, components, rootId: 'root')` — turns the flat list
-  into a keyed `Seed` tree (component id → `Seed` key; dangling child id,
+- `buildComponentTree(registry, components, rootId: 'root')` — turns the flat list
+  into a keyed `Component` tree (component id → `Component` key; dangling child id,
   duplicate id, cycle, unknown type/prop all rejected there).
 - `ComponentRegistry` — the catalog-bound factory. **Injected** via
   `DialogueSurface(registry: …)`: dialogue is registry-agnostic, so the same
@@ -85,16 +85,16 @@ Rejection lives at the layer that owns the invariant:
 
 ## Reconcile by key
 
-`DialogueSurface.apply` builds the new keyed `Seed` tree and calls
-`rootBranch.update(newRootSeed)`. The root id is `"root"` (a stable key) with
+`DialogueSurface.apply` builds the new keyed `Component` tree and calls
+`rootElement.update(newRootSeed)`. The root id is `"root"` (a stable key) with
 an unchanged type, so `canUpdate` holds, the root updates in place, and its
 children reconcile by key. Whole-tree re-emission therefore becomes an
-identity-preserving patch: kept ids keep their `Branch` instances (reordered
+identity-preserving patch: kept ids keep their `Element` instances (reordered
 at their new index, deep into moved subtrees), a prop-changed id keeps its
-instance with the new seed, removed ids unmount, inserted ids mount fresh.
+instance with the new component, removed ids unmount, inserted ids mount fresh.
 
 **Honest limit (the reconcile fast path).** The reconcile fast path skips
-only on `identical()` seeds. Freshly *deserialized* seeds are never
+only on `identical()` components. Freshly *deserialized* components are never
 `identical()`, so re-applying a byte-identical message does **not**
 short-circuit the reconcile — the wire path does not benefit from it. Keyed
 identity preservation still holds; only the skip optimization does not fire.
@@ -114,7 +114,7 @@ vocabulary; consent owns the world-side enforcement.
 
 The codec's **serialize** direction (`UpdateComponents.toJson`) *is* emission
 of an authored surface — round-trip-proven against the parse. The **reverse**
-(walking a live mounted `Seed`/`Branch` tree back into a component list)
+(walking a live mounted `Component`/`Element` tree back into a component list)
 needs a `genesis_taxonomy` reverse-describer that does not exist as built, so
 it is deferred (below). v1 emission is the authored-representation serialize
 path only.
@@ -137,9 +137,9 @@ dialogue layer.
 
 ## Deferred (NOT in v1)
 
-- **Seed-tree → envelope reverse-emission** — walking a live mounted tree back
+- **Component-tree → envelope reverse-emission** — walking a live mounted tree back
   into a component list. Needs a `genesis_taxonomy` reverse-describer (a
-  `Seed` → `ComponentInstance` projection) that does not exist as built; v1
+  `Component` → `ComponentInstance` projection) that does not exist as built; v1
   does not build it and does not change taxonomy. v1 emission = the
   authored-representation serialize path only.
 - **Action routing → `genesis_consent`** — hit-testing, affordance checks,

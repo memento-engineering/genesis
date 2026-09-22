@@ -2,7 +2,7 @@
 /// `updateComponents` message onto a `genesis_tree` and reconciles
 /// re-emissions by key.
 ///
-/// Component ids become `Seed` keys (tree keys == A2UI component ids), which
+/// Component ids become `Component` keys (tree keys == A2UI component ids), which
 /// is what turns whole-tree re-emission into an identity-preserving patch:
 /// the root survives because `id == "root"` is a stable key and `canUpdate`
 /// holds; kept children are reconciled in place at their new index; removed
@@ -10,7 +10,7 @@
 library;
 
 import 'package:genesis_taxonomy/genesis_taxonomy.dart'
-    show ComponentRegistry, buildSeedTree;
+    show ComponentRegistry, buildComponentTree;
 import 'package:genesis_tree/genesis_tree.dart';
 
 import 'envelope.dart';
@@ -22,8 +22,8 @@ const String rootComponentId = 'root';
 ///
 /// dialogue is registry-agnostic: the [ComponentRegistry] is injected via the
 /// constructor, so the surface deserializes against whatever catalog the
-/// consumer generated (the wire type names map to the consumer's `Seed`
-/// species). The surface owns a [TreeOwner]; a renderer (e.g.
+/// consumer generated (the wire type names map to the consumer's `Component`
+/// species). The surface owns a [BuildOwner]; a renderer (e.g.
 /// genesis_typesetting) would mount the *same* owner to draw the tree.
 ///
 /// Lifecycle:
@@ -34,10 +34,10 @@ const String rootComponentId = 'root';
 final class DialogueSurface {
   /// Creates a surface that deserializes through [registry] onto [owner].
   ///
-  /// [owner] defaults to a fresh [TreeOwner]; inject one to share a single
+  /// [owner] defaults to a fresh [BuildOwner]; inject one to share a single
   /// owner with a renderer.
-  DialogueSurface({required this.registry, TreeOwner? owner})
-    : owner = owner ?? TreeOwner();
+  DialogueSurface({required this.registry, BuildOwner? owner})
+    : owner = owner ?? BuildOwner();
 
   /// The catalog-bound registry deserialization goes through (injected;
   /// dialogue hardcodes no component type names).
@@ -45,13 +45,17 @@ final class DialogueSurface {
 
   /// The tree owner this surface roots its tree on. Exposed so a renderer can
   /// mount the same owner and observe flushes.
-  final TreeOwner owner;
+  final BuildOwner owner;
 
-  Branch? _rootBranch;
+  Element? _rootElement;
 
-  /// The mounted root branch, or null before [mount]. Exposed for inspection
+  /// The mounted root element, or null before [mount]. Exposed for inspection
   /// and rendering.
-  Branch? get rootBranch => _rootBranch;
+  Element? get rootElement => _rootElement;
+
+  /// Legacy spelling for [rootElement].
+  @Deprecated('Use rootElement instead.')
+  Element? get rootBranch => rootElement;
 
   /// The surface id of the last mounted/applied message, or null before
   /// [mount].
@@ -59,38 +63,38 @@ final class DialogueSurface {
   String? _surfaceId;
 
   /// Mounts [message] as the initial tree: deserializes the flat components
-  /// into a keyed `Seed` tree (root by `id == "root"`) through the registry,
-  /// roots it on the owner, and returns the mounted root [Branch].
+  /// into a keyed `Component` tree (root by `id == "root"`) through the registry,
+  /// roots it on the owner, and returns the mounted root [Element].
   ///
   /// Throws if already mounted (call [apply] for subsequent messages).
   /// Deserialization faults (dangling child id, duplicate id, cycle, unknown
   /// type, bad props) surface as `genesis_taxonomy` `TaxonomyException`s.
-  Branch mount(UpdateComponents message) {
-    if (_rootBranch != null) {
+  Element mount(UpdateComponents message) {
+    if (_rootElement != null) {
       throw StateError(
         'DialogueSurface already mounted; use apply() to reconcile a '
         'subsequent updateComponents message',
       );
     }
-    final rootSeed = buildSeedTree(
+    final rootComponent = buildComponentTree(
       registry,
       message.components,
       rootId: rootComponentId,
     );
-    final branch = owner.mountRoot(rootSeed);
+    final element = owner.mountRoot(rootComponent);
     _surfaceId = message.surfaceId;
-    return _rootBranch = branch;
+    return _rootElement = element;
   }
 
   /// Reconciles [message] against the mounted tree **by key**, preserving
   /// element identity.
   ///
-  /// Builds the new keyed `Seed` tree from the message and calls
-  /// `rootBranch.update(newRootSeed)`: the root id is `"root"` (a stable key)
+  /// Builds the new keyed `Component` tree from the message and calls
+  /// `rootElement.update(newRootComponent)`: the root id is `"root"` (a stable key)
   /// and its component type is immutable across re-emissions, so the root
-  /// branch updates in place, reconciling its children by key. Kept ids keep
-  /// their `Branch` instances (reordered at their new index, deep into moved
-  /// subtrees); a prop-changed id keeps its instance with the new seed;
+  /// element updates in place, reconciling its children by key. Kept ids keep
+  /// their `Element` instances (reordered at their new index, deep into moved
+  /// subtrees); a prop-changed id keeps its instance with the new component;
   /// removed ids are unmounted (`.mounted == false`); inserted ids are
   /// mounted fresh.
   ///
@@ -104,27 +108,27 @@ final class DialogueSurface {
   /// the root component type. The surface performs this compatibility check
   /// in release mode before it touches the mounted tree.
   void apply(UpdateComponents message) {
-    final root = _rootBranch;
+    final root = _rootElement;
     if (root == null) {
       throw StateError('DialogueSurface not mounted; call mount() first');
     }
-    final newRootSeed = buildSeedTree(
+    final newRootComponent = buildComponentTree(
       registry,
       message.components,
       rootId: rootComponentId,
     );
-    if (!Seed.canUpdate(root.seed, newRootSeed)) {
+    if (!Component.canUpdate(root.component, newRootComponent)) {
       throw StateError(
-        'DialogueSurface.apply: incompatible root seed for component id '
-        '"$rootComponentId" — the mounted root is ${root.seed.runtimeType} '
-        'and this message builds a ${newRootSeed.runtimeType}. The root '
+        'DialogueSurface.apply: incompatible root component for component id '
+        '"$rootComponentId" — the mounted root is ${root.component.runtimeType} '
+        'and this message builds a ${newRootComponent.runtimeType}. The root '
         'component type is immutable across re-emissions: the surface has no '
         'teardown/remount path, so a root-type change is rejected here rather '
         'than corrupting the mounted tree. Re-emit the same root component '
         'type, or build a new surface.',
       );
     }
-    root.update(newRootSeed);
+    root.update(newRootComponent);
     // Committed only after a successful update: a throwing update must not
     // leave the surface metadata describing a message the tree never took.
     _surfaceId = message.surfaceId;

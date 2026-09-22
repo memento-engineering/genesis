@@ -1,4 +1,4 @@
-// PerceptionContext — the capability extension of TreeContext (A8 × A12):
+// PerceptionContext — the capability extension of BuildContext (A8 × A12):
 // the domain layers harvest vocabulary onto the separate handle, inheriting
 // the executable async-gap protection.
 import 'package:genesis_perception/genesis_perception.dart';
@@ -24,7 +24,7 @@ class _CapturingP extends StatelessPerception {
   _CapturingP(this.captured);
   final List<PerceptionContext> captured;
   @override
-  Seed build(PerceptionContext context) {
+  Component build(PerceptionContext context) {
     captured.add(context);
     return const _P();
   }
@@ -39,7 +39,7 @@ void main() {
 
       expect(el.context, isA<PerceptionContext>());
       expect(el.context, isNot(same(el)));
-      expect(el.context, isNot(isA<Branch>()));
+      expect(el.context, isNot(isA<Element>()));
     });
 
     test('handle is canonical — same instance per element', () {
@@ -49,13 +49,13 @@ void main() {
       expect(el.context, same(el.context));
     });
 
-    test('perceptionId aliases branchId; key surfaces the seed key', () {
+    test('perceptionId aliases elementId; key surfaces the component key', () {
       final owner = PerceptionOwner();
       addTearDown(owner.dispose);
       final el = owner.mountRoot(_P(key: ValueKey('k'))) as _E;
       final context = el.context;
-      expect(context.perceptionId, equals(el.branchId));
-      expect(context.branchId, equals(el.branchId));
+      expect(context.perceptionId, equals(el.elementId));
+      expect(context.elementId, equals(el.elementId));
       expect(context.key, equals(const ValueKey('k')));
     });
 
@@ -82,10 +82,10 @@ void main() {
 
       expect(context.mounted, isFalse);
       expect(() => context.perceptionId, throwsStateError);
-      expect(() => context.branchId, throwsStateError);
+      expect(() => context.elementId, throwsStateError);
       expect(() => context.key, throwsStateError);
       expect(
-        () => context.dependOnInheritedSeedOfExactType<String>(),
+        () => context.dependOnInheritedValueOfExactType<String>(),
         throwsStateError,
       );
       expect(() => context.markNeedsHarvest(), throwsStateError);
@@ -101,7 +101,7 @@ void main() {
 
       expect(captured, hasLength(1));
       expect(captured.single, same(el.context));
-      expect(captured.single.perceptionId, equals(el.branchId));
+      expect(captured.single.perceptionId, equals(el.elementId));
     });
   });
 }

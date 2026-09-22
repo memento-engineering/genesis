@@ -37,27 +37,27 @@ UpdateComponents _fieldRoot(String surfaceId) => UpdateComponents(
   ],
 );
 
-class _ExplodingSeed extends Seed {
-  const _ExplodingSeed({super.key});
+class _ExplodingComponent extends Component {
+  const _ExplodingComponent({super.key});
 
   @override
-  _ExplodingBranch createBranch() => _ExplodingBranch(this);
+  _ExplodingElement createElement() => _ExplodingElement(this);
 }
 
-class _ExplodingBranch extends Branch {
-  _ExplodingBranch(_ExplodingSeed super.seed);
+class _ExplodingElement extends Element {
+  _ExplodingElement(_ExplodingComponent super.component);
 
   bool _built = false;
 
   @override
-  void mount(Branch? parent, Object? slot) {
+  void mount(Element? parent, Object? slot) {
     super.mount(parent, slot);
     performRebuild();
   }
 
   @override
   void performRebuild() {
-    if (_built) throw StateError('exploding branch: update failed');
+    if (_built) throw StateError('exploding element: update failed');
     _built = true;
   }
 }
@@ -69,7 +69,7 @@ final ComponentRegistry _explodingRegistry = ComponentRegistry(
     'box': RegistryEntry(
       container: false,
       knownProps: const {},
-      build: (props, children, key) => _ExplodingSeed(key: key),
+      build: (props, children, key) => _ExplodingComponent(key: key),
     ),
   },
 );
@@ -91,15 +91,15 @@ void main() {
         isA<StateError>().having(
           (e) => e.message,
           'message',
-          contains('incompatible root seed'),
+          contains('incompatible root component'),
         ),
       ),
     );
 
     expect(surface.surfaceId, 'main');
-    expect(identical(surface.rootBranch, root), isTrue);
+    expect(identical(surface.rootElement, root), isTrue);
     expect(root.mounted, isTrue);
-    expect((root.seed as Node).name, 'form');
+    expect((root.component as Node).name, 'form');
   });
 
   test('a throwing update leaves the previous surface metadata intact', () {
@@ -112,7 +112,7 @@ void main() {
         isA<StateError>().having(
           (e) => e.message,
           'message',
-          contains('exploding branch'),
+          contains('exploding element'),
         ),
       ),
     );
@@ -127,6 +127,6 @@ void main() {
     surface.apply(_nodeRoot('second'));
 
     expect(surface.surfaceId, 'second');
-    expect(identical(surface.rootBranch, root), isTrue);
+    expect(identical(surface.rootElement, root), isTrue);
   });
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0
+
+- **Breaking:** `TreeNode.componentType` replaces the source spelling `seedType`; migrate `TreeNode(seedType: 'Node', ...)` to `TreeNode(componentType: 'Node', ...)`. Deprecated constructor, getter, and `copyWith` bridges remain, and version-1 JSON continues to use the literal `seedType` key.
+
 ## 0.2.0
 
 - **Breaking:** `debugFillProperties` now receives a `DiagnosticsBuilder` — replace `properties.add(...)` list calls with the builder `add()`; wire format unchanged.

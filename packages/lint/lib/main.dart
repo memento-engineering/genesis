@@ -1,13 +1,13 @@
 import 'package:analysis_server_plugin/plugin.dart';
 import 'package:analysis_server_plugin/registry.dart';
 
-import 'src/rules/no_stored_tree_context.dart';
-import 'src/rules/use_tree_context_synchronously.dart';
+import 'src/rules/no_stored_build_context.dart';
+import 'src/rules/use_build_context_synchronously.dart';
 
 /// The analysis-server entrypoint for the genesis lint extension.
 final plugin = LintExtension();
 
-/// Registers the genesis tree-context analysis warnings.
+/// Registers the genesis build-context analysis warnings.
 class LintExtension extends Plugin {
   /// The extension name reported to the analysis server.
   @override
@@ -17,7 +17,7 @@ class LintExtension extends Plugin {
   @override
   void register(PluginRegistry registry) {
     registry
-      ..registerWarningRule(NoStoredTreeContextRule())
-      ..registerWarningRule(UseTreeContextSynchronouslyRule());
+      ..registerWarningRule(NoStoredBuildContextRule())
+      ..registerWarningRule(UseBuildContextSynchronouslyRule());
   }
 }

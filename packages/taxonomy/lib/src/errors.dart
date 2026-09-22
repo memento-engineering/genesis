@@ -264,7 +264,7 @@ final class ChildrenOnLeafException extends ComponentBuildException {
 // ---------------------------------------------------------------------------
 
 /// A flat keyed component list does not form a tree. Thrown by
-/// `buildSeedTree` before any component is constructed.
+/// `buildComponentTree` before any component is constructed.
 sealed class TreeShapeException extends TaxonomyException {
   const TreeShapeException();
 }

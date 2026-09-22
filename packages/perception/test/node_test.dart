@@ -69,8 +69,8 @@ void main() {
                 ),
               )
               as NodeElement;
-      expect(el.children[0].branchId, isNotEmpty);
-      expect(el.children[0].branchId, isNot(equals(el.children[1].branchId)));
+      expect(el.children[0].elementId, isNotEmpty);
+      expect(el.children[0].elementId, isNot(equals(el.children[1].elementId)));
     });
   });
 
@@ -90,8 +90,8 @@ void main() {
               )
               as NodeElement;
 
-      final idA = el.children[0].branchId;
-      final idB = el.children[1].branchId;
+      final idA = el.children[0].elementId;
+      final idB = el.children[1].elementId;
 
       el.update(
         Node(
@@ -103,8 +103,8 @@ void main() {
         ),
       );
 
-      expect(el.children[0].branchId, equals(idB));
-      expect(el.children[1].branchId, equals(idA));
+      expect(el.children[0].elementId, equals(idB));
+      expect(el.children[1].elementId, equals(idA));
       expect(el.children.every((c) => c.mounted), isTrue);
     });
 
@@ -156,7 +156,7 @@ void main() {
 
       expect(el.children.length, equals(2));
       expect(el.children[1].mounted, isTrue);
-      expect(el.children[1].branchId, isNotEmpty);
+      expect(el.children[1].elementId, isNotEmpty);
     });
   });
 
@@ -173,15 +173,15 @@ void main() {
               )
               as NodeElement;
 
-      final id0 = el.children[0].branchId;
-      final id1 = el.children[1].branchId;
+      final id0 = el.children[0].elementId;
+      final id1 = el.children[1].elementId;
 
       el.update(
         Node('root', children: [const _Tagged('x'), const _Tagged('y')]),
       );
 
-      expect(el.children[0].branchId, equals(id0));
-      expect(el.children[1].branchId, equals(id1));
+      expect(el.children[0].elementId, equals(id0));
+      expect(el.children[1].elementId, equals(id1));
     });
 
     test('unkeyed excess child at tail is unmounted', () {
@@ -241,13 +241,13 @@ void main() {
               )
               as NodeElement;
 
-      final visited = <Branch>[];
+      final visited = <Element>[];
       el.visitChildren(visited.add);
       expect(visited, equals(el.children));
     });
   });
 
-  group('Node mixes composition children (A12 — children typed Seed)', () {
+  group('Node mixes composition children (A12 — children typed Component)', () {
     test('a Watch child mounts and rebuilds inside a Node', () {
       final owner = PerceptionOwner();
       addTearDown(owner.dispose);
@@ -269,7 +269,7 @@ void main() {
 
       expect(el.children.length, 2);
       expect(el.children[0], isA<PerceptionElement>());
-      expect(el.children[1], isA<StatefulBranch>());
+      expect(el.children[1], isA<StatefulElement>());
       expect(el.children.every((c) => c.mounted), isTrue);
     });
   });

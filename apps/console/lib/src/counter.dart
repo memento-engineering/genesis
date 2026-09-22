@@ -8,9 +8,9 @@ import 'package:genesis_typesetting/genesis_typesetting.dart';
 /// dependency. The configuration ([Counter]) is immutable; the live count
 /// lives on [CounterState]; the dispatch seam ([Actionable]) lives on the
 /// element ([CounterElement]), which forwards to its state. The state renders
-/// the count as a `genesis_typesetting` [Text] (a render seed), so the counter
+/// the count as a `genesis_typesetting` [Text] (a render component), so the counter
 /// composes under a `Stage`/`Box` like any other render child.
-class Counter extends StatefulSeed {
+class Counter extends StatefulComponent {
   /// Creates a counter labelled [label], counting from [start].
   const Counter({required this.label, this.start = 0, super.key});
 
@@ -24,15 +24,15 @@ class Counter extends StatefulSeed {
   CounterState createState() => CounterState();
 
   @override
-  CounterElement createBranch() => CounterElement(this);
+  CounterElement createElement() => CounterElement(this);
 }
 
 /// The actionable element for a [Counter]: it implements [Actionable] and
 /// forwards to its [CounterState], so the consent router reaches the action
-/// seam via `branch is Actionable` without touching the `@protected` state.
-class CounterElement extends StatefulBranch implements Actionable {
-  /// Creates the element for [seed].
-  CounterElement(Counter super.seed);
+/// seam via `element is Actionable` without touching the `@protected` state.
+class CounterElement extends StatefulElement implements Actionable {
+  /// Creates the element for [component].
+  CounterElement(Counter super.component);
 
   CounterState get _state => state as CounterState;
 
@@ -56,15 +56,15 @@ class CounterState extends State<Counter> {
   @override
   void initState() {
     super.initState();
-    _count = seed.start;
+    _count = component.start;
   }
 
   @override
-  Seed build(TreeContext context) {
-    // The child render seed is left UNKEYED: reusing the counter's own A2UI id
-    // as a child key would mint a second branch answering to that id and the
+  Component build(BuildContext context) {
+    // The child render component is left UNKEYED: reusing the counter's own A2UI id
+    // as a child key would mint a second element answering to that id and the
     // consent hit-test would reject the action as ambiguous.
-    return Text('${seed.label}: $_count');
+    return Text('${component.label}: $_count');
   }
 
   /// Gate 3 (pure): rejects a malformed payload without mutating anything.

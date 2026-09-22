@@ -44,7 +44,7 @@ Future<void> main(List<String> args) async {
 
   // The tree-native entry shape: mount the Stage; frame 0 paints during
   // mountRoot, and every later frame is scheduled by the stage's binding.
-  final owner = TreeOwner();
+  final owner = BuildOwner();
   final stage =
       owner.mountRoot(
             Stage(
@@ -84,7 +84,7 @@ Future<void> main(List<String> args) async {
               ],
             ),
           )
-          as StageBranch;
+          as StageElement;
 
   Future<void> step(void Function() fire) async {
     fire();
@@ -127,14 +127,14 @@ Future<void> main(List<String> args) async {
 
 /// The A22+A23 adapter: a perception [Node] (with [Field] leaves) rendered
 /// as a [Box] of `name: value` [Text] lines.
-class NodeBox extends StatelessSeed {
+class NodeBox extends StatelessComponent {
   const NodeBox(this.node, {this.accent = -1, super.key});
 
   final Node node;
   final int accent;
 
   @override
-  Seed build(TreeContext context) => Box(
+  Component build(BuildContext context) => Box(
     title: node.name,
     accent: accent,
     children: [
@@ -146,16 +146,16 @@ class NodeBox extends StatelessSeed {
 }
 
 /// Static middle box — never rebuilt by any stream event.
-class StaticAboutBox extends StatelessSeed {
+class StaticAboutBox extends StatelessComponent {
   const StaticAboutBox({super.key});
 
   @override
-  Seed build(TreeContext context) => const NodeBox(
+  Component build(BuildContext context) => const NodeBox(
     Node(
       'about',
       children: [
         Field('package', 'genesis_typesetting', key: ValueKey('package')),
-        Field('backend', 'render branches -> ANSI', key: ValueKey('backend')),
+        Field('backend', 'render elements -> ANSI', key: ValueKey('backend')),
       ],
     ),
     accent: 4,

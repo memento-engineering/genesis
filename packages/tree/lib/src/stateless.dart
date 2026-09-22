@@ -2,29 +2,42 @@
 /// second consumer beyond perception adopts it.
 library;
 
-import 'component_branch.dart';
-import 'seed.dart';
-import 'tree_context.dart';
+import 'buildable_element.dart';
+import 'component.dart';
+import 'build_context.dart';
 
-/// A [Seed] that composes purely from its own configuration — the
+/// A [Component] that composes purely from its own configuration — the
 /// StatelessWidget analogue.
-abstract class StatelessSeed extends Seed {
-  /// Creates a stateless seed, optionally [key]ed.
-  const StatelessSeed({super.key});
+abstract class StatelessComponent extends Component {
+  /// Creates a stateless component, optionally [key]ed.
+  const StatelessComponent({super.key});
 
   /// Describes the child subtree for this configuration. [context] is the
-  /// branch's capability handle, never the branch itself.
-  Seed build(TreeContext context);
+  /// element's capability handle, never the element itself.
+  Component build(BuildContext context);
 
   @override
-  StatelessBranch createBranch() => StatelessBranch(this);
-}
-
-/// Mounted branch for a [StatelessSeed]: delegates [build] to the seed.
-class StatelessBranch extends ComponentBranch {
-  /// Creates the branch for [seed].
-  StatelessBranch(StatelessSeed super.seed);
+  StatelessElement createElement() => StatelessElement(this);
 
   @override
-  Seed build(TreeContext context) => (seed as StatelessSeed).build(context);
+  @Deprecated('Use createElement instead.')
+  StatelessElement createBranch() => createElement();
 }
+
+/// Mounted element for a [StatelessComponent].
+class StatelessElement extends BuildableElement {
+  /// Creates the element for [component].
+  StatelessElement(StatelessComponent super.component);
+
+  @override
+  Component build(BuildContext context) =>
+      (component as StatelessComponent).build(context);
+}
+
+/// Legacy name for [StatelessComponent].
+@Deprecated('Use StatelessComponent instead.')
+typedef StatelessSeed = StatelessComponent;
+
+/// Legacy name for [StatelessElement].
+@Deprecated('Use StatelessElement instead.')
+typedef StatelessBranch = StatelessElement;

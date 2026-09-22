@@ -14,17 +14,17 @@ bool get _assertionsEnabled {
   return enabled;
 }
 
-class _SiblingDirtySeed extends Seed {
-  const _SiblingDirtySeed();
+class _SiblingDirtyComponent extends Component {
+  const _SiblingDirtyComponent();
 
   @override
-  _SiblingDirtyBranch createBranch() => _SiblingDirtyBranch(this);
+  _SiblingDirtyElement createElement() => _SiblingDirtyElement(this);
 }
 
-class _SiblingDirtyBranch extends Branch {
-  _SiblingDirtyBranch(super.seed);
+class _SiblingDirtyElement extends Element {
+  _SiblingDirtyElement(super.component);
 
-  Branch? dirtyTarget;
+  Element? dirtyTarget;
   int buildCount = 0;
 
   @override
@@ -34,9 +34,9 @@ class _SiblingDirtyBranch extends Branch {
   }
 }
 
-/// A stateful seed whose build calls setState — the pathological case that
+/// A stateful component whose build calls setState — the pathological case that
 /// drained forever in release.
-class _SetStateDuringBuild extends StatefulSeed {
+class _SetStateDuringBuild extends StatefulComponent {
   const _SetStateDuringBuild();
 
   @override
@@ -47,7 +47,7 @@ class _SetStateDuringBuildState extends State<_SetStateDuringBuild> {
   int _count = 0;
 
   @override
-  Seed build(TreeContext context) {
+  Component build(BuildContext context) {
     setState(() => _count++);
     return Leaf('count-$_count');
   }
@@ -55,45 +55,45 @@ class _SetStateDuringBuildState extends State<_SetStateDuringBuild> {
 
 /// A leaf that records its own unmount into [log] — the lifecycle probe that
 /// proves the duplicate-key guard runs before any mutation.
-class _Probe extends Seed {
+class _Probe extends Component {
   _Probe(this.tag, this.log, {super.key});
 
   final String tag;
   final List<String> log;
 
   @override
-  _ProbeBranch createBranch() => _ProbeBranch(this);
+  _ProbeElement createElement() => _ProbeElement(this);
 }
 
-class _ProbeBranch extends Branch {
-  _ProbeBranch(_Probe super.seed);
+class _ProbeElement extends Element {
+  _ProbeElement(_Probe super.component);
 
   @override
   void unmount() {
-    log.add((seed as _Probe).tag);
+    log.add((component as _Probe).tag);
     super.unmount();
   }
 
-  List<String> get log => (seed as _Probe).log;
+  List<String> get log => (component as _Probe).log;
 }
 
 class _RetainedContext {
-  TreeContext? value;
+  BuildContext? value;
 }
 
-class _RetainedContextSeed extends StatefulSeed {
-  const _RetainedContextSeed(this.retainedContext);
+class _RetainedContextComponent extends StatefulComponent {
+  const _RetainedContextComponent(this.retainedContext);
 
   final _RetainedContext retainedContext;
 
   @override
-  State<_RetainedContextSeed> createState() => _RetainedContextState();
+  State<_RetainedContextComponent> createState() => _RetainedContextState();
 }
 
-class _RetainedContextState extends State<_RetainedContextSeed> {
+class _RetainedContextState extends State<_RetainedContextComponent> {
   @override
-  Seed build(TreeContext context) {
-    seed.retainedContext.value = context;
+  Component build(BuildContext context) {
+    component.retainedContext.value = context;
     return const Leaf('retained-context-child');
   }
 }
@@ -101,7 +101,7 @@ class _RetainedContextState extends State<_RetainedContextSeed> {
 void main() {
   test('setState during build throws StateError from flush and the drain '
       'terminates', () {
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
     final root = owner.mountRoot(const _SetStateDuringBuild());
 
@@ -112,7 +112,7 @@ void main() {
           (e) => e.message,
           'message',
           allOf(
-            contains('branch ${root.branchId}'),
+            contains('element ${root.elementId}'),
             contains('setState during build'),
           ),
         ),
@@ -122,18 +122,18 @@ void main() {
   });
 
   test('sibling dirty during build is rejected only under assertions', () {
-    final owner = TreeOwner();
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
     final root =
         owner.mountRoot(
               const Node(
                 'root',
-                children: [_SiblingDirtySeed(), _SiblingDirtySeed()],
+                children: [_SiblingDirtyComponent(), _SiblingDirtyComponent()],
               ),
             )
-            as NodeBranch;
-    final source = root.children[0] as _SiblingDirtyBranch;
-    final target = root.children[1] as _SiblingDirtyBranch;
+            as NodeElement;
+    final source = root.children[0] as _SiblingDirtyElement;
+    final target = root.children[1] as _SiblingDirtyElement;
     source.dirtyTarget = target;
     source.markNeedsRebuild();
 
@@ -145,8 +145,8 @@ void main() {
             (error) => error.message,
             'message',
             allOf(
-              contains('branch ${target.branchId}'),
-              contains('branch ${source.branchId}'),
+              contains('element ${target.elementId}'),
+              contains('element ${source.elementId}'),
               contains('descendant'),
             ),
           ),
@@ -159,8 +159,8 @@ void main() {
     }
   });
 
-  test('duplicate sibling keys throw before any old branch is unmounted', () {
-    final owner = TreeOwner();
+  test('duplicate sibling keys throw before any old element is unmounted', () {
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
     final log = <String>[];
     final root =
@@ -173,8 +173,8 @@ void main() {
                 ],
               ),
             )
-            as NodeBranch;
-    final before = List<Branch>.of(root.children);
+            as NodeElement;
+    final before = List<Element>.of(root.children);
 
     expect(
       () => root.update(
@@ -195,13 +195,13 @@ void main() {
       ),
     );
 
-    expect(log, isEmpty, reason: 'no old branch may be unmounted');
+    expect(log, isEmpty, reason: 'no old element may be unmounted');
     expect(before.every((b) => b.mounted), isTrue);
     expect(root.children, orderedEquals(before));
   });
 
-  test('Branch.update with an incompatible seed throws StateError', () {
-    final owner = TreeOwner();
+  test('Element.update with an incompatible component throws StateError', () {
+    final owner = BuildOwner();
     addTearDown(owner.dispose);
     final root = owner.mountRoot(const Leaf('a', key: ValueKey('a')));
 
@@ -218,30 +218,30 @@ void main() {
   });
 
   test(
-    'retained TreeContext rejects dependency registration outside every tree phase',
+    'retained BuildContext rejects dependency registration outside every tree phase',
     () {
-      final owner = TreeOwner();
+      final owner = BuildOwner();
       addTearDown(owner.dispose);
       final retainedContext = _RetainedContext();
       final provider =
           owner.mountRoot(
-                InheritedSeed<int>(
+                InheritedComponent<int>(
                   value: 7,
-                  child: _RetainedContextSeed(retainedContext),
+                  child: _RetainedContextComponent(retainedContext),
                 ),
               )
-              as InheritedBranch<int>;
-      final branch = provider.childBranch as StatefulBranch;
+              as InheritedElement<int>;
+      final element = provider.childElement as StatefulElement;
 
       expect(provider.dependents, isEmpty);
-      expect(branch.dependencies, isEmpty);
+      expect(element.dependencies, isEmpty);
       expect(
-        () => retainedContext.value!.dependOnInheritedSeedOfExactType<int>(),
+        () => retainedContext.value!.dependOnInheritedValueOfExactType<int>(),
         throwsA(
           isA<StateError>().having(
             (error) => error.message,
             'message',
-            'dependOnInheritedSeedOfExactType<int>() called outside a tree '
+            'dependOnInheritedValueOfExactType<int>() called outside a tree '
                 'lifecycle phase (TreeLifecyclePhase.notInTreePhase). '
                 'Register inherited dependencies from '
                 'didChangeDependencies() or build().',
@@ -249,7 +249,7 @@ void main() {
         ),
       );
       expect(provider.dependents, isEmpty);
-      expect(branch.dependencies, isEmpty);
+      expect(element.dependencies, isEmpty);
     },
   );
 }

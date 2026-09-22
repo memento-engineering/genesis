@@ -8,15 +8,15 @@
 ///   serialize direction is emission of an authored surface;
 /// - **the receive-side surface** ([DialogueSurface]) — deserializes a message
 ///   through an injected `genesis_taxonomy` registry into a `genesis_tree`
-///   `Seed` tree, mounts it, and reconciles re-emissions **by key** (component
-///   id → `Seed` key), so whole-tree re-emission becomes an identity-preserving
+///   `Component` tree, mounts it, and reconciles re-emissions **by key** (component
+///   id → `Component` key), so whole-tree re-emission becomes an identity-preserving
 ///   patch;
 /// - **the action half** ([parseActionEvent] → [ActionEvent]) — parses the
 ///   client→server `action` message. Parse only: routing/hit-testing/consent
 ///   belong to `genesis_consent`.
 ///
 /// dialogue is registry-agnostic (the registry is injected) and does not
-/// re-implement deserialization (`buildSeedTree` lives in `genesis_taxonomy`).
+/// re-implement deserialization (`buildComponentTree` lives in `genesis_taxonomy`).
 /// Reverse-emission — walking a live mounted tree back into components — is
 /// out of scope; it needs a taxonomy reverse-describer that does not exist as
 /// built (see README).

@@ -1,9 +1,9 @@
 /// The locality suite against the real, tree-resident live loop (register
 /// A23): stream event -> dirty set -> onNeedsFlush -> microtask frame pass
 /// -> owner.flush() -> flow relayout -> repaint exactly the dirty render
-/// branches' rects -> double-buffered diff -> minimal ANSI.
+/// elements' rects -> double-buffered diff -> minimal ANSI.
 ///
-/// There is no side-car driver and no paint delegate: the render branches
+/// There is no side-car driver and no paint delegate: the render elements
 /// paint as their artifact response, and the FrameRecord carries the
 /// verbatim flush return.
 library;
@@ -22,15 +22,15 @@ bool rectWithin(Rect inner, Rect outer) =>
     inner.top >= outer.top &&
     inner.bottom <= outer.bottom;
 
-/// The sole child of [branch], via the public traversal contract.
-Branch innerOf(Branch branch) {
-  late Branch inner;
+/// The sole child of [element], via the public traversal contract.
+Element innerOf(Element element) {
+  late Element inner;
   var count = 0;
-  branch.visitChildren((child) {
+  element.visitChildren((child) {
     inner = child;
     count++;
   });
-  expect(count, 1, reason: 'expected exactly one child under $branch');
+  expect(count, 1, reason: 'expected exactly one child under $element');
   return inner;
 }
 
@@ -38,14 +38,14 @@ void main() {
   group('Stage live loop', () {
     late LocalityFixture fx;
     late RecordingSink sink;
-    late TreeOwner owner;
-    late StageBranch stage;
+    late BuildOwner owner;
+    late StageElement stage;
 
     setUp(() {
       sink = RecordingSink();
       fx = LocalityFixture(sink: sink);
-      owner = TreeOwner();
-      stage = owner.mountRoot(fx.stageSeed) as StageBranch;
+      owner = BuildOwner();
+      stage = owner.mountRoot(fx.stageSeed) as StageElement;
     });
 
     tearDown(() async {
@@ -55,7 +55,7 @@ void main() {
 
     /// The top-level render boxes, in render-tree (flow) order:
     /// 0 = ticker, 1 = static, 2 = feed.
-    List<RenderBranch> boxes() => stage.renderChildren;
+    List<RenderElement> boxes() => stage.renderChildren;
 
     test('mounting the stage paints frame 0 — painting just happens', () {
       expect(stage.frames, hasLength(1));
@@ -87,7 +87,7 @@ void main() {
     });
 
     test('one stream event -> exactly one flush pass; changed cells '
-        'confined to the rebuilt render branch\'s rect (LOCALITY)', () async {
+        'confined to the rebuilt render element\'s rect (LOCALITY)', () async {
       fx.ticker.add(7);
       await pumpEventQueue();
 
@@ -111,7 +111,7 @@ void main() {
         expect(
           tickerRect.contains(c.x, c.y),
           isTrue,
-          reason: '$c escaped the rebuilt render branch\'s rect $tickerRect',
+          reason: '$c escaped the rebuilt render element\'s rect $tickerRect',
         );
       }
       expect(
@@ -238,7 +238,7 @@ void main() {
       expect(
         identical(boxes()[1], staticBoxBefore),
         isTrue,
-        reason: 'same render branch instance across all events',
+        reason: 'same render element instance across all events',
       );
       final staticRect = staticBoxBefore.rect;
       for (final frame in stage.frames.skip(1)) {
@@ -257,10 +257,10 @@ void main() {
 
     test('instrumentation carries the VERBATIM flush() return — no side '
         'channels', () async {
-      // Locate the ticker Watch branch independently, via the public
+      // Locate the ticker Watch element independently, via the public
       // traversal contract: stage child 0 is the render-scope wrapper; its
-      // sole child is the Watch branch.
-      final wrappers = <Branch>[];
+      // sole child is the Watch element.
+      final wrappers = <Element>[];
       stage.visitChildren(wrappers.add);
       expect(wrappers, hasLength(3));
       final tickerWatch = innerOf(wrappers[0]);
@@ -269,7 +269,7 @@ void main() {
       await pumpEventQueue();
 
       final f = stage.frames.last;
-      // The drained list is exactly the Watch branch the event dirtied
+      // The drained list is exactly the Watch element the event dirtied
       // (A9-cascade force-rebuilds are excluded by the flush inclusion
       // rule, A14).
       expect(f.rebuilt, hasLength(1));

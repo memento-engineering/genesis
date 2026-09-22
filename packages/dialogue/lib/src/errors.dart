@@ -145,7 +145,7 @@ final class MalformedComponentException extends EnvelopeException {
 /// Two component objects in one envelope share an `id`.
 ///
 /// Rejected at envelope-parse time so a duplicate is reported against its
-/// wire position; `buildSeedTree` would also reject it, but the envelope owns
+/// wire position; `buildComponentTree` would also reject it, but the envelope owns
 /// the parse-time well-formedness of the list it just decoded.
 final class DuplicateEnvelopeIdException extends EnvelopeException {
   /// Creates the error for the [id] first seen at [firstIndex] and repeated

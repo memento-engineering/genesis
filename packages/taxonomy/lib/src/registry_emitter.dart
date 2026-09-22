@@ -1,7 +1,7 @@
 /// Projection 1: the typed Dart factory registry.
 ///
 /// Emits a `.g.dart` source file that instantiates a `ComponentRegistry`
-/// binding the catalog's wire types to `Seed` constructors. The generated
+/// binding the catalog's wire types to `Component` constructors. The generated
 /// file is thin wiring — all validation machinery lives in the
 /// `registry_runtime.dart` library, so generated code stays small and the
 /// error paths are tested once.
@@ -24,7 +24,7 @@ String emitRegistry(Catalog catalog) {
     ..writeln('// GENERATED — do not edit.')
     ..writeln('// ${dartProvenanceLine(catalog)}')
     ..writeln('//')
-    ..writeln('// Typed factory registry: wire type name -> Seed factory.')
+    ..writeln('// Typed factory registry: wire type name -> Component factory.')
     ..writeln('// Construction-time validation (unknown type, missing or')
     ..writeln('// mistyped prop, unknown prop, children on a leaf) throws')
     ..writeln('// structured TaxonomyExceptions; nothing outside this file')

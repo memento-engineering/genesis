@@ -3,7 +3,7 @@
 /// `genesis_consent` is the world-side end of the dialogue that `genesis_dialogue`
 /// opened: dialogue *decodes* an `action` message into an [ActionEvent] (parse
 /// only); consent *routes* that event — hit-testing it against the live
-/// `Seed`/`Branch` tree and the catalog-declared affordances, then either
+/// `Component`/`Element` tree and the catalog-declared affordances, then either
 /// enforcing it through the target state or refusing it with a structured,
 /// side-effect-free [Rejected].
 library;
@@ -24,12 +24,12 @@ import 'outcome.dart';
 /// id → wire-type map (to look up affordances) — which dialogue's surface does
 /// not track. So drive emissions through the router's [mount]/[apply], not the
 /// surface's directly; the router forwards to the surface and keeps its ledger
-/// in sync. A renderer can still share the surface's [TreeOwner] for drawing.
+/// in sync. A renderer can still share the surface's [BuildOwner] for drawing.
 ///
 /// What it consumes (the seams that already exist):
 ///
 /// - the live [DialogueSurface] — the mounted tree to hit-test against, walked
-///   *fresh on every [route] call* (no cached branch refs);
+///   *fresh on every [route] call* (no cached element refs);
 /// - the parsed [Catalog] — `genesis_taxonomy`'s catalog-declared `actions`
 ///   (the same source of truth the LLM saw as `x-actions` in the tool schema),
 ///   for the affordance gate;
@@ -61,9 +61,9 @@ final class ConsentRouter {
 
   /// Mounts [message] as the initial surface tree and records its emission.
   ///
-  /// Forwards to [DialogueSurface.mount] and returns the mounted root branch;
+  /// Forwards to [DialogueSurface.mount] and returns the mounted root element;
   /// throws [StateError] if the surface is already mounted.
-  Branch mount(UpdateComponents message) {
+  Element mount(UpdateComponents message) {
     final root = surface.mount(message);
     _record(message);
     return root;
@@ -77,8 +77,12 @@ final class ConsentRouter {
     _record(message);
   }
 
-  /// The mounted root branch, or null before [mount].
-  Branch? get rootBranch => surface.rootBranch;
+  /// The mounted root element, or null before [mount].
+  Element? get rootElement => surface.rootElement;
+
+  /// Legacy spelling for [rootElement].
+  @Deprecated('Use rootElement instead.')
+  Element? get rootBranch => rootElement;
 
   /// The current surface id, or null before [mount].
   String? get surfaceId => surface.surfaceId;
@@ -96,7 +100,7 @@ final class ConsentRouter {
   ///
   /// Three catalog/tree-derived gates, none hardcoded:
   ///
-  /// 1. **exists/mounted** — `sourceComponentId` resolves to a mounted branch
+  /// 1. **exists/mounted** — `sourceComponentId` resolves to a mounted element
   ///    by walking the live tree fresh; otherwise `staleUnmounted` (ever-seen)
   ///    or `unknownComponent` (never seen);
   /// 2. **catalog-declared** — the live component's wire type declares the
@@ -109,11 +113,11 @@ final class ConsentRouter {
   ///
   /// Throws [StateError] for developer/authoring errors (never actor feedback):
   /// called before [mount]; [ActionEvent.sourceComponentId] resolving to more
-  /// than one mounted branch (a DAG-shared id); or a mounted component whose
-  /// catalog type declares the action but whose branch/state does not implement
+  /// than one mounted element (a DAG-shared id); or a mounted component whose
+  /// catalog type declares the action but whose element/state does not implement
   /// [Actionable].
   ConsentOutcome route(ActionEvent event) {
-    final root = surface.rootBranch;
+    final root = surface.rootElement;
     if (root == null) {
       throw StateError(
         'ConsentRouter.route called before mount(); mount a surface first',
@@ -133,7 +137,7 @@ final class ConsentRouter {
     }
 
     // Gate 1b — exists/mounted. Walk the live tree FRESH (no cached refs),
-    // collecting EVERY mounted branch under this id.
+    // collecting EVERY mounted element under this id.
     final matches = _mountedMatches(root, event.sourceComponentId);
     if (matches.isEmpty) {
       return Rejected(
@@ -146,15 +150,15 @@ final class ConsentRouter {
     }
     if (matches.length > 1) {
       // A component id reachable from two parents is built once per reference
-      // (buildSeedTree's DAG-share semantics), so the live tree holds
-      // multiple distinct branches under one id, each with its own state. The
+      // (buildComponentTree's DAG-share semantics), so the live tree holds
+      // multiple distinct elements under one id, each with its own state. The
       // hit-test target is then ambiguous and enforcement would silently
       // mutate an arbitrary copy — a developer/authoring error (a surface must
       // address each component by a unique id), never actor feedback.
       throw StateError(
         'component "${event.sourceComponentId}" resolves to '
-        '${matches.length} mounted branches — the emission shares this id '
-        'across parents (a DAG share; buildSeedTree builds it once per '
+        '${matches.length} mounted elements — the emission shares this id '
+        'across parents (a DAG share; buildComponentTree builds it once per '
         'reference). consent cannot unambiguously enforce an action against a '
         'duplicated id; a surface must address each component by a unique id.',
       );
@@ -202,47 +206,47 @@ final class ConsentRouter {
     );
   }
 
-  /// Returns every mounted branch whose key equals [id], walking the live tree
+  /// Returns every mounted element whose key equals [id], walking the live tree
   /// fresh from [root] in tree order. Normally a singleton; more than one means
   /// the emission shared this id across parents (a DAG share — built once per
-  /// reference by buildSeedTree), which [route] rejects as ambiguous. The
-  /// walk descends transparently through component branches (`visitChildren`
+  /// reference by buildComponentTree), which [route] rejects as ambiguous. The
+  /// walk descends transparently through component elements (`visitChildren`
   /// composes), so a target nested under `Watch`/stateless wrappers is still
-  /// found. No branch refs are cached between calls — staleness is detected by
+  /// found. No element refs are cached between calls — staleness is detected by
   /// re-walking.
   ///
-  /// The A2UI id is matched as `ValueKey(id)`: `buildSeedTree` wraps each
+  /// The A2UI id is matched as `ValueKey(id)`: `buildComponentTree` wraps each
   /// component id in a `ValueKey<String>` (the typed-key bridge), so the
   /// "tree key == component id" invariant resolves through key equality.
-  List<Branch> _mountedMatches(Branch root, String id) {
+  List<Element> _mountedMatches(Element root, String id) {
     final target = ValueKey(id);
-    final matches = <Branch>[];
-    void walk(Branch branch) {
-      if (branch.mounted && branch.key == target) matches.add(branch);
-      branch.visitChildren(walk);
+    final matches = <Element>[];
+    void walk(Element element) {
+      if (element.mounted && element.key == target) matches.add(element);
+      element.visitChildren(walk);
     }
 
     walk(root);
     return matches;
   }
 
-  /// Resolves the [Actionable] dispatch seam for a resolved target branch
+  /// Resolves the [Actionable] dispatch seam for a resolved target element
   /// ("applied via the target state").
   ///
-  /// The target **branch** must implement [Actionable] — the "seam on
+  /// The target **element** must implement [Actionable] — the "seam on
   /// elements": an actionable component declares it on its element, which
-  /// forwards to its own `State`. consent never reaches a branch's `State`
-  /// directly (`StatefulBranch.state` is `@protected`); the element exposes only
+  /// forwards to its own `State`. consent never reaches a element's `State`
+  /// directly (`StatefulElement.state` is `@protected`); the element exposes only
   /// the narrow action seam.
   ///
   /// Throws [StateError] when a component whose catalog type declares the
   /// action does not implement [Actionable] — the catalog and the component
   /// disagree, a developer wiring error rather than actor feedback.
-  Actionable _actionableOf(Branch target) {
+  Actionable _actionableOf(Element target) {
     if (target case final Actionable handler) return handler;
     throw StateError(
-      'component "${target.key}" (${target.seed.runtimeType}) has a '
-      'catalog-declared action but its live branch does not implement '
+      'component "${target.key}" (${target.component.runtimeType}) has a '
+      'catalog-declared action but its live element does not implement '
       'Actionable: the catalog affords an action the component cannot honor. '
       'Implement Actionable on the component\'s element.',
     );

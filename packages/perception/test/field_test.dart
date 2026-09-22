@@ -149,7 +149,7 @@ void main() {
       final el = owner.mountRoot(const Field('n', 1)) as FieldElement;
       expect(el.mounted, isTrue);
 
-      final visited = <Branch>[];
+      final visited = <Element>[];
       el.visitChildren(visited.add);
       expect(visited, isEmpty);
     });
@@ -221,8 +221,8 @@ void main() {
               )
               as NodeElement;
 
-      final idA = el.children[0].branchId;
-      final idB = el.children[1].branchId;
+      final idA = el.children[0].elementId;
+      final idB = el.children[1].elementId;
 
       el.update(
         Node(
@@ -234,8 +234,8 @@ void main() {
         ),
       );
 
-      expect(el.children[0].branchId, equals(idB));
-      expect(el.children[1].branchId, equals(idA));
+      expect(el.children[0].elementId, equals(idB));
+      expect(el.children[1].elementId, equals(idA));
     });
 
     test(

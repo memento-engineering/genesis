@@ -4,8 +4,8 @@ import 'package:meta/meta.dart';
 import 'perception_context.dart';
 
 /// A configuration whose element owns mutable [PerceptionState] — the
-/// perception-domain face of the tree composition layer's [StatefulSeed].
-abstract class StatefulPerception extends StatefulSeed {
+/// perception-domain face of the tree composition layer's [StatefulComponent].
+abstract class StatefulPerception extends StatefulComponent {
   /// Creates a stateful perception, optionally [key]ed.
   const StatefulPerception({super.key});
 
@@ -14,21 +14,21 @@ abstract class StatefulPerception extends StatefulSeed {
   PerceptionState<StatefulPerception> createState();
 
   @override
-  StatefulPerceptionElement createBranch() => StatefulPerceptionElement(this);
+  StatefulPerceptionElement createElement() => StatefulPerceptionElement(this);
 }
 
 /// Mutable state owned by a [StatefulPerceptionElement] — the perception
 /// face of the tree composition layer's [State], with the domain vocabulary
 /// layered on:
 ///
-/// - [perception] — domain alias of [State.seed];
+/// - [perception] — domain alias of [State.component];
 /// - [perceived] — domain alias of the tree setState-analogue
 ///   ([State.setState]);
 /// - [context] — the handle, upgraded to [PerceptionContext].
 abstract class PerceptionState<T extends StatefulPerception> extends State<T> {
-  /// Domain alias of [State.seed]: the current [StatefulPerception]
+  /// Domain alias of [State.component]: the current [StatefulPerception]
   /// configuration of the owning element.
-  T get perception => seed;
+  T get perception => component;
 
   /// The owning element's capability handle, upgraded to
   /// [PerceptionContext]: a separate object, never the element itself;
@@ -39,19 +39,19 @@ abstract class PerceptionState<T extends StatefulPerception> extends State<T> {
   /// Describes the child subtree for the current configuration and state.
   /// [context] is the element's [PerceptionContext] capability handle.
   @override
-  Seed build(covariant PerceptionContext context);
+  Component build(covariant PerceptionContext context);
 
   /// Domain alias of the tree setState-analogue ([State.setState]): applies
   /// [fn], then marks the owning element as needing harvest.
   void perceived(VoidCallback fn) => setState(fn);
 }
 
-/// Mounted element for [StatefulPerception]: tree's [StatefulBranch] with
+/// Mounted element for [StatefulPerception]: tree's [StatefulElement] with
 /// the capability handle upgraded to [PerceptionContext] and the state
 /// surfaced as [PerceptionState].
-class StatefulPerceptionElement extends StatefulBranch {
-  /// Creates the element and its [PerceptionState] for [seed].
-  StatefulPerceptionElement(StatefulPerception super.seed);
+class StatefulPerceptionElement extends StatefulElement {
+  /// Creates the element and its [PerceptionState] for [component].
+  StatefulPerceptionElement(StatefulPerception super.component);
 
   PerceptionContext? _handle;
 
@@ -60,7 +60,7 @@ class StatefulPerceptionElement extends StatefulBranch {
       _handle ??= createPerceptionContext(super.context);
 
   /// The state, typed as [PerceptionState]. `@protected` (mirrors
-  /// [StatefulBranch.state]): subclass/test access only, never external.
+  /// [StatefulElement.state]): subclass/test access only, never external.
   @protected
   @override
   PerceptionState<StatefulPerception> get state =>

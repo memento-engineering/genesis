@@ -2,15 +2,15 @@
 import 'package:test/test.dart';
 import 'package:genesis_tree/genesis_tree.dart';
 
-class _S extends Seed {
+class _S extends Component {
   const _S({this.tag = ''});
   final String tag;
   @override
-  _B createBranch() => _B(this);
+  _B createElement() => _B(this);
 }
 
-class _B extends Branch {
-  _B(_S super.seed);
+class _B extends Element {
+  _B(_S super.component);
   bool marked = false;
   @override
   void markNeedsRebuild() {
@@ -19,33 +19,33 @@ class _B extends Branch {
   }
 }
 
-InheritedBranch<String> _mountInherited(Branch parent, String value) {
-  final ip = InheritedSeed<String>(value: value, child: _S());
-  final branch = ip.createBranch();
-  branch.mount(parent, 0);
-  return branch;
+InheritedElement<String> _mountInherited(Element parent, String value) {
+  final ip = InheritedComponent<String>(value: value, child: _S());
+  final element = ip.createElement();
+  element.mount(parent, 0);
+  return element;
 }
 
 void main() {
-  group('InheritedSeed construction', () {
-    test('createBranch returns InheritedBranch<T>', () {
-      final ip = InheritedSeed<String>(value: 'x', child: _S());
-      expect(ip.createBranch(), isA<InheritedBranch<String>>());
+  group('InheritedComponent construction', () {
+    test('createElement returns InheritedElement<T>', () {
+      final ip = InheritedComponent<String>(value: 'x', child: _S());
+      expect(ip.createElement(), isA<InheritedElement<String>>());
     });
 
     test('value and child are preserved', () {
       final child = _S(tag: 'c');
-      final ip = InheritedSeed<int>(value: 42, child: child);
+      final ip = InheritedComponent<int>(value: 42, child: child);
       expect(ip.value, 42);
       expect(ip.child, same(child));
     });
   });
 
-  group('dependOnInheritedSeedOfExactType — lookup', () {
-    late TreeOwner testOwner;
+  group('dependOnInheritedValueOfExactType — lookup', () {
+    late BuildOwner testOwner;
     late _B root;
     setUp(() {
-      testOwner = TreeOwner();
+      testOwner = BuildOwner();
       root = testOwner.mountRoot(_S()) as _B;
     });
     tearDown(() => testOwner.dispose());
@@ -54,7 +54,7 @@ void main() {
       final ip = _mountInherited(root, 'hello');
       final leaf = _B(_S())..mount(ip, 0);
 
-      expect(leaf.dependOnInheritedSeedOfExactType<String>(), 'hello');
+      expect(leaf.dependOnInheritedValueOfExactType<String>(), 'hello');
     });
 
     test('returns value from grandparent provider (O(n) walk)', () {
@@ -62,37 +62,37 @@ void main() {
       final mid = _B(_S())..mount(ip, 0);
       final leaf = _B(_S())..mount(mid, 0);
 
-      expect(leaf.dependOnInheritedSeedOfExactType<String>(), 'deep');
+      expect(leaf.dependOnInheritedValueOfExactType<String>(), 'deep');
     });
 
     test('returns null when no ancestor of type T exists', () {
       final leaf = _B(_S())..mount(root, 0);
-      expect(leaf.dependOnInheritedSeedOfExactType<String>(), isNull);
+      expect(leaf.dependOnInheritedValueOfExactType<String>(), isNull);
     });
 
-    test('skips InheritedSeed<OtherType> and finds correct type', () {
-      final intIp = InheritedSeed<int>(value: 7, child: _S());
-      final intBranch = intIp.createBranch();
-      intBranch.mount(root, 0);
+    test('skips InheritedComponent<OtherType> and finds correct type', () {
+      final intIp = InheritedComponent<int>(value: 7, child: _S());
+      final intElement = intIp.createElement();
+      intElement.mount(root, 0);
 
-      final strIp = InheritedSeed<String>(value: 'found', child: _S());
-      final strBranch = strIp.createBranch();
-      strBranch.mount(intBranch, 0);
+      final strIp = InheritedComponent<String>(value: 'found', child: _S());
+      final strElement = strIp.createElement();
+      strElement.mount(intElement, 0);
 
-      final leaf = _B(_S())..mount(strBranch, 0);
-      expect(leaf.dependOnInheritedSeedOfExactType<String>(), 'found');
-      expect(leaf.dependOnInheritedSeedOfExactType<int>(), 7);
+      final leaf = _B(_S())..mount(strElement, 0);
+      expect(leaf.dependOnInheritedValueOfExactType<String>(), 'found');
+      expect(leaf.dependOnInheritedValueOfExactType<int>(), 7);
     });
   });
 
-  group('getInheritedSeedOfExactType — dependency-free lookup', () {
-    late TreeOwner testOwner;
+  group('getInheritedValueOfExactType — dependency-free lookup', () {
+    late BuildOwner testOwner;
     late _B root;
-    late InheritedBranch<String> ip;
+    late InheritedElement<String> ip;
     late _B leaf;
 
     setUp(() {
-      testOwner = TreeOwner();
+      testOwner = BuildOwner();
       root = testOwner.mountRoot(_S()) as _B;
       ip = _mountInherited(root, 'snap');
       leaf = _B(_S())..mount(ip, 0);
@@ -100,46 +100,46 @@ void main() {
     tearDown(() => testOwner.dispose());
 
     test('returns the nearest ancestor value', () {
-      expect(leaf.getInheritedSeedOfExactType<String>(), 'snap');
+      expect(leaf.getInheritedValueOfExactType<String>(), 'snap');
     });
 
-    test('returns value through intermediate branches (same walk)', () {
+    test('returns value through intermediate elements (same walk)', () {
       final deep = _B(_S())..mount(leaf, 0);
-      expect(deep.getInheritedSeedOfExactType<String>(), 'snap');
+      expect(deep.getInheritedValueOfExactType<String>(), 'snap');
     });
 
     test('returns null when no ancestor of type T exists', () {
-      expect(leaf.getInheritedSeedOfExactType<int>(), isNull);
+      expect(leaf.getInheritedValueOfExactType<int>(), isNull);
     });
 
     test('does NOT register the caller as a dependent (either side)', () {
-      leaf.getInheritedSeedOfExactType<String>();
+      leaf.getInheritedValueOfExactType<String>();
       expect(ip.dependents, isEmpty);
       expect(leaf.dependencies, isEmpty);
     });
 
     test('value change does NOT mark a get-only reader', () {
-      leaf.getInheritedSeedOfExactType<String>();
-      ip.update(InheritedSeed<String>(value: 'changed', child: _S()));
+      leaf.getInheritedValueOfExactType<String>();
+      ip.update(InheritedComponent<String>(value: 'changed', child: _S()));
       expect(leaf.marked, isFalse);
     });
 
     test('get after dependOn leaves the existing dependency intact', () {
-      leaf.dependOnInheritedSeedOfExactType<String>();
-      leaf.getInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
+      leaf.getInheritedValueOfExactType<String>();
       expect(ip.dependents, contains(leaf));
       expect(leaf.dependencies, contains(ip));
     });
   });
 
   group('dependency registration', () {
-    late TreeOwner testOwner;
+    late BuildOwner testOwner;
     late _B root;
-    late InheritedBranch<String> ip;
+    late InheritedElement<String> ip;
     late _B leaf;
 
     setUp(() {
-      testOwner = TreeOwner();
+      testOwner = BuildOwner();
       root = testOwner.mountRoot(_S()) as _B;
       ip = _mountInherited(root, 'v');
       leaf = _B(_S())..mount(ip, 0);
@@ -147,34 +147,34 @@ void main() {
     tearDown(() => testOwner.dispose());
 
     test('lookup registers the caller as a dependent', () {
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
       expect(ip.dependents, contains(leaf));
     });
 
     test('registration is idempotent — two calls, one entry', () {
-      leaf.dependOnInheritedSeedOfExactType<String>();
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
       expect(ip.dependents.length, 1);
     });
 
     test('leaf dependencies contains the provider', () {
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
       expect(leaf.dependencies, contains(ip));
     });
   });
 
   group('invalidation', () {
-    late TreeOwner testOwner;
+    late BuildOwner testOwner;
     late _B root;
-    late InheritedBranch<String> ip;
+    late InheritedElement<String> ip;
     late _B leaf;
 
     setUp(() {
-      testOwner = TreeOwner();
+      testOwner = BuildOwner();
       root = testOwner.mountRoot(_S()) as _B;
       ip = _mountInherited(root, 'old');
       leaf = _B(_S())..mount(ip, 0);
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
     });
     tearDown(() => testOwner.dispose());
 
@@ -182,7 +182,7 @@ void main() {
       'value change (updateShouldNotify=true) marks dependent needsRebuild',
       () {
         expect(leaf.marked, isFalse);
-        ip.update(InheritedSeed<String>(value: 'new', child: _S()));
+        ip.update(InheritedComponent<String>(value: 'new', child: _S()));
         expect(leaf.marked, isTrue);
       },
     );
@@ -190,35 +190,35 @@ void main() {
     test(
       'equal value (updateShouldNotify=false) does NOT mark needsRebuild',
       () {
-        ip.update(InheritedSeed<String>(value: 'old', child: _S()));
+        ip.update(InheritedComponent<String>(value: 'old', child: _S()));
         expect(leaf.marked, isFalse);
       },
     );
 
     test('custom updateShouldNotify is honoured', () {
       const nn = _NeverNotify('a');
-      final nnBranch = nn.createBranch();
-      nnBranch.mount(root, 1);
-      final leaf2 = _B(_S())..mount(nnBranch, 0);
-      leaf2.dependOnInheritedSeedOfExactType<String>();
+      final nnElement = nn.createElement();
+      nnElement.mount(root, 1);
+      final leaf2 = _B(_S())..mount(nnElement, 0);
+      leaf2.dependOnInheritedValueOfExactType<String>();
 
-      nnBranch.update(const _NeverNotify('b'));
+      nnElement.update(const _NeverNotify('b'));
       expect(leaf2.marked, isFalse);
     });
   });
 
   group('dependent unmount cleanup', () {
-    late TreeOwner testOwner;
+    late BuildOwner testOwner;
     late _B root;
-    late InheritedBranch<String> ip;
+    late InheritedElement<String> ip;
     late _B leaf;
 
     setUp(() {
-      testOwner = TreeOwner();
+      testOwner = BuildOwner();
       root = testOwner.mountRoot(_S()) as _B;
       ip = _mountInherited(root, 'v');
       leaf = _B(_S())..mount(ip, 0);
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
     });
     tearDown(() => testOwner.dispose());
 
@@ -235,18 +235,18 @@ void main() {
     });
   });
 
-  group('InheritedBranch unmount cleanup', () {
-    late TreeOwner testOwner;
+  group('InheritedElement unmount cleanup', () {
+    late BuildOwner testOwner;
     late _B root;
-    late InheritedBranch<String> ip;
+    late InheritedElement<String> ip;
     late _B leaf;
 
     setUp(() {
-      testOwner = TreeOwner();
+      testOwner = BuildOwner();
       root = testOwner.mountRoot(_S()) as _B;
       ip = _mountInherited(root, 'v');
       leaf = _B(_S())..mount(ip, 0);
-      leaf.dependOnInheritedSeedOfExactType<String>();
+      leaf.dependOnInheritedValueOfExactType<String>();
     });
     tearDown(() => testOwner.dispose());
 
@@ -267,15 +267,15 @@ void main() {
   });
 
   group('Pure-Dart guard', () {
-    test('InheritedBranch is a Branch', () {
-      final ip = InheritedSeed<String>(value: 'x', child: _S());
-      final branch = ip.createBranch();
-      expect(branch, isA<Branch>());
+    test('InheritedElement is a Element', () {
+      final ip = InheritedComponent<String>(value: 'x', child: _S());
+      final element = ip.createElement();
+      expect(element, isA<Element>());
     });
   });
 }
 
-class _NeverNotify extends InheritedSeed<String> {
+class _NeverNotify extends InheritedComponent<String> {
   const _NeverNotify(String v) : super(value: v, child: const _S());
   @override
   bool updateShouldNotify(_) => false;

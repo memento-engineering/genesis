@@ -36,7 +36,7 @@ Map<String, Object?> leafType({
       dart ??
       {
         'class': 'Label',
-        'import': 'fixture_seeds.dart',
+        'import': 'fixture_components.dart',
         'positionalProps': const <String>[],
         'namedProps': const <String>[],
       },
@@ -115,7 +115,7 @@ void main() {
     test('dart bindings parse', () {
       final panel = catalog.typeNamed('panel')!.dart;
       expect(panel.className, 'Panel');
-      expect(panel.import, 'fixture_seeds.dart');
+      expect(panel.import, 'fixture_components.dart');
       expect(panel.positionalProps, ['name']);
       expect(panel.childrenParam, 'children');
 

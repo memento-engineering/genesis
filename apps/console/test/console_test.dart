@@ -189,7 +189,7 @@ void main() {
     expect(
       grid,
       contains('Oranges: 15'),
-      reason: 'live state survives reconcile, not reset to seed start',
+      reason: 'live state survives reconcile, not reset to component start',
     );
     // Prove the apply actually took effect — otherwise the count above would
     // also pass for a no-op apply: the new hint rendered and c1 is gone.

@@ -14,4 +14,4 @@ export 'src/extension.dart';
 export 'src/registry_emitter.dart' show emitRegistry;
 export 'src/registry_runtime.dart';
 export 'src/tool_schema_emitter.dart' show emitToolSchema;
-export 'src/tree_builder.dart';
+export 'src/component_tree_builder.dart';

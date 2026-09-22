@@ -1,18 +1,18 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:analyzer_testing/package_config_file_builder.dart';
-import 'package:genesis_lint/src/rules/no_stored_tree_context.dart';
+import 'package:genesis_lint/src/rules/no_stored_build_context.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
-import 'support/tree_context_rule_test.dart';
+import 'support/build_context_rule_test.dart';
 
 const _holderSource = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
 class Holder {
-  TreeContext? saved;
+  BuildContext? saved;
 
-  void store(TreeContext context) {
+  void store(BuildContext context) {
     saved = context;
   }
 }
@@ -20,19 +20,36 @@ class Holder {
 
 void main() {
   defineReflectiveSuite(() {
-    defineReflectiveTests(NoStoredTreeContextRuleTest);
+    defineReflectiveTests(NoStoredBuildContextRuleTest);
   });
 }
 
 @reflectiveTest
-final class NoStoredTreeContextRuleTest extends TreeContextRuleTest {
+final class NoStoredBuildContextRuleTest extends BuildContextRuleTest {
   @override
   void setUp() {
-    rule = NoStoredTreeContextRule();
+    rule = NoStoredBuildContextRule();
     super.setUp();
   }
 
   Future<void> test_assignment_to_field() async {
+    const source = r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+class Holder {
+  BuildContext? saved;
+
+  void store(BuildContext context) {
+    saved = context;
+  }
+}
+''';
+    await assertDiagnostics(source, [
+      lint(source.indexOf('context;'), 'context'.length),
+    ]);
+  }
+
+  Future<void> test_legacy_alias_assignment_to_field() async {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
@@ -49,11 +66,31 @@ class Holder {
     ]);
   }
 
+  Future<void> test_prefixed_canonical_and_legacy_aliases() async {
+    const source = r'''
+import 'package:genesis_tree/genesis_tree.dart' as tree;
+
+class Holder {
+  tree.BuildContext? canonical;
+  tree.TreeContext? legacy;
+
+  void store(tree.BuildContext first, tree.TreeContext second) {
+    canonical = first;
+    legacy = second;
+  }
+}
+''';
+    await assertDiagnostics(source, [
+      lint(source.indexOf('first;'), 'first'.length),
+      lint(source.indexOf('second;'), 'second'.length),
+    ]);
+  }
+
   Future<void> test_collection_add() async {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-void store(List<TreeContext> values, TreeContext context) {
+void store(List<BuildContext> values, BuildContext context) {
   values.add(context);
 }
 ''';
@@ -66,7 +103,7 @@ void store(List<TreeContext> values, TreeContext context) {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-void store(List<TreeContext> values, Iterable<TreeContext> contexts) {
+void store(List<BuildContext> values, Iterable<BuildContext> contexts) {
   values.addAll(contexts);
 }
 ''';
@@ -79,7 +116,7 @@ void store(List<TreeContext> values, Iterable<TreeContext> contexts) {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-void store(List<TreeContext> values, TreeContext context) {
+void store(List<BuildContext> values, BuildContext context) {
   values[0] = context;
 }
 ''';
@@ -92,7 +129,7 @@ void store(List<TreeContext> values, TreeContext context) {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Object store(TreeContext context) => <TreeContext>[context];
+Object store(BuildContext context) => <BuildContext>[context];
 ''';
     await assertDiagnostics(source, [
       lint(source.indexOf('context];'), 'context'.length),
@@ -103,8 +140,8 @@ Object store(TreeContext context) => <TreeContext>[context];
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Object store(bool include, TreeContext context) =>
-    <TreeContext>[if (include) context];
+Object store(bool include, BuildContext context) =>
+    <BuildContext>[if (include) context];
 ''';
     await assertDiagnostics(source, [
       lint(source.indexOf('context];'), 'context'.length),
@@ -118,7 +155,7 @@ import 'package:genesis_tree/genesis_tree.dart';
 class Holder {
   Holder(this.context);
 
-  final TreeContext context;
+  final BuildContext context;
 }
 ''';
     await assertDiagnostics(source, [
@@ -131,9 +168,9 @@ class Holder {
 import 'package:genesis_tree/genesis_tree.dart';
 
 class Holder {
-  Holder(TreeContext context) : saved = context;
+  Holder(BuildContext context) : saved = context;
 
-  final TreeContext saved;
+  final BuildContext saved;
 }
 ''';
     await assertDiagnostics(source, [
@@ -148,7 +185,7 @@ import 'package:genesis_tree/genesis_tree.dart';
 class Holder {
   late void Function() callback;
 
-  void store(TreeContext context) {
+  void store(BuildContext context) {
     callback = () {
       context.markNeedsRebuild();
     };
@@ -164,7 +201,7 @@ class Holder {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-void Function() store(TreeContext context) {
+void Function() store(BuildContext context) {
   return () => context.markNeedsRebuild();
 }
 ''';
@@ -177,7 +214,7 @@ void Function() store(TreeContext context) {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-Object store(TreeContext context) => <void Function()>[
+Object store(BuildContext context) => <void Function()>[
   () => context.markNeedsRebuild(),
 ];
 ''';
@@ -190,7 +227,7 @@ Object store(TreeContext context) => <void Function()>[
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-void use(TreeContext context) {
+void use(BuildContext context) {
   (() => context.markNeedsRebuild())();
 }
 ''');
@@ -198,12 +235,12 @@ void use(TreeContext context) {
 
   Future<void> test_local_same_named_type() async {
     await assertNoDiagnostics(r'''
-class TreeContext {}
+class BuildContext {}
 
 class Holder {
-  TreeContext? saved;
+  BuildContext? saved;
 
-  void store(TreeContext context) {
+  void store(BuildContext context) {
     saved = context;
   }
 }
@@ -222,7 +259,22 @@ class Holder {
     await assertNoDiagnosticsInFile(path);
   }
 
-  Future<void> test_managed_branch_owner() async {
+  Future<void> test_managed_element_owner() async {
+    await assertNoDiagnostics(r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+class FrameworkElement extends Element {
+  BuildContext? saved;
+
+  void store(BuildContext context) {
+    saved = context;
+    <BuildContext>[context];
+  }
+}
+''');
+  }
+
+  Future<void> test_managed_legacy_branch_owner() async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
@@ -231,20 +283,19 @@ class FrameworkBranch extends Branch {
 
   void store(TreeContext context) {
     saved = context;
-    <TreeContext>[context];
   }
 }
 ''');
   }
 
-  Future<void> test_managed_tree_context_owner() async {
+  Future<void> test_managed_build_context_owner() async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-class ContextWrapper implements TreeContext {
+class ContextWrapper implements BuildContext {
   ContextWrapper(this.inner);
 
-  final TreeContext inner;
+  final BuildContext inner;
 
   @override
   bool get mounted => inner.mounted;
@@ -278,7 +329,7 @@ class ContextWrapper implements TreeContext {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-abstract class SpecializedContext implements TreeContext {}
+abstract class SpecializedContext implements BuildContext {}
 
 class Holder {
   SpecializedContext? saved;
@@ -297,7 +348,7 @@ class Holder {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-extension type WrappedContext(TreeContext context) {}
+extension type WrappedContext(BuildContext context) {}
 
 void store(List<WrappedContext> values, WrappedContext context) {
   values[0] = context;
@@ -312,9 +363,9 @@ void store(List<WrappedContext> values, WrappedContext context) {
     const source = r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-set retained(TreeContext value) {}
+set retained(BuildContext value) {}
 
-void store(TreeContext context) {
+void store(BuildContext context) {
   retained = context;
 }
 ''';
@@ -327,7 +378,7 @@ void store(TreeContext context) {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
 
-void use(TreeContext context) {
+void use(BuildContext context) {
   context.markNeedsRebuild();
 }
 ''');

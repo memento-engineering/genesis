@@ -6,24 +6,24 @@ changing inputs observable, and keep I/O outside the declarative tree. Each rule
 states whether the library enforces it or whether it remains a convention for
 consumer code.
 
-They elaborate [ADR-0006](../adr/ADR-0006-pull-free-build.md) and the branch
+They elaborate [ADR-0006](../adr/ADR-0006-pull-free-build.md) and the element
 purity invariant in [ADR-0001](../adr/ADR-0001-foundations.md).
 
 ## Rule 1 — Track every changing dependency
 
 Always watch every changing dependency that affects `build()`. For an inherited
-value, call `dependOnInheritedSeedOfExactType()` in `build()`, or cache its
+value, call `dependOnInheritedValueOfExactType()` in `build()`, or cache its
 result from `didChangeDependencies()`. `dependencyChanged()` causes
 `didChangeDependencies()` to run again before the next build, so that method
 must repeat the read and replace the cached value. Use
-`getInheritedSeedOfExactType()` only for a deliberately one-shot snapshot whose
+`getInheritedValueOfExactType()` only for a deliberately one-shot snapshot whose
 later changes must not rebuild the reader. Never initialize a reactive cache
 once and leave it detached from its source.
 
 **Enforcement:** Code-enforced — debug-mode asserts at
 `packages/tree/lib/src/stateful.dart:100-122` directly guard this
 cache-and-track rule. They reject dependency-watching reads during `initState`
-and `dispose`, direct one-shot reads to `getInheritedSeedOfExactType()`, and
+and `dispose`, direct one-shot reads to `getInheritedValueOfExactType()`, and
 direct cache-and-track reads to `didChangeDependencies()`. The same range shows
 `dependencyChanged()` marking the lifecycle callback and rebuild for another
 pass.
@@ -40,9 +40,9 @@ read from the object that already owns the subscription.
 arbitrary consumer accessor has a matching subscription. Reviews and consumer
 tests must prove the invalidation path for every reactive read.
 
-## Rule 3 — Keep service access out of seeds and branches
+## Rule 3 — Keep service access out of components and elements
 
-`Seed` objects carry immutable configuration values. `Branch` objects and
+`Component` objects carry immutable configuration values. `Element` objects and
 composition code may touch value types and reactive domain objects; they must
 not locate or call service-layer APIs. A long-lived object can enter through
 dependency injection or composition only, and tree code can carry its reference
@@ -50,7 +50,7 @@ onward without doing that object's work.
 
 **Enforcement:** Convention — the generic library cannot identify consumer
 service types or dependency-injection choices. Reviews keep service lookup and
-service calls outside seeds and branches.
+service calls outside components and elements.
 
 ## Rule 4 — Pure description delegates may be created during build
 

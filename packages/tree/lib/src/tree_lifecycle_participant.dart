@@ -26,7 +26,7 @@ abstract interface class TreeWatchingReader {
 /// dependency pass or lifecycle teardown changes [isCurrent] monotonically to
 /// false. A scope only reports supersession: it neither cancels nor schedules
 /// work, and it does not replace a separate mountedness probe when a caller
-/// also needs to know whether its tree branch remains mounted.
+/// also needs to know whether its tree element remains mounted.
 abstract interface class TreeDependencyScope {
   /// Whether the dependency pass that supplied this scope is still current.
   bool get isCurrent;

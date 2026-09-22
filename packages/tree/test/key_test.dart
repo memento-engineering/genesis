@@ -2,8 +2,8 @@
 // relies on, ObjectKey's identity semantics, the `Key(String)` ergonomic
 // factory, and the deliberate absence of any cross-tree (Global) key.
 //
-// Equality is load-bearing: `Seed.canUpdate` and `Branch.updateChildren` match
-// new config to mounted branches by `runtimeType` + key equality, so these
+// Equality is load-bearing: `Component.canUpdate` and `Element.updateChildren` match
+// new config to mounted elements by `runtimeType` + key equality, so these
 // laws are what make keyed identity reliable.
 import 'package:genesis_tree/genesis_tree.dart';
 import 'package:test/test.dart';
@@ -86,10 +86,10 @@ void main() {
   group('keyed reconcile matches by Key value', () {
     test('value-equal keys let a child update in place (no remount)', () {
       final root =
-          TreeOwner().mountRoot(
+          BuildOwner().mountRoot(
                 const Node('root', children: [Leaf('a', key: ValueKey('k'))]),
               )
-              as NodeBranch;
+              as NodeElement;
       final before = root.children.single;
 
       root.update(
@@ -102,10 +102,10 @@ void main() {
 
     test('a changed key forces a remount (old unmounted, new mounted)', () {
       final root =
-          TreeOwner().mountRoot(
+          BuildOwner().mountRoot(
                 const Node('root', children: [Leaf('a', key: ValueKey('k1'))]),
               )
-              as NodeBranch;
+              as NodeElement;
       final before = root.children.single;
 
       root.update(
@@ -116,16 +116,16 @@ void main() {
       expect(before.mounted, isFalse);
     });
 
-    test('canUpdate keys on the Key value, not the seed instance', () {
+    test('canUpdate keys on the Key value, not the component instance', () {
       expect(
-        Seed.canUpdate(
+        Component.canUpdate(
           const Leaf('a', key: ValueKey('k')),
           const Leaf('b', key: ValueKey('k')),
         ),
         isTrue,
       );
       expect(
-        Seed.canUpdate(
+        Component.canUpdate(
           const Leaf('a', key: ValueKey('k')),
           const Leaf('a', key: ValueKey('other')),
         ),

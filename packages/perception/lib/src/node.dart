@@ -6,7 +6,7 @@ import 'perception_element.dart';
 /// Named container perception: a keyed-multichild structural node in a
 /// measurement (the measurement vocabulary, built on the tree spine).
 ///
-/// Children are typed [Seed] — perception's public signatures surface tree
+/// Children are typed [Component] — perception's public signatures surface tree
 /// types — so a Node freely mixes domain artifacts ([Perception]s such
 /// as `Field`) with composition configs (`StatelessPerception`, `Watch`, …).
 class Node extends Perception {
@@ -17,7 +17,7 @@ class Node extends Perception {
   final String name;
 
   /// The child configurations, reconciled by key identity.
-  final List<Seed> children;
+  final List<Component> children;
 
   @override
   NodeElement createElement() => NodeElement(this);
@@ -27,19 +27,19 @@ class Node extends Perception {
 /// response in the rebuild hook is keyed reconciliation of its children —
 /// no build contract.
 class NodeElement extends PerceptionElement {
-  /// Creates the element for [seed].
-  NodeElement(Node super.seed);
+  /// Creates the element for [component].
+  NodeElement(Node super.component);
 
-  List<Branch> _children = const [];
+  List<Element> _children = const [];
 
-  /// The mounted child branches, in tree order. Exposed for testing.
+  /// The mounted child elements, in tree order. Exposed for testing.
   /// Do not use in production code.
-  List<Branch> get children => _children;
+  List<Element> get children => _children;
 
   Node get _node => perception as Node;
 
   @override
-  void mount(Branch? parent, Object? slot) {
+  void mount(Element? parent, Object? slot) {
     super.mount(parent, slot);
     performRebuild();
   }
@@ -53,7 +53,7 @@ class NodeElement extends PerceptionElement {
   }
 
   @override
-  void visitChildren(void Function(Branch child) visitor) {
+  void visitChildren(void Function(Element child) visitor) {
     for (final child in _children) {
       visitor(child);
     }

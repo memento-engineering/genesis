@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- **Breaking:** render descendants now follow the canonical tree vocabulary: migrate `RenderSeed`/`RenderBranch` and `StageBranch`/`BoxBranch`/`TextBranch` to `RenderComponent`/`RenderElement` and `*Element`; migrate `RenderParentLink.branch` to `.element`. Deprecated aliases and the forwarding getter retain compatibility.
+
 ## 0.1.2
 
 - Fix: a render container's internal child wrapper no longer reuses the child

@@ -45,7 +45,7 @@ json_schema_builder  (schema build + validate, draft 2020-12)
 | `genesis_dialogue` | **`a2ui_core`** | **Real overlap.** Both pure-Dart A2UI **v0.9**, same string `component` discriminator, flat components, parse/serialize `updateComponents` + client actions. We rebuilt the codec. |
 | `genesis_taxonomy` | `json_schema_builder` | **Mostly orthogonal.** Our catalog→factory-registry **codegen** has no counterpart (json_schema_builder is runtime build+validate, no codegen). Only our schema-emission + validation overlaps (we already dev-dep `json_schema` there). |
 | — *(gap)* | **`genai_primitives`** | **Not duplicated — a gap.** It's the LLM conversation/tool vocabulary (`ChatMessage`, `Part`/`StandardPart`, `ToolDefinition`). We'll need it for the agent loop and don't have it. |
-| `genesis_tree` / `perception` / `typesetting` | **none** | **The bet, unduplicated.** genui is Flutter/Skia; nobody ships an extracted Seed/Branch engine, a measurement domain, or a bare-VM ANSI renderer. |
+| `genesis_tree` / `perception` / `typesetting` | **none** | **The bet, unduplicated.** genui is Flutter/Skia; nobody ships an extracted Component/Element engine, a measurement domain, or a bare-VM ANSI renderer. |
 
 We duplicated **one layer** — the A2UI wire codec — not the substrate.
 

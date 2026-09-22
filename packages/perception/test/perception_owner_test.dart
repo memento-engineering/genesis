@@ -15,7 +15,7 @@ class _FakeP extends Perception {
 class _FakeE extends PerceptionElement {
   _FakeE(_FakeP super.p);
   int buildCount = 0;
-  Branch? childEl;
+  Element? childEl;
 
   @override
   void performRebuild() {
@@ -70,7 +70,7 @@ class _ObservingE extends PerceptionElement {
 
   @override
   void performRebuild() {
-    lastValue = dependOnInheritedSeedOfExactType<int>();
+    lastValue = dependOnInheritedValueOfExactType<int>();
   }
 }
 
@@ -138,7 +138,7 @@ void main() {
           InheritedPerception<int>(value: 5, child: fakeP),
         );
         final ipEl = root as InheritedPerceptionElement<int>;
-        final fakeEl = ipEl.childBranch as _ObservingE;
+        final fakeEl = ipEl.childElement as _ObservingE;
         fakeEl.performRebuild(); // register dependency
         root.update(InheritedPerception<int>(value: 7, child: fakeP));
         owner.flushHarvest();

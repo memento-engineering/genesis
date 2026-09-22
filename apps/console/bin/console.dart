@@ -167,7 +167,7 @@ genesis console — commands:
   press <id> [amount]     fire a press action on a counter (amount defaults to 1)
   set <id> <key>=<value>  fire a set action (e.g. set c1 value=42)
   ask <prompt>            ask the agent to render/update the screen (swift-infer)
-  tree                    dump the live branch tree
+  tree                    dump the live element tree
   help                    show this help
   quit                    exit''';
 

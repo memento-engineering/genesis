@@ -10,25 +10,25 @@ hit-tested action after which the tree re-measures (the action half is
 
 ## Surface
 
-- **`Perception extends Seed`** — a measurement node; `createElement()` is the
+- **`Perception extends Component`** — a measurement node; `createElement()` is the
   domain factory.
-- **`PerceptionElement extends Branch`** — reserved for artifact elements
+- **`PerceptionElement extends Element`** — reserved for artifact elements
   (`NodeElement`, `FieldElement`, custom measurement leaves); composition
-  elements are thin subclasses of the tree composition branches that only
+  elements are thin subclasses of the tree composition elements that only
   upgrade the handle.
-- **`PerceptionContext`** — a capability extension of `TreeContext` (adds
+- **`PerceptionContext`** — a capability extension of `BuildContext` (adds
   `perceptionId` + `markNeedsHarvest`; inherits throw-after-unmount); the seam
   where the token budget lands.
-- **`PerceptionOwner extends TreeOwner`** — `flushHarvest()` returns the
+- **`PerceptionOwner extends BuildOwner`** — `flushHarvest()` returns the
   rebuilt list.
-- **`Node`** (named container, children widened to `List<Seed>`) and
+- **`Node`** (named container, children widened to `List<Component>`) and
   **`Field(String name, Object? value)`** (the non-generic leaf — a `Field<T>`
   would break `canUpdate` across value-type changes, and `null` is a legal
   measurement).
 
 The tree spine is **re-exported in full**, so one import surfaces
-`Seed`/`Branch`/`TreeContext`/`TreeOwner` and the composition layer
-(`Watch`, `Sprout`, …) alongside the domain.
+`Component`/`Element`/`BuildContext`/`BuildOwner` and the composition layer
+(`Watch`, `HookComponent`, …) alongside the domain.
 
 ## Status
 

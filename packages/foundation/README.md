@@ -71,7 +71,7 @@ Exhaustive `switch` expressions remain the house style.
 ```
 genesis_foundation   Diagnosticable · DiagnosticsProperty · TreeSnapshot
         ▲
-genesis_tree         Seed / Branch — the keyed-reconcile spine
+genesis_tree         Component / Element — the keyed-reconcile spine
         ▲
 genesis_perception   measurement domain on the spine
 ```

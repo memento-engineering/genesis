@@ -2,88 +2,93 @@
 /// second consumer beyond perception adopts it.
 library;
 
-import 'branch.dart';
-import 'seed.dart';
+import 'element.dart';
+import 'component.dart';
 
-/// A [Seed] that carries a fixed, ordered list of child seeds directly in its
+/// A [Component] that carries a fixed, ordered list of child seeds directly in its
 /// configuration — the MultiChildRenderObjectWidget analogue, and the
 /// multi-child sibling of the single-child component seeds
-/// (`StatelessSeed`/`StatefulSeed`/`Sprout`).
+/// (`StatelessComponent`/`StatefulComponent`/`HookComponent`).
 ///
-/// A component seed *builds* one child from a `build()` method; a
-/// `MultiChildSeed` instead *declares* its children up front. Its
-/// [MultiChildBranch] keyed-reconciles them against the previous set on every
-/// rebuild ([Branch.updateChildren]): a child matched by key (or, when unkeyed,
-/// by position) keeps its branch identity across rebuilds; a child that appears
+/// A component component *builds* one child from a `build()` method; a
+/// `MultiChildComponent` instead *declares* its children up front. Its
+/// [MultiChildElement] keyed-reconciles them against the previous set on every
+/// rebuild ([Element.updateChildren]): a child matched by key (or, when unkeyed,
+/// by position) keeps its element identity across rebuilds; a child that appears
 /// mounts; a child that vanishes unmounts; and the resulting child order
 /// follows [children]. The identical-config fast path is inherited unchanged —
-/// a child seed reused by `identical` instance prunes its subtree at reconcile
+/// a child component reused by `identical` instance prunes its subtree at reconcile
 /// time.
 ///
-/// `MultiChildSeed` is `abstract` deliberately: a seed's `runtimeType` is its
-/// reconciliation tag ([Seed.canUpdate]), so a topology of distinct container
+/// `MultiChildComponent` is `abstract` deliberately: a component's `runtimeType` is its
+/// reconciliation tag ([Component.canUpdate]), so a topology of distinct container
 /// kinds (e.g. a Grid of Rigs of Steps) must subclass it once per kind — two
 /// kinds sharing this base directly would reconcile into one another. Subclasses
 /// pass their children up and may add their own typed fields:
 ///
 /// ```dart
-/// class Grid extends MultiChildSeed {
+/// class Grid extends MultiChildComponent {
 ///   const Grid(List<Rig> rigs) : super(children: rigs);
 /// }
 /// ```
-abstract class MultiChildSeed extends Seed {
-  /// Creates a multi-child seed configured with [children] (default empty),
+abstract class MultiChildComponent extends Component {
+  /// Creates a multi-child component configured with [children] (default empty),
   /// optionally [key]ed for keyed reconciliation by its own parent.
-  const MultiChildSeed({this.children = const [], super.key});
+  const MultiChildComponent({this.children = const [], super.key});
 
-  /// The ordered child configurations this seed reconciles. Each may carry its
-  /// own [Seed.key] for keyed identity; unkeyed children match positionally. A
+  /// The ordered child configurations this component reconciles. Each may carry its
+  /// own [Component.key] for keyed identity; unkeyed children match positionally. A
   /// key must be unique among siblings (asserted in debug by
-  /// [Branch.updateChildren]).
-  final List<Seed> children;
+  /// [Element.updateChildren]).
+  final List<Component> children;
 
   @override
-  MultiChildBranch createBranch() => MultiChildBranch(this);
+  MultiChildElement createElement() => MultiChildElement(this);
+
+  @override
+  @Deprecated('Use createElement instead.')
+  MultiChildElement createBranch() => createElement();
 }
 
-/// Mounted branch for a [MultiChildSeed]: keyed-reconciles the seed's declared
-/// [MultiChildSeed.children] — the MultiChildRenderObjectElement analogue.
+/// Mounted element for a [MultiChildComponent]: keyed-reconciles the component's declared
+/// [MultiChildComponent.children] — the MultiChildRenderObjectElement analogue.
 ///
 /// It carries no build contract of its own; its rebuild hook simply reconciles
-/// the live child list against the seed's children through
-/// [Branch.updateChildren], so a config update re-reconciles in place,
-/// preserving the branch identity of every matched child. Concrete and reusable across container kinds (like `StatelessBranch`
+/// the live child list against the component's children through
+/// [Element.updateChildren], so a config update re-reconciles in place,
+/// preserving the element identity of every matched child. Concrete and reusable across container kinds (like `StatelessElement`
 /// across stateless seeds): a domain that needs no extra behaviour reuses it
 /// verbatim; one that needs an artifact response may subclass it and extend
 /// [performRebuild] after `super` (the RenderObjectElement pattern).
-class MultiChildBranch extends Branch {
-  /// Creates the branch for [seed].
-  MultiChildBranch(MultiChildSeed super.seed);
+class MultiChildElement extends Element {
+  /// Creates the element for [component].
+  MultiChildElement(MultiChildComponent super.component);
 
-  List<Branch> _children = const [];
+  List<Element> _children = const [];
 
-  /// The mounted child branches, in tree order. Exposed for testing.
+  /// The mounted child elements, in tree order. Exposed for testing.
   /// Do not use in production code.
-  List<Branch> get children => _children;
+  List<Element> get children => _children;
 
-  List<Seed> get _childSeeds => (seed as MultiChildSeed).children;
+  List<Component> get _childComponents =>
+      (component as MultiChildComponent).children;
 
   @override
-  void mount(Branch? parent, Object? slot) {
-    // First reconcile is unconditional (the ComponentBranch first-build idiom):
+  void mount(Element? parent, Object? slot) {
+    // First reconcile is unconditional (the BuildableElement first-build idiom):
     // a freshly mounted container builds its child subtree immediately, so
-    // mountRoot(seed) yields a full tree without an external markNeedsRebuild.
+    // mountRoot(component) yields a full tree without an external markNeedsRebuild.
     super.mount(parent, slot);
     performRebuild();
   }
 
   @override
   void performRebuild() {
-    _children = updateChildren(_children, _childSeeds);
+    _children = updateChildren(_children, _childComponents);
   }
 
   @override
-  void visitChildren(void Function(Branch child) visitor) {
+  void visitChildren(void Function(Element child) visitor) {
     for (final child in _children) {
       visitor(child);
     }
@@ -96,3 +101,11 @@ class MultiChildBranch extends Branch {
     super.unmount();
   }
 }
+
+/// Legacy name for [MultiChildComponent].
+@Deprecated('Use MultiChildComponent instead.')
+typedef MultiChildSeed = MultiChildComponent;
+
+/// Legacy name for [MultiChildElement].
+@Deprecated('Use MultiChildElement instead.')
+typedef MultiChildBranch = MultiChildElement;

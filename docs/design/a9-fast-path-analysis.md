@@ -2,63 +2,63 @@
 
 **Bead:** genesis-ak7 · **Author:** AI (analysis only — no implementation, no register write)
 **Date:** 2026-06-12
-**Provenance:** register A14 flagged: "Flutter's identical-config fast path (`identical(seed, newSeed) → skip`) was deliberately not ported; under A9 every in-place update cascades a subtree rebuild — the const-Seed/short-circuit pruning is the natural next optimization decision."
-**Governs:** `packages/tree/lib/src/branch.dart` (`updateChild`/`updateChildren`/`update`/`rebuild`); reads against ADR-0001 Decisions 3–5, register A9/A11/A14.
+**Provenance:** register A14 flagged: "Flutter's identical-config fast path (`identical(component, newComponent) → skip`) was deliberately not ported; under A9 every in-place update cascades a subtree rebuild — the const-Component/short-circuit pruning is the natural next optimization decision."
+**Governs:** `packages/tree/lib/src/element.dart` (`updateChild`/`updateChildren`/`update`/`rebuild`); reads against ADR-0001 Decisions 3–5, register A9/A11/A14.
 
 ---
 
 ## 1. What genesis does today
 
-`Branch.updateChild` (branch.dart, lines 192–207) has no identity check — any non-null
-`newSeed` that passes `canUpdate` runs `child.update(newSeed)` unconditionally:
+`Element.updateChild` (element.dart, lines 192–207) has no identity check — any non-null
+`newComponent` that passes `canUpdate` runs `child.update(newComponent)` unconditionally:
 
 ```dart
-Branch? updateChild(Branch? child, Seed? newSeed, Object? slot) {
-  if (newSeed == null) {
+Element? updateChild(Element? child, Component? newComponent, Object? slot) {
+  if (newComponent == null) {
     child?.unmount();
     return null;
   }
   if (child != null) {
-    if (Seed.canUpdate(child._seed, newSeed)) {
-      child.update(newSeed);
+    if (Component.canUpdate(child._seed, newComponent)) {
+      child.update(newComponent);
       return child;
     }
     child.unmount();
   }
-  final branch = newSeed.createBranch();
-  branch.mount(this, slot);
-  return branch;
+  final element = newComponent.createElement();
+  element.mount(this, slot);
+  return element;
 }
 ```
 
-and `Branch.update` (A9 / ADR-0001 Decision 4) is unconditionally a force-rebuild:
+and `Element.update` (A9 / ADR-0001 Decision 4) is unconditionally a force-rebuild:
 
 ```dart
-void update(Seed newSeed) {
+void update(Component newComponent) {
   ...
-  _seed = newSeed;
+  _seed = newComponent;
   rebuild(force: true);
 }
 ```
 
-For a `ComponentBranch`, `performRebuild()` re-runs `build()` and reconciles the
+For a `BuildableElement`, `performRebuild()` re-runs `build()` and reconciles the
 child — which calls `updateChild` again — so **one in-place update at depth d
-rebuilds the entire subtree below d**, even when every seed below is the same
+rebuilds the entire subtree below d**, even when every component below is the same
 object. `updateChildren` (lines 212–254) does **not** delegate to `updateChild`;
-it has its own inline `canUpdate → match.update(newSeed)` path (line 235–237), so
+it has its own inline `canUpdate → match.update(newComponent)` path (line 235–237), so
 any skip must land in both places (or `updateChildren` must be refactored to
 delegate, Flutter-style — see §2).
 
 Two concrete consequences in our architecture today:
 
-1. **Provider updates are O(subtree), not O(dependents).** `InheritedBranch.update`
+1. **Provider updates are O(subtree), not O(dependents).** `InheritedElement.update`
    notifies dependents, then `super.update` → `performRebuild` →
    `updateChild(_child, _typed.child, 0)`. Even when the surface author reuses the
    *same child instance* and only the provided value changed, the whole provided
    subtree force-rebuilds. `updateShouldNotify` currently gates *notification*,
    never *cost* — the dependent-targeting machinery (the whole point of the
    dependent set) is economically dead under the cascade.
-2. **const-Seed pruning is impossible**, although our own test fixtures already
+2. **const-Component pruning is impossible**, although our own test fixtures already
    write the pattern that would benefit: `_CountedSeed.build` returns
    `const Leaf('counted-child')` (a9_rebuild_on_update_test.dart) — Dart
    canonicalizes const instances, so every rebuild returns the *identical* object,
@@ -145,9 +145,9 @@ Three things to read precisely:
 
 - **Even on the skip, the slot is still updated** (`updateSlotForChild`) — an
   identical widget that *moved* must tell its render parent. (Genesis note:
-  `Branch` stores no slot today — `mount` receives one and drops it; position
+  `Element` stores no slot today — `mount` receives one and drops it; position
   lives only in the parent's child list — so there is nothing to update *yet*.
-  This becomes an obligation the day render branches/typesetting grow slots.)
+  This becomes an obligation the day render elements/typesetting grow slots.)
 
 - **`hasSameSuperclass` is debug-only hot-reload armor** (the assert body) for
   Stateful↔Stateless swaps at the same tree location; in release it is
@@ -162,9 +162,9 @@ static bool canUpdate(Widget oldWidget, Widget newWidget) {
 }
 ```
 
-Genesis's `Seed.canUpdate` is a verbatim port. Note `identical(a, b)` implies
+Genesis's `Component.canUpdate` is a verbatim port. Note `identical(a, b)` implies
 `canUpdate(a, b)` trivially, so the skip strictly precedes — never conflicts
-with — the existing branch arms.
+with — the existing conditional arms.
 
 ### 2.3 Multichild and proxies
 
@@ -177,27 +177,27 @@ with — the existing branch arms.
   widget precisely because the fast path upstream guarantees it. The notify
   order (`updated(oldWidget)` → dependents' `didChangeDependencies()` →
   `markNeedsBuild()`, lines 5190–5194 — then `rebuild(force: true)`) is the
-  order genesis already ported into `InheritedBranch.update` (A14: "notifies
+  order genesis already ported into `InheritedElement.update` (A14: "notifies
   dependents BEFORE reconciling its child").
 
 ## 3. The correctness question: does provider invalidation survive the skip?
 
 **Yes — verified by reading, this is the load-bearing check.** The worry: if a
-provider's child subtree is skipped because the child seed is identical, do
+provider's child subtree is skipped because the child component is identical, do
 dependents inside that subtree still rebuild?
 
 The chain, from source:
 
-1. `InheritedBranch.update` (inherited.dart, lines 90–108) notifies dependents
+1. `InheritedElement.update` (inherited.dart, lines 90–108) notifies dependents
    **before** `super.update` reconciles the child: `dep.dependencyChanged()`.
-2. `Branch.dependencyChanged` → `markNeedsRebuild()` (branch.dart, lines 71–81):
+2. `Element.dependencyChanged` → `markNeedsRebuild()` (element.dart, lines 71–81):
    sets `_dirty` and calls `owner?.scheduleRebuildFor(this)` —
    **independent of the update cascade**; it goes through the owner's dirty set.
-3. `TreeOwner.flush` (tree_owner.dart, lines 70–95) drains depth-ordered and —
+3. `BuildOwner.flush` (build_owner.dart, lines 70–95) drains depth-ordered and —
    documented and implemented — "**Branches dirtied mid-flush are rebuilt in
    the same pass and included**" (the `while (_dirtyBranches.isNotEmpty)` loop
    re-reads the set every iteration).
-4. `StatefulBranch.dependencyChanged` additionally sets
+4. `StatefulElement.dependencyChanged` additionally sets
    `_needsDidChangeDependencies`, consumed by its next `performRebuild` —
    whichever path triggers it (stateful.dart, lines 84–101).
 
@@ -222,7 +222,7 @@ cannot trip.
   rebuilds dependents via the cascade; with the skip (and an identical provider
   child) they rebuild at the next `flush()`. Embedders already must flush on
   `onNeedsFlush` (setState has the same shape), and the wire path never
-  produces identical seeds (§4.3), so this only affects in-process surfaces
+  produces identical components (§4.3), so this only affects in-process surfaces
   that opt into instance reuse — but it needs a test pinning the semantics.
 
 ## 4. Where updates actually come from, surface by surface
@@ -232,19 +232,19 @@ cannot trip.
 Perception's invalidation enters via `setState`/`markNeedsHarvest` at the
 dirtied element and via provider invalidation — `markNeedsRebuild()` funnels
 into `markNeedsHarvest` (A15), which super-calls the tree path. Flush-driven
-rebuilds start *at* the dirty branch, so the fast path buys nothing for
+rebuilds start *at* the dirty element, so the fast path buys nothing for
 leaf-dirty re-harvest. It pays inside perception when a *container's* builder
-re-runs and re-emits const/cached children (`Node` children are `List<Seed>`;
+re-runs and re-emits const/cached children (`Node` children are `List<Component>`;
 `Field` is a const-friendly leaf): unchanged sub-measurements prune instead of
 re-running. Harvest output is unaffected either way — harvest walks the
-mounted tree, and a skipped branch still holds the same seed.
+mounted tree, and a skipped element still holds the same component.
 
 ### 4.2 Expression surfaces, in-process — the real win
 
 This is Flutter's own economics, and ours: a `setState`/update near the root
-re-rebuilds everything below it today. With the skip, `const` seeds (Dart
+re-rebuilds everything below it today. With the skip, `const` components (Dart
 canonicalization makes every `const Leaf('x')` at the same call site identical)
-and cached child instances (`InheritedSeed(value: v, child: prebuiltChild)`)
+and cached child instances (`InheritedComponent(value: v, child: prebuiltChild)`)
 prune entire subtrees. Provider updates drop from O(subtree) to
 O(dependents) + the reconcile spine above the skip point. The A4/typesetting
 dirty-region economics (spike 4: 268 bytes vs 10530 across ten updates,
@@ -255,67 +255,67 @@ everything.
 
 ### 4.3 The wire path (A2UI re-emission) — the fast path does NOT help, honestly
 
-`genesis_dialogue` deserializes `updateComponents` payloads into fresh `Seed`
-instances every time. **Deserialized seeds are never `identical()`**, so under
+`genesis_dialogue` deserializes `updateComponents` payloads into fresh `Component`
+instances every time. **Deserialized components are never `identical()`**, so under
 option (a) a whole-tree re-emission still cascades exactly as today. This is
 not a flaw to paper over; it is a layering fact: wire-cost containment belongs
 *in the dialogue package* — diff incoming component maps against the previous
 emission by key and only `update()` the components whose payload changed —
 which is also what A2UI's flat-keyed grammar is *for* (A3: "whole-(sub)tree
-emission reconciles to a patch by key"). Pushing wire economics into `Seed`
+emission reconciles to a patch by key"). Pushing wire economics into `Component`
 equality (option b) solves the wrong layer with the sharpest tool.
 
 ## 5. Options
 
-### Option (a) — port the fast path: `identical(child.seed, newSeed)` → skip
+### Option (a) — port the fast path: `identical(child.component, newComponent)` → skip
 
 In `updateChild`, before the `canUpdate` arm:
 
 ```dart
 if (child != null) {
-  if (identical(child.seed, newSeed)) {
+  if (identical(child.component, newComponent)) {
     return child;
   }
-  if (Seed.canUpdate(child._seed, newSeed)) { ... }
+  if (Component.canUpdate(child._seed, newComponent)) { ... }
 }
 ```
 
 and the same guard in `updateChildren`'s match arm (or refactor
 `updateChildren` to delegate pairs to `updateChild`, mirroring Flutter — the
-cleaner shape, and it keeps a single skip site). `Branch.update` itself stays
+cleaner shape, and it keeps a single skip site). `Element.update` itself stays
 force-semantics (Flutter's `Element.update` also has no identity check — the
 skip is reconciliation's concern; direct `update()` callers keep A9 exactly).
 
 A deliberate genesis refinement over Flutter: use **`identical()` explicitly**,
 not `==`. Flutter writes `child.widget == newWidget` and then pins `Widget.==`
 to identity with `@nonVirtual` to keep that expression honest. Genesis should
-*not* pin `Seed.operator==` — the house freezed plans (ADR-0001 Decision 7)
-want value equality on data seeds for wire diffing and testing — and instead
-make reconciliation immune to whatever `==` seeds define. Same semantics as
+*not* pin `Component.operator==` — the house freezed plans (ADR-0001 Decision 7)
+want value equality on data components for wire diffing and testing — and instead
+make reconciliation immune to whatever `==` components define. Same semantics as
 Flutter, fewer constraints on the config type.
 
-- **Buys:** const-Seed subtree pruning; provider updates at O(dependents);
+- **Buys:** const-Component subtree pruning; provider updates at O(dependents);
   preserves the A4 dirty-region economics under top-down updates; restores the
   `ProxyElement`-style invariant (update never sees an identical config).
 - **Costs:** the A14 flush inclusion-rule delta and out-of-flush timing delta
   (§3) must be tested and re-worded; the skip must cover both reconcile sites;
-  a slot-update obligation lands the day branches grow slots (§2.1); seeds
-  that are *mutated* in place (illegal but unenforced — `Seed` fields are
+  a slot-update obligation lands the day elements grow slots (§2.1); components
+  that are *mutated* in place (illegal but unenforced — `Component` fields are
   final by convention) would now silently skip their rebuild.
 
 ### Option (b) — `==`-based skip (value equality on Seeds)
 
-`if (child.seed == newSeed) return child;` with freezed-style `operator==` on
-seed classes. The only option that would *also* help the wire path (two
+`if (child.component == newComponent) return child;` with freezed-style `operator==` on
+component classes. The only option that would *also* help the wire path (two
 deserializations of the same component compare equal).
 
 - **Buys:** wire-path pruning without a dialogue-layer diff.
 - **Costs:** Flutter explicitly forbids this shape (`@nonVirtual ==`, §2.2) —
   for reasons that bind harder on us: (i) deep value comparison on the hottest
   reconcile path, O(fields·depth) per frame, can cost what the skipped rebuild
-  cost; (ii) builder-carrying seeds (`Watch.builder`, any closure field) never
+  cost; (ii) builder-carrying components (`Watch.builder`, any closure field) never
   compare equal — closures have identity equality — so the skip silently
-  stratifies into "works for data seeds, never for composition seeds";
+  stratifies into "works for data components, never for composition components";
   (iii) rebuild-or-not starts depending on how thoroughly a domain author
   wrote `==` — a correctness knob disguised as an optimization. The wire
   problem it solves is better solved at the dialogue layer by key/payload
@@ -335,10 +335,10 @@ typesetting time with more consumers locked to cascade timing.
 
 ### Micro-benchmark sketch (do not build yet)
 
-Chain of N=1000 nested `StatelessSeed`s whose builders return a cached child
+Chain of N=1000 nested `StatelessComponent`s whose builders return a cached child
 below depth k; one `update()` at the root; count builder invocations and wall
 time with/without the skip, k ∈ {1, 500, 999}. Second scenario: one
-`InheritedSeed` over a 1000-leaf `Node` with d ∈ {1, 100} dependents; measure
+`InheritedComponent` over a 1000-leaf `Node` with d ∈ {1, 100} dependents; measure
 builds per value change. Expected: builds drop from O(N) to O(k) and from
 O(N) to O(d) respectively; wall-time ratio is the publishable number. Belongs
 next to the spike-4 economics evidence in `docs/evidence/` if ever built.
@@ -347,25 +347,25 @@ next to the spike-4 economics evidence in `docs/evidence/` if ever built.
 
 **Port the fast path (option a), as `identical()` — not `==` — in both
 `updateChild` and `updateChildren` (preferably by refactoring `updateChildren`
-to delegate to `updateChild`, Flutter's shape), leaving `Branch.update` force
-semantics untouched and `Seed.operator==` unpinned for future freezed use.**
+to delegate to `updateChild`, Flutter's shape), leaving `Element.update` force
+semantics untouched and `Component.operator==` unpinned for future freezed use.**
 Confidence: high — Flutter has shipped exactly this skip for a decade; the one
 genesis-specific hazard (provider invalidation under a skipped subtree) is
-disproven by reading `inherited.dart` + `tree_owner.dart` (§3) and is pinned
+disproven by reading `inherited.dart` + `build_owner.dart` (§3) and is pinned
 by the proposed tests. Record honestly: the wire path gains nothing (§4.3);
 its economics belong to `genesis_dialogue`.
 
 ### Tests that would gate the change
 
-1. **Skip-on-identical:** `updateChild` with an identical seed returns the same
-   branch and the child's `performRebuild` does not run (builder counter == 0).
+1. **Skip-on-identical:** `updateChild` with an identical component returns the same
+   element and the child's `performRebuild` does not run (builder counter == 0).
 2. **const pruning:** parent whose `build()` returns a const child — parent
    `update()` re-runs the parent builder once; child and grandchild builders do
-   not re-run; branch identity preserved (`same()`).
-3. **Identity-only, not value:** a test seed overriding `operator==`/`hashCode`
-   to value equality still rebuilds when a non-identical equal seed arrives —
+   not re-run; element identity preserved (`same()`).
+3. **Identity-only, not value:** a test component overriding `operator==`/`hashCode`
+   to value equality still rebuilds when a non-identical equal component arrives —
    pins `identical()` semantics against freezed drift.
-4. **Provider invalidation survives the skip:** `InheritedSeed` whose new config
+4. **Provider invalidation survives the skip:** `InheritedComponent` whose new config
    reuses the *identical child instance* with a changed value — each dependent
    rebuilds exactly once, `didChangeDependencies` fires before its build,
    non-dependent siblings in the skipped subtree never rebuild.
@@ -376,13 +376,13 @@ its economics belong to `genesis_dialogue`.
    identical child — dependents are dirty (not yet rebuilt) until `flush()`,
    then rebuild exactly once.
 7. **Multichild coverage:** `updateChildren` with a keyed child moved to a new
-   position under an identical seed — no rebuild, identity preserved, new order
+   position under an identical component — no rebuild, identity preserved, new order
    reflected in the parent's children.
-8. **Direct `update()` unchanged:** calling `branch.update(sameSeedInstance)`
+8. **Direct `update()` unchanged:** calling `element.update(sameComponentInstance)`
    directly still force-rebuilds (A9 core semantics; the skip lives in
    reconciliation only).
 9. **Wire realism guard (documentation-as-test):** two structurally equal but
-   distinct seed instances (simulating double deserialization) do NOT skip.
+   distinct component instances (simulating double deserialization) do NOT skip.
 10. **Perception conformance:** existing perception suite green; a harvest
     over a tree containing a skipped subtree yields a byte-identical
     Observation.
@@ -391,5 +391,5 @@ its economics belong to `genesis_dialogue`.
 
 See the orchestrator payload (`proposedRegisterEntry`); summary: A18, port the
 identical-config fast path as `identical()`-based skip in both reconcile sites,
-`Seed.==` left free, A14 inclusion-rule delta recorded, wire path explicitly
+`Component.==` left free, A14 inclusion-rule delta recorded, wire path explicitly
 out of scope (dialogue-layer diffing instead). Status: pending.
