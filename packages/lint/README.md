@@ -66,14 +66,20 @@ or `++`/`--` that outlives the build — a field of `this`, a top-level or
 static variable, or a property or index of any object the build did not make.
 Constructing components and building local values stay legal: a write
 through a local variable, or into a literal or constructor call, including
-as a cascade (`<String, int>{}..['a'] = 1`), is local.
+as a cascade (`<String, int>{}..['a'] = 1`), is local. So is a write through
+the accumulator of a `fold` whose initial value is such a local value, as in
+`names.fold(<String, int>{}, (acc, name) => acc..[name] = name.length)`; a
+`fold` seeded with a field is still reported.
 
-The rule checks what the build runs before it returns: its own body, a
-closure invoked on the spot, a closure handed to a `dart:core` or
-`dart:collection` method (`forEach`, `map`, `fold` and the rest) or to a
-`generate` or `fromIterable` constructor, and a local function the build
-calls or hands to such a method. A closure handed anywhere else — a
-component's callback, an effect hook — runs later and is not checked.
+The rule checks the build's own body, a closure invoked on the spot, a closure handed
+to any `dart:core` or `dart:collection` method or to a `generate` or
+`fromIterable` constructor of those libraries, and a local function the
+build calls or hands to such a method. Most of those methods run the closure
+before they return (`forEach`, `fold`, `sort`); the lazy `Iterable` methods
+(`map`, `where`, `expand`, `takeWhile`, `skipWhile`) run it only when the
+result is iterated, and are checked anyway, because a lazy iterable made in a
+build is consumed there. A closure handed anywhere else — a component's
+callback, an effect hook — runs later and is not checked.
 
 The rule does not see through aliases or dynamic dispatch: a field written
 through a local that aliases it, a closure stored in a variable and then
@@ -156,10 +162,22 @@ lifecycle methods — `startOrAdopt`, `update` and `dispose` — and the methods
 getters and setters of the same class that a lifecycle method calls or tears
 off, directly or through each other. These are the lifecycle names of the
 effect-leaf Element contract an orchestrator declares on its own leaf base
-class; `genesis_tree`'s `Element` does not declare `startOrAdopt`. The mark is
-inherited, so annotating that base class covers its subclasses. A leaf's
-constructor, field initializers, build and any member the lifecycle does not
-reach are not sanctioned.
+class; `genesis_tree`'s `Element` does not declare `startOrAdopt`. A setter
+counts as reached when a lifecycle method assigns through it, and a getter
+and setter both when one applies a compound assignment, `++` or `--`.
+
+The mark is inherited, so annotating that base class makes its subclasses
+leaves, and a subclass's own override of a lifecycle method is a lifecycle
+entry point. Reachability follows the hierarchy within one file: for a leaf
+class, the members it and its supertypes declare in that file are walked
+together, so a base's lifecycle method reaches a subclass's override of the
+hook it calls, and a subclass's lifecycle method reaches a helper the base
+declares. Members declared in another file — a base class imported from
+another library, or declared in a different part of the same library — are
+not walked: a helper such a base declares, or a hook such a base's lifecycle
+calls, is reported when it invokes an effect. A leaf's constructor, field
+initializers, build and any member the lifecycle does not reach are not
+sanctioned.
 
 ```dart
 @effectLeaf

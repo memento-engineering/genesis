@@ -200,6 +200,188 @@ class SpawnElement extends LeafElement {
 ''');
   }
 
+  Future<void> test_effect_setter_reached_from_update() async {
+    const source = r"""
+import 'package:genesis_tree/genesis_tree.dart';
+
+import 'runtime.dart';
+
+@effectLeaf
+class TitledElement {
+  String _title = '';
+
+  set title(String value) {
+    _title = value;
+    spawn(value);
+  }
+
+  void update() {
+    title = 'next';
+  }
+}
+
+@effectLeaf
+class BuildTitledElement {
+  set title(String value) {
+    spawn(value);
+  }
+
+  void update() {}
+
+  void build() {
+    title = 'built';
+  }
+}
+""";
+    await assertDiagnostics(source, [
+      lint(source.lastIndexOf('spawn(value)'), 'spawn'.length),
+    ]);
+  }
+
+  Future<void> test_compound_assignment_reaches_getter_and_setter() async {
+    await assertNoDiagnostics(r"""
+import 'package:genesis_tree/genesis_tree.dart';
+
+import 'runtime.dart';
+
+@effectLeaf
+class CountingElement {
+  int _count = 0;
+
+  int get count {
+    spawn('read');
+    return _count;
+  }
+
+  set count(int value) {
+    spawn('write');
+    _count = value;
+  }
+
+  void update() {
+    count += 1;
+  }
+}
+
+@effectLeaf
+class IncrementingElement {
+  int _count = 0;
+
+  int get count {
+    spawn('read');
+    return _count;
+  }
+
+  set count(int value) {
+    spawn('write');
+    _count = value;
+  }
+
+  void dispose() {
+    count++;
+  }
+}
+""");
+  }
+
+  Future<void> test_effect_leaf_hierarchy_is_silent() async {
+    await assertNoDiagnostics(r"""
+import 'package:genesis_tree/genesis_tree.dart';
+
+import 'runtime.dart';
+
+@effectLeaf
+abstract class LeafElement extends Element {
+  void startOrAdopt() => launch();
+
+  void update();
+
+  void launch();
+
+  void relaunch(String command) => spawn(command);
+}
+
+class SpawnElement extends LeafElement {
+  @override
+  void launch() => spawn('agent');
+
+  @override
+  void update() => relaunch('again');
+}
+
+class RespawnElement extends SpawnElement {
+  @override
+  void update() {
+    super.update();
+    _again();
+  }
+
+  void _again() => spawn('respawn');
+}
+""");
+  }
+
+  Future<void> test_effect_leaf_hierarchy_outside_lifecycle() async {
+    const source = r"""
+import 'package:genesis_tree/genesis_tree.dart';
+
+import 'runtime.dart';
+
+@effectLeaf
+abstract class LeafElement extends Element {
+  void update();
+
+  void helper() => spawn('helper');
+}
+
+class SpawnElement extends LeafElement {
+  @override
+  void update() {}
+
+  void describe() => helper();
+
+  void unreached() => spawn('unreached');
+}
+""";
+    await assertDiagnostics(source, [
+      lint(source.indexOf("spawn('helper')"), 'spawn'.length),
+      lint(source.indexOf("spawn('unreached')"), 'spawn'.length),
+    ]);
+  }
+
+  Future<void> test_hierarchy_across_files_is_not_walked() async {
+    newFile('$testPackageLibPath/base.dart', r"""
+import 'package:genesis_tree/genesis_tree.dart';
+
+@effectLeaf
+abstract class LeafElement extends Element {
+  void startOrAdopt() => launch();
+
+  void launch();
+}
+""");
+    const source = r"""
+import 'base.dart';
+import 'runtime.dart';
+
+class SpawnElement extends LeafElement {
+  @override
+  void launch() => spawn('agent');
+}
+
+class RespawnElement extends LeafElement {
+  @override
+  void startOrAdopt() => spawn('again');
+
+  @override
+  void launch() {}
+}
+""";
+    await assertDiagnostics(source, [
+      lint(source.indexOf("spawn('agent')"), 'spawn'.length),
+    ]);
+  }
+
   Future<void> test_effects_composing_effects_are_silent() async {
     await assertNoDiagnosticsInFile('$testPackageLibPath/runtime.dart');
   }

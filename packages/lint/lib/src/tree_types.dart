@@ -64,9 +64,11 @@ bool isDartAsyncMember(Element? element, String name) {
 ///
 /// Locals and parameters are transient. A field, a top-level or static
 /// variable, and a setter are durable. An index or property write is durable
-/// unless its receiver is transient: a local variable, or a value created on
-/// the spot (a collection or record literal, or a constructor call), reached
-/// directly, through parentheses, or as the target of a cascade.
+/// unless its receiver is transient: a local variable, a value created on the
+/// spot (a collection or record literal, or a constructor call), or the
+/// accumulator parameter of a `dart:core` or `dart:collection` `fold` whose
+/// initial value is itself transient — reached directly, through
+/// parentheses, or as the target of a cascade.
 bool isDurableWrite(Expression target, Element? writeElement) =>
     switch (target) {
       IndexExpression(:final realTarget) ||
@@ -79,11 +81,52 @@ bool isDurableWrite(Expression target, Element? writeElement) =>
 
 bool _isTransientReceiver(Expression receiver) =>
     switch (receiver.unParenthesized) {
-      SimpleIdentifier(:final element) => element is LocalVariableElement,
+      SimpleIdentifier(:final element) =>
+        element is LocalVariableElement ||
+            (element is FormalParameterElement &&
+                _isFreshFoldAccumulator(receiver, element)),
       TypedLiteral() || RecordLiteral() || InstanceCreationExpression() => true,
       CascadeExpression(:final target) => _isTransientReceiver(target),
       _ => false,
     };
+
+/// Whether [parameter], referred to at [use], is the accumulator of a closure
+/// handed to a `dart:core` or `dart:collection` `fold` whose initial value is
+/// transient.
+///
+/// The accumulator receives the initial value first and then whatever the
+/// closure returns; a closure that returns something else is still checked
+/// at the write that produced it.
+bool _isFreshFoldAccumulator(AstNode use, FormalParameterElement parameter) {
+  for (AstNode? node = use.parent; node != null; node = node.parent) {
+    if (node is! FunctionExpression) continue;
+    final parameters = node.parameters?.parameters;
+    if (parameters == null || parameters.isEmpty) continue;
+    if (!parameters.any((p) => p.declaredFragment?.element == parameter)) {
+      continue;
+    }
+    if (parameters.first.declaredFragment?.element != parameter) return false;
+    AstNode value = node;
+    var parent = value.parent;
+    while (parent is ParenthesizedExpression) {
+      value = parent;
+      parent = parent.parent;
+    }
+    if (parent is! ArgumentList) return false;
+    final invocation = parent.parent;
+    if (invocation is! MethodInvocation ||
+        invocation.methodName.name != 'fold') {
+      return false;
+    }
+    final library = invocation.methodName.element?.library?.uri.toString();
+    if (library != 'dart:core' && library != 'dart:collection') return false;
+    final arguments = parent.arguments;
+    return arguments.length == 2 &&
+        identical(arguments[1], value) &&
+        _isTransientReceiver(arguments[0].argumentExpression);
+  }
+  return false;
+}
 
 /// Whether [element] carries an annotation whose value is an instance of the
 /// `genesis_foundation` class [className].
@@ -108,12 +151,13 @@ bool hasFoundationAnnotation(Element element, String className) =>
 
 /// Visits the code a build method runs synchronously.
 ///
-/// A closure is visited when it runs during the call: invoked on the spot, or
-/// handed to a `dart:core` or `dart:collection` method such as `forEach`,
-/// `map` or `fold`, or to a `generate` or `fromIterable` constructor. A local
-/// function is visited when it is called, or handed to such a method, from
-/// code that is itself visited. Any other closure or local function is handed
-/// on to run later (a callback, an effect hook) and is not visited.
+/// A closure is visited when it is invoked on the spot, or handed to any
+/// `dart:core` or `dart:collection` method — `forEach`, `fold`, and also the
+/// lazy `map` and `where` (see [isRunDuringTheCall]) — or to a `generate` or
+/// `fromIterable` constructor. A local function is visited when it is called,
+/// or handed to such a method, from code that is itself visited. Any other
+/// closure or local function is handed on to run later (a callback, an effect
+/// hook) and is not visited.
 abstract class SynchronousBodyVisitor extends RecursiveAstVisitor<void> {
   final _localFunctions = <Element, FunctionExpression>{};
   final _visitedLocalFunctions = <Element>{};
@@ -160,15 +204,21 @@ bool isInvokedOnTheSpot(FunctionExpression function) {
       identical(parent.function, value);
 }
 
-/// Whether [argument] is a function the invoked member runs before it
-/// returns.
+/// Whether [argument] is a function treated as run by the code that hands it
+/// over.
 ///
-/// The members of `dart:core` and `dart:collection` that take a function run
-/// it synchronously — `forEach`, `map`, `where`, `fold`, `sort`,
-/// `putIfAbsent` and the rest — as do the `generate` and `fromIterable`
-/// constructors. Other constructors of those libraries may keep the function
-/// for later (a `Finalizer` callback, a `SplayTreeMap` comparator), so they
-/// do not count.
+/// Every function argument of a `dart:core` or `dart:collection` method
+/// counts, and so does every function argument of a `generate` or
+/// `fromIterable` constructor of those libraries. Most of those methods run
+/// the function before they return (`forEach`, `fold`, `sort`,
+/// `putIfAbsent`), but not all: `Iterable.map`, `where`, `expand`,
+/// `takeWhile` and `skipWhile` are lazy and run the function only when the
+/// returned iterable is iterated, possibly after the call or never. They
+/// count anyway, as the conservative choice for a build: a lazy iterable
+/// built there is almost always consumed there. Other constructors of those
+/// libraries may keep the function for later (a `Finalizer` callback, a
+/// `SplayTreeMap` comparator), so they do not count. Only the declaring
+/// library is checked, not the member or the parameter.
 bool isRunDuringTheCall(Expression argument) {
   AstNode value = argument;
   var parent = value.parent;

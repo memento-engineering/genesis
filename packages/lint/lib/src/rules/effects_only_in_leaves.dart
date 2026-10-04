@@ -14,9 +14,9 @@ import '../tree_types.dart';
 /// tree decides when it starts and stops. A call from anywhere else starts an
 /// artifact nothing owns. Inside an `@effectLeaf` class the sanctioned sites
 /// are its lifecycle methods — `startOrAdopt`, `update`, `dispose` — and the
-/// members of the class they reach; a constructor, a field initializer, a
-/// build and any other member are not. An `@effect` declaration may also
-/// compose other effects.
+/// members they reach, across the leaf's hierarchy as declared in one file;
+/// a constructor, a field initializer, a build and any other member are not.
+/// An `@effect` declaration may also compose other effects.
 class EffectsOnlyInLeavesRule extends AnalysisRule {
   /// The diagnostic reported for an effect invoked outside a leaf.
   static const LintCode code = LintCode(
@@ -100,14 +100,18 @@ bool _isSanctionedSite(AstNode node) {
         member = declaration;
       case ConstructorDeclaration() || FieldDeclaration():
         return false;
-      case ClassDeclaration declaration:
+      case ClassDeclaration() || MixinDeclaration():
+        final container = switch (ancestor) {
+          ClassDeclaration(:final declaredFragment) =>
+            declaredFragment?.element,
+          MixinDeclaration(:final declaredFragment) =>
+            declaredFragment?.element,
+          _ => null,
+        };
         return member != null &&
-            _isEffectLeaf(declaration.declaredFragment?.element) &&
-            _reachedFromLifecycle(declaration, member);
-      case MixinDeclaration declaration:
-        return member != null &&
-            _isEffectLeaf(declaration.declaredFragment?.element) &&
-            _reachedFromLifecycle(declaration, member);
+            container != null &&
+            _isEffectLeaf(container) &&
+            _reachedFromLifecycle(container, member);
       case CompilationUnit():
         return false;
     }
@@ -116,16 +120,71 @@ bool _isSanctionedSite(AstNode node) {
   return false;
 }
 
-/// Whether [member] of [container] is a lifecycle method, or a method,
-/// getter or setter of [container] that a lifecycle method calls or tears
-/// off, directly or through other such members. A build is never reached.
-bool _reachedFromLifecycle(AstNode container, MethodDeclaration member) {
-  final members = _MemberCollector();
-  container.accept(members);
+/// Whether [member] of [container] is reached from a lifecycle method of an
+/// instance of [container] or of one of its subtypes.
+///
+/// The hierarchy is read from the file that declares [container]: for that
+/// class or mixin and every class or mixin of the file that extends,
+/// implements or mixes it in, the members of the type and of its supertypes
+/// declared in the same file are walked together, from every lifecycle
+/// method among them. A reference to a member by name reaches every member
+/// of that name and kind in the walked hierarchy, so an override and the
+/// declaration it overrides are reached together. A build is never reached.
+bool _reachedFromLifecycle(
+  InterfaceElement container,
+  MethodDeclaration member,
+) {
+  final unit = member.thisOrAncestorOfType<CompilationUnit>();
+  if (unit == null) return false;
+  final declarations = <InterfaceElement, List<MethodDeclaration>>{};
+  for (final declaration in unit.declarations) {
+    final (element, members) = switch (declaration) {
+      ClassDeclaration(:final declaredFragment) => (
+        declaredFragment?.element,
+        declaration.body.members,
+      ),
+      MixinDeclaration(:final declaredFragment) => (
+        declaredFragment?.element,
+        declaration.body.members,
+      ),
+      _ => (null, const <ClassMember>[]),
+    };
+    if (element == null) continue;
+    declarations[element] = members.whereType<MethodDeclaration>().toList();
+  }
+  for (final type in declarations.keys) {
+    if (!_isSubtypeOf(type, container) || !_isEffectLeaf(type)) continue;
+    final hierarchy = [
+      for (final candidate in [
+        type,
+        ...type.allSupertypes.map((supertype) => supertype.element),
+      ])
+        ...?declarations[candidate],
+    ];
+    if (_reachedIn(hierarchy).contains(member)) return true;
+  }
+  return false;
+}
+
+bool _isSubtypeOf(InterfaceElement type, InterfaceElement container) =>
+    type == container ||
+    type.allSupertypes.any((supertype) => supertype.element == container);
+
+/// The members of [hierarchy] a lifecycle method reaches by calling, tearing
+/// off, reading or assigning them, directly or through each other.
+Set<MethodDeclaration> _reachedIn(List<MethodDeclaration> hierarchy) {
+  final byKey = <_MemberKey, List<MethodDeclaration>>{};
+  for (final declaration in hierarchy) {
+    final key = _keyOfDeclaration(declaration);
+    (byKey[key] ??= []).add(declaration);
+  }
   final reached = <MethodDeclaration>{};
   final pending = [
-    for (final declaration in members.declarations.values)
-      if (_lifecycleMethodNames.contains(declaration.name.lexeme)) declaration,
+    for (final declaration in hierarchy)
+      if (!declaration.isGetter &&
+          !declaration.isSetter &&
+          _lifecycleMethodNames.contains(declaration.name.lexeme))
+        declaration,
   ];
   while (pending.isNotEmpty) {
     final declaration = pending.removeLast();
@@ -134,32 +193,69 @@ bool _reachedFromLifecycle(AstNode container, MethodDeclaration member) {
     final references = _ReferenceCollector();
     declaration.body.accept(references);
     for (final element in references.elements) {
-      final callee = members.declarations[element];
-      if (callee != null) pending.add(callee);
+      final key = _keyOfElement(element);
+      if (key != null) pending.addAll(byKey[key] ?? const []);
     }
   }
-  return reached.contains(member);
+  return reached;
 }
 
-/// Collects the methods, getters and setters a class or mixin declares.
-final class _MemberCollector extends RecursiveAstVisitor<void> {
-  final declarations = <Element, MethodDeclaration>{};
+/// The name and kind — method, getter or setter — of a member.
+typedef _MemberKey = ({String name, int kind});
 
-  @override
-  void visitMethodDeclaration(MethodDeclaration node) {
-    final element = node.declaredFragment?.element;
-    if (element != null) declarations[element] = node;
+_MemberKey _keyOfDeclaration(MethodDeclaration declaration) => (
+  name: declaration.name.lexeme,
+  kind: declaration.isGetter
+      ? 1
+      : declaration.isSetter
+      ? 2
+      : 0,
+);
+
+_MemberKey? _keyOfElement(Element element) {
+  final name = element.name;
+  if (name == null || element.enclosingElement is! InterfaceElement) {
+    return null;
   }
+  return switch (element) {
+    GetterElement() => (name: name, kind: 1),
+    SetterElement() => (name: name, kind: 2),
+    MethodElement() => (name: name, kind: 0),
+    _ => null,
+  };
 }
 
-/// Collects the elements a body refers to by a simple name.
+/// Collects the members a body refers to: by a simple name, and the getter
+/// and setter an assignment, `++` or `--` reads and writes.
 final class _ReferenceCollector extends RecursiveAstVisitor<void> {
   final elements = <Element>{};
 
-  @override
-  void visitSimpleIdentifier(SimpleIdentifier node) {
-    final element = node.element;
+  void _add(Element? element) {
     if (element != null) elements.add(element.baseElement);
+  }
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) => _add(node.element);
+
+  @override
+  void visitAssignmentExpression(AssignmentExpression node) {
+    _add(node.readElement);
+    _add(node.writeElement);
+    super.visitAssignmentExpression(node);
+  }
+
+  @override
+  void visitPostfixExpression(PostfixExpression node) {
+    _add(node.readElement);
+    _add(node.writeElement);
+    super.visitPostfixExpression(node);
+  }
+
+  @override
+  void visitPrefixExpression(PrefixExpression node) {
+    _add(node.readElement);
+    _add(node.writeElement);
+    super.visitPrefixExpression(node);
   }
 }
 

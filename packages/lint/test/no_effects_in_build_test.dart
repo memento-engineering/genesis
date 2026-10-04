@@ -498,6 +498,109 @@ class Rows extends StatelessComponent {
     );
   }
 
+  Future<void> test_fold_into_a_fresh_accumulator_is_silent() async {
+    await assertNoDiagnostics(
+      r"""
+import 'package:genesis_tree/genesis_tree.dart';
+
+class Row extends Component {
+  const Row(this.weights);
+
+  final Map<String, int> weights;
+}
+
+class Rows extends StatelessComponent {
+  const Rows(this.names);
+
+  final List<String> names;
+
+  @override
+  Component build(BuildContext context) {
+    final weights = names.fold(
+      <String, int>{},
+      (acc, name) => acc..[name] = name.length,
+    );
+    final seed = <String>[];
+    final joined = names.fold<List<String>>(seed, (acc, name) {
+      acc.add(name);
+      acc[0] = name;
+      return acc;
+    });
+    final boxes = names.fold(Box(), (box, name) => box..length = name.length);
+    return Row({...weights, 'n': joined.length + boxes.length});
+  }
+}
+
+class Box {
+  int length = 0;
+}
+""" +
+          _leaf,
+    );
+  }
+
+  Future<void> test_durable_writes_in_a_fold_callback() async {
+    const source =
+        r"""
+import 'package:genesis_tree/genesis_tree.dart';
+
+class Counter extends StatefulComponent {
+  @override
+  State<Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<Counter> {
+  int last = 0;
+  final Map<String, int> seen = {};
+  final List<String> names = ['a'];
+
+  @override
+  Component build(BuildContext context) {
+    names.fold(<String, int>{}, (acc, name) {
+      last = name.length;
+      return acc..[name] = 1;
+    });
+    names.fold(seen, (acc, name) => acc..[name] = 2);
+    names.fold(<String, int>{}, (acc, name) => seen..[name] = 3);
+    return const Leaf();
+  }
+}
+""" +
+        _leaf;
+    await assertDiagnostics(source, [
+      lint(source.indexOf('last = name'), 'last'.length),
+      lint(source.indexOf('..[name] = 2'), '..[name]'.length),
+      lint(source.indexOf('..[name] = 3'), '..[name]'.length),
+    ]);
+  }
+
+  Future<void> test_lazy_iterable_callbacks_are_checked() async {
+    const source =
+        r"""
+import 'package:genesis_tree/genesis_tree.dart';
+
+class Counter extends StatefulComponent {
+  @override
+  State<Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<Counter> {
+  int last = 0;
+  final List<int> ids = [1];
+
+  @override
+  Component build(BuildContext context) {
+    ids.where((id) => (last = id) > 0);
+    return const Leaf();
+  }
+}
+""" +
+        _leaf;
+    await assertDiagnostics(source, [
+      lint(source.indexOf('last = id'), 'last'.length),
+    ]);
+  }
+
   Future<void> test_pure_build_is_silent() async {
     await assertNoDiagnostics(
       r'''
