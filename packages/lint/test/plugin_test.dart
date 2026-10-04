@@ -5,7 +5,7 @@ import 'package:genesis_lint/main.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('entrypoint registers exactly the two warnings', () {
+  test('entrypoint registers exactly the eight warnings', () {
     final registry = _RecordingPluginRegistry();
 
     expect(plugin, isA<LintExtension>());
@@ -20,6 +20,12 @@ void main() {
       orderedEquals(const [
         'no_stored_tree_context',
         'use_tree_context_synchronously',
+        'no_effects_in_build',
+        'no_cached_dependency',
+        'watch_not_read_in_build',
+        'derive_dont_construct',
+        'state_flag_threshold',
+        'effects_only_in_leaves',
       ]),
     );
   });
