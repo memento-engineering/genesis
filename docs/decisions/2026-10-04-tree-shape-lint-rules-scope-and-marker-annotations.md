@@ -59,7 +59,8 @@ match a marker by its declaring library, never by name alone.
 - `no_effects_in_build` treats locals and parameters as transient. A property
   or index write is local when its receiver is a local variable or a value
   made on the spot (a literal or constructor call, directly or as a cascade
-  target); every other write target — a field, a top-level or static
+  target), or the accumulator parameter of a `dart:core` `fold` whose seed is
+  itself local; every other write target — a field, a top-level or static
   variable, a property or index of any other object — is durable.
   `Stream.listen` counts as an effect.
 - `no_cached_dependency` applies only to durable targets: a `??=` into a local
@@ -67,12 +68,14 @@ match a marker by its declaring library, never by name alone.
   lazily wrapping its own handle) is not a dependency read and is left to
   `no_stored_tree_context`.
 - `effects_only_in_leaves` accepts an `@effect` call inside an `@effectLeaf`
-  class only from its `startOrAdopt`, `update` and `dispose` methods and the
-  members of the same class they reach by call or tear-off; a constructor, a
-  field initializer, a build and any unreached member are rejected. It
-  inherits `@effectLeaf` through supertypes, treats an override of an
-  `@effect` member as an effect, and lets an `@effect` declaration invoke
-  other effects so effects compose.
+  class only from its `startOrAdopt`, `update` and `dispose` methods
+  (including a subclass's overrides) and the members they reach by call,
+  tear-off, assignment, compound assignment or `++`/`--` — walking the
+  class's hierarchy as far as it is declared in the same file; a constructor,
+  a field initializer, a build and any unreached member are rejected, and a
+  base class in another file is not followed. It inherits `@effectLeaf`
+  through supertypes, treats an override of an `@effect` member as an effect,
+  and lets an `@effect` declaration invoke other effects so effects compose.
 - `state_flag_threshold` counts `bool` and `bool?` instance fields the class
   itself declares; inherited fields are not counted.
 - Like the two existing rules, none of the six reports in a `test/` directory.
