@@ -1,6 +1,6 @@
 name: genesis_foundation
-description: Dependency-free diagnostics protocols and typed, versioned tree snapshots.
-version: 0.3.0-dev.1
+description: Dependency-free diagnostics protocols, typed, versioned tree snapshots, and marker annotations for genesis analyzer rules.
+version: 0.3.0-dev.2
 repository: https://github.com/memento-engineering/genesis
 resolution: workspace
 

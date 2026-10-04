@@ -1,7 +1,8 @@
 # genesis_foundation
 
-The layer **below** the spine: a dependency-free diagnostics protocol and the
-typed, versioned wire contract that carries it off-process.
+The layer **below** the spine: a dependency-free diagnostics protocol, the
+typed, versioned wire contract that carries it off-process, and the marker
+annotations the genesis analyzer rules read.
 
 `genesis_foundation` sits under [`genesis_tree`](https://pub.dev/packages/genesis_tree)
 the way Flutter's `foundation` sits under `widgets` — the tree depends on it,
@@ -58,6 +59,22 @@ This is a deliberate divergence from Flutter, whose inspector ships an untyped
 `Map<String, Object?>` over the wire. A typed, versioned snapshot lets a client
 parse with the compiler's help and detect a contract it is too old to read.
 
+## Annotations
+
+Three const markers describe intent to
+[`genesis_lint`](https://pub.dev/packages/genesis_lint); they change nothing
+at runtime.
+
+| Marker | Annotates | Rule |
+| --- | --- | --- |
+| `@deriveOnly` | a class constructed only inside its own library and reached elsewhere through `derive` / `copyWith` | `derive_dont_construct` |
+| `@effect` | a method or function that starts, changes or stops something outside the tree | `effects_only_in_leaves` |
+| `@effectLeaf` | a class (typically an Element) that owns effects through `startOrAdopt` / `update` / `dispose`; inherited by subclasses | `effects_only_in_leaves` |
+
+The annotation classes are named `DeriveOnly`, `EffectMarker` and
+`EffectLeafMarker`, leaving `Effect` and `EffectLeaf` free for a consumer's
+own types.
+
 ## Conventions
 
 Value types here are **hand-written** — const constructors, `==`, `hashCode`,
@@ -69,7 +86,7 @@ Exhaustive `switch` expressions remain the house style.
 ## Where this sits
 
 ```
-genesis_foundation   Diagnosticable · DiagnosticsProperty · TreeSnapshot
+genesis_foundation   Diagnosticable · DiagnosticsProperty · TreeSnapshot · markers
         ▲
 genesis_tree         Component / Element — the keyed-reconcile spine
         ▲

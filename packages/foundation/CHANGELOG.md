@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.0-dev.2
+- Add the marker annotations `genesis_lint` reads: `deriveOnly` (`DeriveOnly`) for classes constructed only inside their own library, `effect` (`EffectMarker`) for members that perform an effect, and `effectLeaf` (`EffectLeafMarker`) for classes that own effects through their lifecycle. Additive; the package stays dependency-free.
+
 ## 0.3.0-dev.1
 - **Breaking:** `TreeNode.componentType` replaces the source spelling `seedType`; migrate `TreeNode(seedType: 'Node', ...)` to `TreeNode(componentType: 'Node', ...)`. Deprecated constructor, getter, and `copyWith` bridges remain, and version-1 JSON continues to use the literal `seedType` key.
 
