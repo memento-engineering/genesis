@@ -24,6 +24,7 @@ class StateFlagThresholdRule extends AnalysisRule {
         'Model the phases as a sealed state value and switch over it in '
         'build.',
     uniqueName: 'LintCode.state_flag_threshold',
+    severity: DiagnosticSeverity.WARNING,
   );
 
   /// Creates the rule.

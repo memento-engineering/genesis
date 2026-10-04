@@ -12,7 +12,8 @@ import '../tree_types.dart';
 /// Rejects effects inside the build method of a `Component` or `State`.
 ///
 /// A build describes children and nothing else: it starts no asynchronous
-/// work, schedules nothing, and writes no state that outlives the call.
+/// work, subscribes to no stream, schedules nothing, and writes no state that
+/// outlives the call.
 /// Constructing components is the pure part of a build and is allowed.
 class NoEffectsInBuildRule extends AnalysisRule {
   /// The diagnostic reported for an effect inside a build.
@@ -23,6 +24,7 @@ class NoEffectsInBuildRule extends AnalysisRule {
         'Emit a leaf Component whose Element owns the effect through '
         'startOrAdopt, update and dispose.',
     uniqueName: 'LintCode.no_effects_in_build',
+    severity: DiagnosticSeverity.WARNING,
   );
 
   /// Creates the rule.
@@ -30,8 +32,8 @@ class NoEffectsInBuildRule extends AnalysisRule {
     : super(
         name: 'no_effects_in_build',
         description:
-            'Rejects futures, timers, microtasks, setState and durable '
-            'writes inside a build method.',
+            'Rejects futures, timers, microtasks, stream subscriptions, '
+            'setState and durable writes inside a build method.',
       );
 
   @override
@@ -125,6 +127,9 @@ bool _isEffectInvocation(MethodInvocation node) {
   final element = node.methodName.element;
   if (isDartAsyncMember(element, 'scheduleMicrotask')) return true;
   if (isDartAsyncMember(element, 'Timer')) return true;
+  if (element?.name == 'listen' && isDartAsyncMember(element, 'Stream')) {
+    return true;
+  }
   if (element is MethodElement && element.name == 'setState') {
     final owner = element.enclosingElement;
     return owner is InterfaceElement && isTreeSubtype(owner, 'State');

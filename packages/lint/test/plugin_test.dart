@@ -1,6 +1,7 @@
 import 'package:analysis_server_plugin/plugin.dart';
 import 'package:analysis_server_plugin/registry.dart';
 import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/error/error.dart';
 import 'package:genesis_lint/main.dart';
 import 'package:test/test.dart';
 
@@ -28,6 +29,23 @@ void main() {
         'effects_only_in_leaves',
       ]),
     );
+  });
+
+  test('the six tree-shape rules report at warning severity', () {
+    final registry = _RecordingPluginRegistry();
+    plugin.register(registry);
+
+    final treeShapeRules = registry.warningRules.skip(2).toList();
+    expect(treeShapeRules, hasLength(6));
+    for (final rule in treeShapeRules) {
+      for (final code in rule.diagnosticCodes) {
+        expect(
+          code.severity,
+          DiagnosticSeverity.WARNING,
+          reason: '${code.lowerCaseName} must fail dart analyze',
+        );
+      }
+    }
   });
 }
 

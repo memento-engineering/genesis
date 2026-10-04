@@ -89,6 +89,27 @@ class Reader extends HookComponent {
     ]);
   }
 
+  Future<void> test_snapshot_read_in_a_synchronous_callback() async {
+    const source =
+        _preamble +
+        r'''
+class Reader extends StatelessComponent {
+  const Reader(this.names);
+
+  final List<String> names;
+
+  @override
+  Component build(BuildContext context) {
+    final configs = names.map((_) => context.read<Config>()).toList();
+    return Leaf(configs.first);
+  }
+}
+''';
+    await assertDiagnostics(source, [
+      lint(source.indexOf('read<Config>'), 'read'.length),
+    ]);
+  }
+
   Future<void> test_depending_reads_are_silent() async {
     await assertNoDiagnostics(
       _preamble +

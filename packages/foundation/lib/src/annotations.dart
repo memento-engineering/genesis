@@ -38,8 +38,10 @@ const effect = EffectMarker();
 /// it, and disposes it.
 ///
 /// Subclasses inherit the mark. `genesis_lint`'s `effects_only_in_leaves`
-/// accepts [effect] invocations inside such a class, outside its build. The
-/// class name leaves `EffectLeaf` free for a consumer's own leaf types.
+/// accepts [effect] invocations inside such a class only from its
+/// `startOrAdopt`, `update` and `dispose` methods and the members of the
+/// class they reach. The class name leaves `EffectLeaf` free for a consumer's
+/// own leaf types.
 ///
 /// Use the [effectLeaf] constant rather than constructing this class.
 final class EffectLeafMarker {

@@ -25,6 +25,7 @@ class NoCachedDependencyRule extends AnalysisRule {
         'Read the dependency with dependOnInheritedValueOfExactType or watch '
         'where it is used.',
     uniqueName: 'LintCode.no_cached_dependency',
+    severity: DiagnosticSeverity.WARNING,
   );
 
   /// Creates the rule.

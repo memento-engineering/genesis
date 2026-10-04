@@ -323,6 +323,181 @@ class Loader extends Component {
     ]);
   }
 
+  Future<void> test_cascade_writes_to_durable_receivers() async {
+    const source =
+        r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+class Counter extends StatefulComponent {
+  @override
+  State<Counter> createState() => _CounterState();
+}
+
+class Box {
+  int value = 0;
+}
+
+class _CounterState extends State<Counter> {
+  final Box box = Box();
+  final Map<String, int> seen = {};
+
+  @override
+  Component build(BuildContext context) {
+    box..value = 1;
+    seen..['a'] = 2;
+    (box).value = 3;
+    return const Leaf();
+  }
+}
+''' +
+        _leaf;
+    await assertDiagnostics(source, [
+      lint(source.indexOf('..value = 1'), '..value'.length),
+      lint(source.indexOf("..['a'] = 2"), "..['a']".length),
+      lint(source.indexOf('(box).value'), '(box).value'.length),
+    ]);
+  }
+
+  Future<void> test_effects_in_synchronous_callbacks() async {
+    const source =
+        r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+Future<int> load(int id) async => id;
+
+class Counter extends StatefulComponent {
+  @override
+  State<Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<Counter> {
+  int count = 0;
+  final List<int> ids = [1, 2];
+
+  @override
+  Component build(BuildContext context) {
+    ids.forEach((id) {
+      count = id;
+    });
+    ids.map((id) => load(id)).toList();
+    final total = ids.fold<int>(0, (sum, id) => sum + (count = id));
+    return total > 0 ? const Leaf() : const Leaf();
+  }
+}
+''' +
+        _leaf;
+    await assertDiagnostics(source, [
+      lint(source.indexOf('count = id;'), 'count'.length),
+      lint(source.indexOf('load(id)'), 'load(id)'.length),
+      lint(source.indexOf('count = id)'), 'count'.length),
+    ]);
+  }
+
+  Future<void> test_effects_in_called_local_functions() async {
+    const source =
+        r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+Future<int> load(int id) async => id;
+
+class Counter extends StatefulComponent {
+  @override
+  State<Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<Counter> {
+  int count = 0;
+  final List<int> ids = [1, 2];
+
+  @override
+  Component build(BuildContext context) {
+    void remember(int id) {
+      count = id;
+    }
+
+    void fetch(int id) => load(id);
+    remember(1);
+    remember(2);
+    ids.forEach(fetch);
+    return const Leaf();
+  }
+}
+''' +
+        _leaf;
+    await assertDiagnostics(source, [
+      lint(source.indexOf('count = id;'), 'count'.length),
+      lint(source.indexOf('load(id)'), 'load(id)'.length),
+    ]);
+  }
+
+  Future<void> test_stream_listen() async {
+    const source =
+        r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+class Watcher extends StatelessComponent {
+  const Watcher(this.ticks);
+
+  final Stream<int> ticks;
+
+  @override
+  Component build(BuildContext context) {
+    ticks.listen((_) {});
+    return const Leaf();
+  }
+}
+''' +
+        _leaf;
+    await assertDiagnostics(source, [
+      lint(source.indexOf('ticks.listen'), 'ticks.listen((_) {})'.length),
+    ]);
+  }
+
+  Future<void> test_local_and_fresh_receivers_are_silent() async {
+    await assertNoDiagnostics(
+      r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+class Bag {
+  int x = 0;
+}
+
+class Row extends Component {
+  const Row(this.children, this.weights);
+
+  final List<Component> children;
+  final Map<String, int> weights;
+}
+
+class Rows extends StatelessComponent {
+  const Rows(this.names);
+
+  final List<String> names;
+
+  @override
+  Component build(BuildContext context) {
+    final weights = <String, int>{}..['a'] = 1;
+    final children = <Component>[]..length = 0;
+    final bag = Bag();
+    bag.x = 1;
+    (Bag()..x = 2).x = 3;
+    final counts = {for (final name in names) name: 0};
+    names.forEach((name) => counts[name] = name.length);
+    final sorted = names.where((name) => name.isNotEmpty).toList();
+    final labels = List<String>.generate(sorted.length, (i) {
+      final label = Bag();
+      label.x = i;
+      return '${label.x}';
+    });
+    weights['b'] = labels.length + bag.x;
+    return Row(children, weights);
+  }
+}
+''' +
+          _leaf,
+    );
+  }
+
   Future<void> test_pure_build_is_silent() async {
     await assertNoDiagnostics(
       r'''

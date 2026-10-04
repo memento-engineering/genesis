@@ -23,6 +23,7 @@ class WatchNotReadInBuildRule extends AnalysisRule {
         'Use dependOnInheritedValueOfExactType or watch so the build reruns '
         'when the value changes.',
     uniqueName: 'LintCode.watch_not_read_in_build',
+    severity: DiagnosticSeverity.WARNING,
   );
 
   /// Creates the rule.

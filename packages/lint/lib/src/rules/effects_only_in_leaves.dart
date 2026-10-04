@@ -13,8 +13,10 @@ import '../tree_types.dart';
 /// An effect belongs to the leaf whose Element owns its artifact, so the
 /// tree decides when it starts and stops. A call from anywhere else starts an
 /// artifact nothing owns. Inside an `@effectLeaf` class the sanctioned sites
-/// are its lifecycle methods and their helpers, never its build; an `@effect`
-/// declaration may also compose other effects.
+/// are its lifecycle methods — `startOrAdopt`, `update`, `dispose` — and the
+/// members of the class they reach; a constructor, a field initializer, a
+/// build and any other member are not. An `@effect` declaration may also
+/// compose other effects.
 class EffectsOnlyInLeavesRule extends AnalysisRule {
   /// The diagnostic reported for an effect invoked outside a leaf.
   static const LintCode code = LintCode(
@@ -24,6 +26,7 @@ class EffectsOnlyInLeavesRule extends AnalysisRule {
         'Move the call into the startOrAdopt, update or dispose of an '
         '@effectLeaf Element.',
     uniqueName: 'LintCode.effects_only_in_leaves',
+    severity: DiagnosticSeverity.WARNING,
   );
 
   /// Creates the rule.
@@ -78,8 +81,14 @@ bool _isEffect(ExecutableElement element) {
   });
 }
 
+/// The lifecycle methods of an effect leaf's Element.
+const _lifecycleMethodNames = {'startOrAdopt', 'update', 'dispose'};
+
+/// Whether the effect invoked at [node] runs from a sanctioned site: an
+/// `@effect` declaration, or a lifecycle method of an `@effectLeaf` class or
+/// a method of that class the lifecycle reaches.
 bool _isSanctionedSite(AstNode node) {
-  var insideBuild = false;
+  MethodDeclaration? member;
   for (AstNode? ancestor = node.parent; ancestor != null;) {
     switch (ancestor) {
       case FunctionDeclaration declaration:
@@ -88,21 +97,70 @@ bool _isSanctionedSite(AstNode node) {
       case MethodDeclaration declaration:
         final method = declaration.declaredFragment?.element;
         if (method != null && _isEffect(method)) return true;
-        if (buildMethodNames.contains(declaration.name.lexeme)) {
-          insideBuild = true;
-        }
+        member = declaration;
+      case ConstructorDeclaration() || FieldDeclaration():
+        return false;
       case ClassDeclaration declaration:
-        return !insideBuild &&
-            _isEffectLeaf(declaration.declaredFragment?.element);
+        return member != null &&
+            _isEffectLeaf(declaration.declaredFragment?.element) &&
+            _reachedFromLifecycle(declaration, member);
       case MixinDeclaration declaration:
-        return !insideBuild &&
-            _isEffectLeaf(declaration.declaredFragment?.element);
+        return member != null &&
+            _isEffectLeaf(declaration.declaredFragment?.element) &&
+            _reachedFromLifecycle(declaration, member);
       case CompilationUnit():
         return false;
     }
     ancestor = ancestor.parent;
   }
   return false;
+}
+
+/// Whether [member] of [container] is a lifecycle method, or a method,
+/// getter or setter of [container] that a lifecycle method calls or tears
+/// off, directly or through other such members. A build is never reached.
+bool _reachedFromLifecycle(AstNode container, MethodDeclaration member) {
+  final members = _MemberCollector();
+  container.accept(members);
+  final reached = <MethodDeclaration>{};
+  final pending = [
+    for (final declaration in members.declarations.values)
+      if (_lifecycleMethodNames.contains(declaration.name.lexeme)) declaration,
+  ];
+  while (pending.isNotEmpty) {
+    final declaration = pending.removeLast();
+    if (buildMethodNames.contains(declaration.name.lexeme)) continue;
+    if (!reached.add(declaration)) continue;
+    final references = _ReferenceCollector();
+    declaration.body.accept(references);
+    for (final element in references.elements) {
+      final callee = members.declarations[element];
+      if (callee != null) pending.add(callee);
+    }
+  }
+  return reached.contains(member);
+}
+
+/// Collects the methods, getters and setters a class or mixin declares.
+final class _MemberCollector extends RecursiveAstVisitor<void> {
+  final declarations = <Element, MethodDeclaration>{};
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    final element = node.declaredFragment?.element;
+    if (element != null) declarations[element] = node;
+  }
+}
+
+/// Collects the elements a body refers to by a simple name.
+final class _ReferenceCollector extends RecursiveAstVisitor<void> {
+  final elements = <Element>{};
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    final element = node.element;
+    if (element != null) elements.add(element.baseElement);
+  }
 }
 
 /// Whether [element], or one of its supertypes, is annotated `@effectLeaf`.

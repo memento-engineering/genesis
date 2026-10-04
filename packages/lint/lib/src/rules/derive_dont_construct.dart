@@ -21,6 +21,7 @@ class DeriveDontConstructRule extends AnalysisRule {
     correctionMessage:
         'Derive it from the ambient value with derive or copyWith.',
     uniqueName: 'LintCode.derive_dont_construct',
+    severity: DiagnosticSeverity.WARNING,
   );
 
   /// Creates the rule.

@@ -119,6 +119,40 @@ class Spawn extends StatelessComponent {
     ]);
   }
 
+  Future<void> test_effect_in_a_leaf_outside_its_lifecycle() async {
+    const source = r'''
+import 'package:genesis_tree/genesis_tree.dart';
+
+import 'runtime.dart';
+
+@effectLeaf
+class SpawnElement {
+  SpawnElement(this.delivery) {
+    spawn('constructor');
+  }
+
+  final Delivery delivery;
+
+  final Object marker = () {
+    spawnTwice('initializer');
+    return 0;
+  }();
+
+  String describe() {
+    delivery.open('describe');
+    return 'spawn';
+  }
+
+  void startOrAdopt() {}
+}
+''';
+    await assertDiagnostics(source, [
+      lint(source.indexOf("spawn('constructor')"), 'spawn'.length),
+      lint(source.indexOf("spawnTwice('initializer')"), 'spawnTwice'.length),
+      lint(source.indexOf("open('describe')"), 'open'.length),
+    ]);
+  }
+
   Future<void> test_leaf_lifecycle_is_silent() async {
     await assertNoDiagnostics(r'''
 import 'package:genesis_tree/genesis_tree.dart';
@@ -152,9 +186,16 @@ class SpawnElement extends LeafElement {
   }
 
   @override
-  void dispose() {}
+  void dispose() => _closing.open('closed');
 
-  void _announce() => delivery.open('started');
+  void _announce() => _greet('started');
+
+  void _greet(String title) => delivery.open(title);
+
+  Delivery get _closing {
+    spawn('closing');
+    return delivery;
+  }
 }
 ''');
   }
