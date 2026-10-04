@@ -1,12 +1,12 @@
 ## 0.3.0-dev.1
 
-- Add six warnings that keep tree code declarative, enabled by default like the existing two, so code that trips them now reports diagnostics:
-  - `no_effects_in_build` rejects a `Future`- or `FutureOr`-returning invocation, a `Timer` construction or static call, `scheduleMicrotask`, `setState`, `await`, and a write to anything but a local inside the build of a `Component` or `State`.
-  - `no_cached_dependency` rejects a `??=` into a field, top-level variable or property whose right-hand side calls a member on a `BuildContext` or passes one as an argument.
+- Add six tree-shape rules that keep tree code declarative. They are enabled by default like the existing two and report at warning severity, so `dart analyze` fails on code that trips them:
+  - `no_effects_in_build` rejects a `Future`- or `FutureOr`-returning invocation, a `Timer` construction or static call, `scheduleMicrotask`, `Stream.listen`, `setState`, `await`, and a write that outlives the call inside the build of a `Component` or `State`, including inside closures the build runs on the spot or hands to a core collection method.
+  - `no_cached_dependency` rejects a `??=` into a field, top-level variable or non-local property whose right-hand side calls a member on a `BuildContext` or passes one as an argument.
   - `watch_not_read_in_build` rejects `getInheritedValueOfExactType` and `read` inside a build.
   - `derive_dont_construct` rejects constructing a `@deriveOnly` class outside the library that declares it.
   - `state_flag_threshold` rejects a `State` declaring more than four `bool` instance fields.
-  - `effects_only_in_leaves` rejects invoking an `@effect` method or function outside an `@effectLeaf` class.
+  - `effects_only_in_leaves` rejects invoking an `@effect` method or function anywhere but an `@effect` declaration or the `startOrAdopt`, `update` and `dispose` lifecycle of an `@effectLeaf` class and the members they reach.
 - The annotations the new rules read ship in `genesis_foundation` 0.3.0-dev.2 and are matched by their declaring library, so a same-named annotation elsewhere is ignored.
 
 ## 0.2.0

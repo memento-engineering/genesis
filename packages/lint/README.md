@@ -26,8 +26,11 @@ plugins:
     path: packages/lint
 ```
 
-Every diagnostic is a warning, so each is enabled without a `diagnostics`
-mapping. None of them reports in a package's `test/` directory.
+Every rule is registered as a warning rule, so each is enabled without a
+`diagnostics` mapping. The six tree-shape rules, from `no_effects_in_build`
+on, report at warning severity, so `dart analyze` exits non-zero when one of
+them fires; the two context rules report at info. None of them reports in a
+package's `test/` directory.
 
 ## `no_stored_tree_context`
 
@@ -58,12 +61,26 @@ A second `await` invalidates the earlier probe and requires another check.
 Rejects an effect inside the `build` (or `buildWithChild`) of a
 `genesis_tree` `Component` or `State` subclass: an invocation whose static
 type is `Future` or `FutureOr`, a `Timer` construction or static call,
-`scheduleMicrotask`, `setState`, `await`, and an assignment or `++`/`--` to
-anything but a local variable — a field of `this` or of any other object, a
-top-level or static variable, or an index into a non-local collection.
-Constructing components and filling local collections stay legal. A closure
-or local function that the build only hands on (a callback, an effect hook)
-is not checked; one invoked on the spot is.
+`scheduleMicrotask`, `Stream.listen`, `setState`, `await`, and an assignment
+or `++`/`--` that outlives the build — a field of `this`, a top-level or
+static variable, or a property or index of any object the build did not make.
+Constructing components and building local values stay legal: a write
+through a local variable, or into a literal or constructor call, including
+as a cascade (`<String, int>{}..['a'] = 1`), is local.
+
+The rule checks what the build runs before it returns: its own body, a
+closure invoked on the spot, a closure handed to a `dart:core` or
+`dart:collection` method (`forEach`, `map`, `fold` and the rest) or to a
+`generate` or `fromIterable` constructor, and a local function the build
+calls or hands to such a method. A closure handed anywhere else — a
+component's callback, an effect hook — runs later and is not checked.
+
+The rule does not see through aliases or dynamic dispatch: a field written
+through a local that aliases it, a closure stored in a variable and then
+called, a callback run by a non-core helper such as `package:collection`'s
+`forEachIndexed`, and a `Future` obtained from a getter are not reported.
+Reading a `Future` is not starting one, and passing an existing `Future` to
+a component is legal.
 
 ```dart
 @override
@@ -77,8 +94,8 @@ The process starts in `Spawn`'s Element, not in the build that emits it.
 
 ## `no_cached_dependency`
 
-Rejects a `??=` into a field, top-level variable or property whose right-hand
-side calls a member on a `BuildContext` — `dependOnInheritedValueOfExactType`,
+Rejects a `??=` into a field, a top-level variable, or a property of an
+object the code did not just make, whose right-hand side calls a member on a `BuildContext` — `dependOnInheritedValueOfExactType`,
 `getInheritedValueOfExactType`, `watch`, `read` — or passes a `BuildContext`
 to any invocation. The cache freezes the first value it saw, so a change to
 the provided value never propagates. A `??=` into a local is not a cache, and
@@ -132,16 +149,26 @@ exhaustively in `build`. Only fields the class itself declares are counted.
 ## `effects_only_in_leaves`
 
 Rejects an invocation of a method or function annotated `@effect` (from
-`genesis_foundation`), or of an override of one, from outside a class
-annotated `@effectLeaf`. The mark is inherited, so annotating a base Element
-covers its subclasses. Inside a leaf class the sanctioned call sites are its
-lifecycle — `startOrAdopt`, `update`, `dispose` — and the helpers they call;
-its build is not one of them. An `@effect` declaration may invoke other
-effects, so effects compose.
+`genesis_foundation`), or of an override of one, from anywhere but a
+sanctioned site. The sanctioned sites are an `@effect` declaration, so
+effects compose, and, inside a class or mixin annotated `@effectLeaf`, its
+lifecycle methods — `startOrAdopt`, `update` and `dispose` — and the methods,
+getters and setters of the same class that a lifecycle method calls or tears
+off, directly or through each other. These are the lifecycle names of the
+effect-leaf Element contract an orchestrator declares on its own leaf base
+class; `genesis_tree`'s `Element` does not declare `startOrAdopt`. The mark is
+inherited, so annotating that base class covers its subclasses. A leaf's
+constructor, field initializers, build and any member the lifecycle does not
+reach are not sanctioned.
 
 ```dart
 @effectLeaf
 abstract class ProcessElement extends Element {
-  void startOrAdopt() => spawnProcess(command);
+  void startOrAdopt() => _spawn();
+
+  void _spawn() => spawnProcess(command);
 }
 ```
+
+Dispatch is resolved statically: a call through a supertype whose member is
+not annotated is not reported, even when an override is.
