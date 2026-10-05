@@ -57,8 +57,8 @@ final class _SpyWatch extends StatelessComponent {
   @override
   Component build(BuildContext context) {
     values
-      ..add(context.watch<_Value>()?.name)
-      ..add(context.watch<_DisposeSpy>() != null);
+      ..add(context.watch<_Value?>()?.name)
+      ..add(context.watch<_DisposeSpy?>() != null);
     return const _Leaf();
   }
 }
@@ -74,7 +74,7 @@ final class _Watch extends StatelessComponent {
 
   @override
   Component build(BuildContext context) {
-    values.add(context.watch<_Value>()?.name);
+    values.add(context.watch<_Value?>()?.name);
     return const _Leaf();
   }
 }
@@ -86,8 +86,8 @@ final class _WatchBoth extends StatelessComponent {
   @override
   Component build(BuildContext context) {
     values
-      ..add(context.watch<_Value>()?.name)
-      ..add(context.watch<_Other>()?.name);
+      ..add(context.watch<_Value?>()?.name)
+      ..add(context.watch<_Other?>()?.name);
     return const _Leaf();
   }
 }
@@ -102,7 +102,7 @@ final class _AspectWatch extends StatelessComponent {
   @override
   Component build(BuildContext context) {
     try {
-      context.dependOnInheritedValueOfExactType<_Value>(aspect: 'name');
+      context.dependOnInheritedValueOfExactType<_Value?>(aspect: 'name');
     } on ArgumentError catch (error) {
       errors.add(error);
     }
@@ -119,7 +119,7 @@ final class _RegistryAspectWatch extends StatelessComponent {
   @override
   Component build(BuildContext context) {
     try {
-      context.dependOnInheritedValueOfExactType<AvailabilityRegistry>(
+      context.dependOnInheritedValueOfExactType<AvailabilityRegistry?>(
         aspect: 'name',
       );
     } on ArgumentError catch (error) {
@@ -193,7 +193,7 @@ final class _PokableWatchState extends State<_PokableWatch> {
 
   @override
   Component build(BuildContext context) {
-    component.values.add(context.watch<_Value>()?.name);
+    component.values.add(context.watch<_Value?>()?.name);
     return const _Leaf();
   }
 }
@@ -222,8 +222,8 @@ final class _RetargetingWatchState extends State<_RetargetingWatch> {
 
   @override
   Component build(BuildContext context) {
-    if (_watchValue) component.values.add(context.watch<_Value>()?.name);
-    component.values.add(context.watch<_Other>()?.name);
+    if (_watchValue) component.values.add(context.watch<_Value?>()?.name);
+    component.values.add(context.watch<_Other?>()?.name);
     return const _Leaf();
   }
 }
@@ -279,7 +279,7 @@ final class _DependencyProbeState extends State<_DependencyProbe> {
 
   @override
   Component build(BuildContext context) {
-    component.values.add(context.watch<_Value>()?.name);
+    component.values.add(context.watch<_Value?>()?.name);
     return const _Leaf();
   }
 }
@@ -302,7 +302,7 @@ final class _OtherDependencyProbeState extends State<_OtherDependencyProbe> {
 
   @override
   Component build(BuildContext context) {
-    component.values.add(context.watch<_Other>()?.name);
+    component.values.add(context.watch<_Other?>()?.name);
     return const _Leaf();
   }
 }
@@ -326,7 +326,7 @@ final class _ReadProbe extends StatefulComponent {
 }
 
 final class _ReadProbeState extends State<_ReadProbe> {
-  String? readValue() => context.read<_Value>()?.name;
+  String? readValue() => context.read<_Value?>()?.name;
 
   @override
   Component build(BuildContext context) {
@@ -353,7 +353,7 @@ final class _TeardownReadState extends State<_TeardownRead> {
 
   @override
   void dispose() {
-    component.events.add('teardown read ${context.read<_Value>()?.name}');
+    component.events.add('teardown read ${context.read<_Value?>()?.name}');
   }
 }
 
@@ -433,7 +433,7 @@ void main() {
             Provider<_Value>(create: (_) => const _Value('cfg')),
             Provider<_Other>(
               // Dependency-free ambient lookup in initState: the read verb.
-              create: (context) => _Other(context.read<_Value>()!.name),
+              create: (context) => _Other(context.read<_Value>().name),
             ),
           ],
           child: _WatchBoth(values),
@@ -503,7 +503,7 @@ void main() {
               // creation-order disposal unsound.
               create: (context) {
                 events.add('create inner');
-                return _Other('${context.read<_Value>()!.name}-derived');
+                return _Other('${context.read<_Value>().name}-derived');
               },
               dispose: (value) => events.add('dispose ${value.name}'),
             ),
@@ -595,7 +595,7 @@ void main() {
               Provider<_Other>(
                 create: (context) {
                   events.add('create inner');
-                  return _Other('${context.read<_Value>()!.name}-derived');
+                  return _Other('${context.read<_Value>().name}-derived');
                 },
                 dispose: (value) => events.add('dispose ${value.name}'),
               ),
@@ -938,8 +938,8 @@ void main() {
         ),
       );
       expect(values, [null]);
-      final registry = slot.context.read<AvailabilityRegistry>()!;
-      expect(registry.debugPendingOf(_Value), hasLength(1));
+      final registry = slot.context.read<AvailabilityRegistry>();
+      expect(registry.debugPendingOf<_Value>(), hasLength(1));
 
       // A Provider<_Other> mounts in the sibling slot. The watcher is parked
       // under _Value; the mount drains only the pending set keyed by ITS type,
@@ -956,7 +956,7 @@ void main() {
       owner.flush();
       expect(values, [null], reason: 'no cross-type ping, no rebuild');
       expect(
-        registry.debugPendingOf(_Value),
+        registry.debugPendingOf<_Value>(),
         hasLength(1),
         reason: 'the registration stays parked under its own type',
       );
@@ -1078,7 +1078,7 @@ void main() {
       );
       expect(left, ['held']);
       expect(right, ['held']);
-      final registry = host.context.read<AvailabilityRegistry>()!;
+      final registry = host.context.read<AvailabilityRegistry>();
       expect(registry.debugNotifying, isEmpty);
 
       // Swap the provider subtree out. The provider element must hand the
@@ -1130,8 +1130,8 @@ void main() {
         ),
       );
       expect(values, ['held']);
-      final registry = host.context.read<AvailabilityRegistry>()!;
-      expect(registry.debugPendingOf(_Value), isEmpty);
+      final registry = host.context.read<AvailabilityRegistry>();
+      expect(registry.debugPendingOf<_Value>(), isEmpty);
 
       // The watcher holds a LIVE edge on the provider element and unmounts
       // with it when the subtree swaps out.
@@ -1140,7 +1140,7 @@ void main() {
       await _pump();
       owner.flush();
       expect(
-        registry.debugPendingOf(_Value),
+        registry.debugPendingOf<_Value>(),
         isEmpty,
         reason: 'a dead dependent must not be parked on its way down',
       );
@@ -1173,15 +1173,15 @@ void main() {
         ),
       );
       expect(values, [null]);
-      final registry = slot.context.read<AvailabilityRegistry>()!;
-      expect(registry.debugPendingOf(_Value), hasLength(1));
+      final registry = slot.context.read<AvailabilityRegistry>();
+      expect(registry.debugPendingOf<_Value>(), hasLength(1));
 
       // Unmount ONLY the watcher (the scope stays up): the parked
       // registration must not survive the element it belongs to.
       watcherSlot.swap(() => const _Leaf());
       owner.flush();
       expect(
-        registry.debugPendingOf(_Value),
+        registry.debugPendingOf<_Value>(),
         isEmpty,
         reason: 'unmount releases the parked registration',
       );
@@ -1213,9 +1213,9 @@ void main() {
         ),
       );
       expect(values, [null, null]);
-      final registry = slot.context.read<AvailabilityRegistry>()!;
-      expect(registry.debugPendingOf(_Value), hasLength(1));
-      expect(registry.debugPendingOf(_Other), hasLength(1));
+      final registry = slot.context.read<AvailabilityRegistry>();
+      expect(registry.debugPendingOf<_Value>(), hasLength(1));
+      expect(registry.debugPendingOf<_Other>(), hasLength(1));
 
       // The watcher rebuilds and stops watching _Value. No substrate hook
       // fires on the hook-free non-watch, so the stale _Value registration
@@ -1223,7 +1223,7 @@ void main() {
       watcher.retarget();
       owner.flush();
       expect(values, [null, null, null]);
-      expect(registry.debugPendingOf(_Value), hasLength(1));
+      expect(registry.debugPendingOf<_Value>(), hasLength(1));
 
       // ...but the next delivered ping consumes it: a Provider<_Other> mount
       // in the sibling slot pings the watcher (parked under _Other), delivery
@@ -1240,12 +1240,12 @@ void main() {
       owner.flush();
       expect(values, [null, null, null, null]);
       expect(
-        registry.debugPendingOf(_Value),
+        registry.debugPendingOf<_Value>(),
         isEmpty,
         reason: 'the stale interest must not outlive the next notification',
       );
       expect(
-        registry.debugPendingOf(_Other),
+        registry.debugPendingOf<_Other>(),
         hasLength(1),
         reason: 'the current interest re-filed through the rebuild\'s miss',
       );
@@ -1275,8 +1275,8 @@ void main() {
         ),
       );
       expect(values, [null]);
-      final registry = slot.context.read<AvailabilityRegistry>()!;
-      expect(registry.debugPendingOf(_Value), hasLength(1));
+      final registry = slot.context.read<AvailabilityRegistry>();
+      expect(registry.debugPendingOf<_Value>(), hasLength(1));
 
       slot.swap(
         () => Provider<_Value>.value(
@@ -1286,7 +1286,7 @@ void main() {
       );
       owner.flush();
       expect(
-        registry.debugPendingOf(_Value),
+        registry.debugPendingOf<_Value>(),
         isEmpty,
         reason: 'the drain consumed the bucket synchronously at the announce',
       );
@@ -1296,7 +1296,7 @@ void main() {
       owner.flush();
       expect(values, [null, null]);
       expect(
-        registry.debugPendingOf(_Value),
+        registry.debugPendingOf<_Value>(),
         hasLength(1),
         reason: 'the rebuild\'s re-miss re-filed the registration',
       );
@@ -1416,7 +1416,7 @@ void main() {
       // A genuine survivor re-registers pending through its own rebuild's
       // watch miss, which rides the registry-element dependency path that IS
       // released at unmount.
-      expect(registry.debugPendingOf(_Value), isEmpty);
+      expect(registry.debugPendingOf<_Value>(), isEmpty);
     });
 
     test('one throwing dependent neither swallows the rest of the batch nor '
@@ -1517,7 +1517,7 @@ void main() {
       );
       expect(values, ['held'], reason: 'the aspect-free watcher resolved');
       expect(errors, hasLength(1), reason: 'the aspect-scoped one was refused');
-      final registry = host.context.read<AvailabilityRegistry>()!;
+      final registry = host.context.read<AvailabilityRegistry>();
 
       host.swap(() => const _Leaf());
       owner.flush();

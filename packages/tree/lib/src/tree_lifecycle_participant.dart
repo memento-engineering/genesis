@@ -6,7 +6,11 @@
 /// [TreeLifecycleParticipant.didChangeDependencies].
 abstract interface class TreeSnapshotReader {
   /// Reads the nearest inherited value of exact type [T] without subscribing.
-  T? read<T extends Object>();
+  ///
+  /// Nullable when asked: an absent value throws [StateError] naming [T] for
+  /// a non-nullable [T] and returns null for a nullable one (for example
+  /// `read<Config?>()`).
+  T read<T>();
 }
 
 /// A call-scoped capability for reading and subscribing to inherited values.
@@ -17,7 +21,12 @@ abstract interface class TreeSnapshotReader {
 /// inherited value changes.
 abstract interface class TreeWatchingReader {
   /// Watches the nearest inherited value of exact type [T].
-  T? watch<T extends Object>();
+  ///
+  /// Nullable when asked: an absent value throws [StateError] naming [T] for
+  /// a non-nullable [T] and returns null for a nullable one (for example
+  /// `watch<Config?>()`). Either way the dependency is registered, so a later
+  /// provider mount re-runs the pass.
+  T watch<T>();
 }
 
 /// Whether one dependency callback is still the participant's current pass.

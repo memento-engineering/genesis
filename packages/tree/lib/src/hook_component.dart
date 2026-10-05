@@ -348,20 +348,19 @@ class _HookBuildContext implements HookBuildContext {
   String get branchId => elementId;
 
   @override
-  T? dependOnInheritedValueOfExactType<T extends Object>({Object? aspect}) =>
+  T? dependOnInheritedValueOfExactType<T>({Object? aspect}) =>
       _delegate.dependOnInheritedValueOfExactType<T>(aspect: aspect);
 
   @override
-  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) =>
+  T? dependOnInheritedSeedOfExactType<T>({Object? aspect}) =>
       dependOnInheritedValueOfExactType<T>(aspect: aspect);
 
   @override
-  T? getInheritedValueOfExactType<T extends Object>() =>
+  T? getInheritedValueOfExactType<T>() =>
       _delegate.getInheritedValueOfExactType<T>();
 
   @override
-  T? getInheritedSeedOfExactType<T extends Object>() =>
-      getInheritedValueOfExactType<T>();
+  T? getInheritedSeedOfExactType<T>() => getInheritedValueOfExactType<T>();
 
   @override
   void markNeedsRebuild() => _delegate.markNeedsRebuild();

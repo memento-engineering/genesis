@@ -62,20 +62,19 @@ class _PerceptionHandle implements PerceptionContext {
   String get perceptionId => _inner.elementId;
 
   @override
-  T? dependOnInheritedValueOfExactType<T extends Object>({Object? aspect}) =>
+  T? dependOnInheritedValueOfExactType<T>({Object? aspect}) =>
       _inner.dependOnInheritedValueOfExactType<T>(aspect: aspect);
 
   @override
-  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) =>
+  T? dependOnInheritedSeedOfExactType<T>({Object? aspect}) =>
       dependOnInheritedValueOfExactType<T>(aspect: aspect);
 
   @override
-  T? getInheritedValueOfExactType<T extends Object>() =>
+  T? getInheritedValueOfExactType<T>() =>
       _inner.getInheritedValueOfExactType<T>();
 
   @override
-  T? getInheritedSeedOfExactType<T extends Object>() =>
-      getInheritedValueOfExactType<T>();
+  T? getInheritedSeedOfExactType<T>() => getInheritedValueOfExactType<T>();
 
   @override
   void markNeedsRebuild() => _inner.markNeedsRebuild();

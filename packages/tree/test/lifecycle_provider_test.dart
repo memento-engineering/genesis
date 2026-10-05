@@ -27,7 +27,7 @@ final class _Participant with TreeLifecycleParticipant {
   void initState(TreeSnapshotReader reader) {
     events?.add('initState');
     snapshotReader = reader;
-    snapshot = reader.read<int>();
+    snapshot = reader.read<int?>();
     onInitState?.call();
   }
 
@@ -39,7 +39,7 @@ final class _Participant with TreeLifecycleParticipant {
     events?.add('didChangeDependencies');
     watchingReader = reader;
     dependencyScopes.add(scope);
-    if (watchInt) watched.add(reader.watch<int>());
+    if (watchInt) watched.add(reader.watch<int?>());
     onDidChangeDependencies?.call();
   }
 
@@ -100,7 +100,7 @@ final class _InheritedHostState extends State<_InheritedHost> {
 
   @override
   Component build(BuildContext context) =>
-      InheritedComponent<int>(value: _value, child: component.describe());
+      InheritedComponent<int?>(value: _value, child: component.describe());
 }
 
 final class _ThrowingComponent extends StatelessComponent {
@@ -251,9 +251,9 @@ void main() {
 
     final stringProvider =
         owner.mountRoot(
-              InheritedComponent<String>(
+              InheritedComponent<String?>(
                 value: 'ambient',
-                child: InheritedComponent<int>(
+                child: InheritedComponent<int?>(
                   value: 7,
                   child: _Slots([
                     LifecycleProvider<_Participant>.value(
@@ -268,7 +268,7 @@ void main() {
                 ),
               ),
             )
-            as InheritedElement<String>;
+            as InheritedElement<String?>;
 
     expect(matchingPhaseErrors, hasLength(2));
     expect(
@@ -430,7 +430,7 @@ void main() {
                 ),
               )
               as StatefulElement;
-      final inherited = root.child as InheritedElement<int>;
+      final inherited = root.child as InheritedElement<int?>;
       final lifecycleProviderElement = inherited.childElement!;
       final oldScope = participant.dependencyScopes.single;
 

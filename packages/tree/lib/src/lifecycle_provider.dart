@@ -189,7 +189,7 @@ final class _LifecycleSnapshotReader extends _LifecycleReader
     : super(context, guard, TreeLifecyclePhase.initState);
 
   @override
-  T? read<T extends Object>() {
+  T read<T>() {
     _checkActive('TreeSnapshotReader.read<$T>()');
     return _context.read<T>();
   }
@@ -201,7 +201,7 @@ final class _LifecycleWatchingReader extends _LifecycleReader
     : super(context, guard, TreeLifecyclePhase.didChangeDependencies);
 
   @override
-  T? watch<T extends Object>() {
+  T watch<T>() {
     _checkActive('TreeWatchingReader.watch<$T>()');
     return _context.watch<T>();
   }

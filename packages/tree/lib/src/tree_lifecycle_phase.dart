@@ -55,7 +55,7 @@ final class TreeLifecyclePhaseGuard {
   /// [TreeLifecyclePhase.building]. The historical initialization and
   /// teardown diagnostics remain debug assertions; registration outside all
   /// tree phases throws [StateError] in every build mode.
-  void checkCanDependOnInheritedValueOfExactType<T extends Object>() {
+  void checkCanDependOnInheritedValueOfExactType<T>() {
     switch (phase) {
       case TreeLifecyclePhase.didChangeDependencies:
       case TreeLifecyclePhase.building:
@@ -91,6 +91,6 @@ final class TreeLifecyclePhaseGuard {
 
   /// Legacy spelling for [checkCanDependOnInheritedValueOfExactType].
   @Deprecated('Use checkCanDependOnInheritedValueOfExactType instead.')
-  void checkCanDependOnInheritedSeedOfExactType<T extends Object>() =>
+  void checkCanDependOnInheritedSeedOfExactType<T>() =>
       checkCanDependOnInheritedValueOfExactType<T>();
 }
