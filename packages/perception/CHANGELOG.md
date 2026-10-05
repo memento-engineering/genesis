@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.0-dev.2
+- Require `genesis_tree ^0.6.0-dev.1`: the perception context's inherited-value lookups drop their `extends Object` bound to match the tree spine, so a nullable type argument passes through.
+
 ## 0.4.0-dev.1
 - **Breaking:** perception now surfaces the canonical tree spine: migrate tree-facing `Seed`/`Branch`/`TreeContext`/`TreeOwner` signatures to `Component`/`Element`/`BuildContext`/`BuildOwner`, including `component`, `elementId`, and inherited-value lookup members. `Perception`, `Node`, `Field`, harvest names, and the version-1 `seedType` wire key remain unchanged.
 
