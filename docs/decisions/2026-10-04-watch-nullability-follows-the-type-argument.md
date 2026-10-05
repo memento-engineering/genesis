@@ -45,9 +45,18 @@ throw a loud `StateError` that names the type and the requesting element; a miss
 dependency is a composition defect, not a value.
 
 **D2.** `watch<T?>()` and `read<T?>()` return `null` for absence. The `extends Object` bound is
-dropped; the implementation tests `null is T` to choose. Absence as a designed posture is now
-expressed by the caller choosing a nullable type argument, which is where the knowledge of
-whether absence is acceptable actually lives.
+dropped from the lookup pair and from `InheritedComponent`/`InheritedElement`; the verb is one
+lookup, one `null is! T` check, one cast. Absence as a designed posture is now expressed by the
+caller choosing a nullable type argument, which is where the knowledge of whether absence is
+acceptable actually lives.
+
+**Mechanism (the `package:provider` approach).** A provider registers its inherited element
+under the *nullable spelling* of its type (`Provider<X>` mounts `InheritedComponent<X?>`), and
+every lookup verb asks for the nullable spelling (`dependOnInheritedValueOfExactType<T?>()`).
+`X` and `X?` therefore normalize to one key, the spine's exact-type match is untouched, and the
+pending registry has one bucket per type by construction. Consequence: `watch<X>()` finds
+providers, not a plain `InheritedComponent<X>` — the same split Flutter has between
+`context.watch` and `dependOnInheritedWidgetOfExactType`.
 
 **D3.** The derived-provider family (`ProxyProvider` through `ProxyProvider6`) follows the
 declared input types: an input declared non-nullable makes the proxy unavailable until it is
