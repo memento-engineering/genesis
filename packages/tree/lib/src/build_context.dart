@@ -40,11 +40,16 @@ abstract class BuildContext {
   /// throws [ArgumentError].
   ///
   /// Throws [StateError] after the bound element unmounts.
-  T? dependOnInheritedValueOfExactType<T extends Object>({Object? aspect});
+  ///
+  /// [T] may be a nullable type. The match stays exact, so `X?` resolves an
+  /// `InheritedComponent<X?>` (the spelling the provider layer registers
+  /// under) and `X` an `InheritedComponent<X>`. Provided values are never
+  /// null, so a null result always means no such ancestor exists.
+  T? dependOnInheritedValueOfExactType<T>({Object? aspect});
 
   /// Legacy spelling for [dependOnInheritedValueOfExactType].
   @Deprecated('Use dependOnInheritedValueOfExactType instead.')
-  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect});
+  T? dependOnInheritedSeedOfExactType<T>({Object? aspect});
 
   /// Returns the nearest ancestor value provided via `InheritedComponent<T>` of
   /// exact type [T] **without registering a dependency**; null when no such
@@ -58,11 +63,16 @@ abstract class BuildContext {
   /// the depend variant wherever the element must rebuild on change.
   ///
   /// Throws [StateError] after the bound element unmounts.
-  T? getInheritedValueOfExactType<T extends Object>();
+  ///
+  /// [T] may be a nullable type. The match stays exact, so `X?` resolves an
+  /// `InheritedComponent<X?>` (the spelling the provider layer registers
+  /// under) and `X` an `InheritedComponent<X>`. Provided values are never
+  /// null, so a null result always means no such ancestor exists.
+  T? getInheritedValueOfExactType<T>();
 
   /// Legacy spelling for [getInheritedValueOfExactType].
   @Deprecated('Use getInheritedValueOfExactType instead.')
-  T? getInheritedSeedOfExactType<T extends Object>();
+  T? getInheritedSeedOfExactType<T>();
 
   /// Marks the bound element dirty for the next `BuildOwner.flush`.
   ///
@@ -116,24 +126,24 @@ class _ElementContext implements BuildContext {
   String get branchId => elementId;
 
   @override
-  T? dependOnInheritedValueOfExactType<T extends Object>({Object? aspect}) {
+  T? dependOnInheritedValueOfExactType<T>({Object? aspect}) {
     _checkMounted('dependOnInheritedValueOfExactType');
     return _element.dependOnInheritedValueOfExactType<T>(aspect: aspect);
   }
 
   @override
-  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) {
+  T? dependOnInheritedSeedOfExactType<T>({Object? aspect}) {
     return dependOnInheritedValueOfExactType<T>(aspect: aspect);
   }
 
   @override
-  T? getInheritedValueOfExactType<T extends Object>() {
+  T? getInheritedValueOfExactType<T>() {
     _checkMounted('getInheritedValueOfExactType');
     return _element.getInheritedValueOfExactType<T>();
   }
 
   @override
-  T? getInheritedSeedOfExactType<T extends Object>() {
+  T? getInheritedSeedOfExactType<T>() {
     return getInheritedValueOfExactType<T>();
   }
 

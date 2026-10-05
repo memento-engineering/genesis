@@ -71,7 +71,12 @@ abstract class Element with Diagnosticable, DiagnosticableTree {
   /// behaviour of every plain `InheritedComponent<T>` provider, and of this method
   /// before aspects existed. Passing an [aspect] to a plain provider throws
   /// [ArgumentError].
-  T? dependOnInheritedValueOfExactType<T extends Object>({Object? aspect}) {
+  ///
+  /// [T] may be a nullable type. The match stays exact, so `X?` resolves an
+  /// `InheritedComponent<X?>` (the spelling the provider layer registers
+  /// under) and `X` an `InheritedComponent<X>`. Provided values are never
+  /// null, so a null result always means no such ancestor exists.
+  T? dependOnInheritedValueOfExactType<T>({Object? aspect}) {
     final provider = _findInheritedProviderOfExactType<T>();
     if (provider == null) return null;
     provider.addDependent(this, aspect: aspect);
@@ -81,7 +86,7 @@ abstract class Element with Diagnosticable, DiagnosticableTree {
 
   /// Legacy spelling for [dependOnInheritedValueOfExactType].
   @Deprecated('Use dependOnInheritedValueOfExactType instead.')
-  T? dependOnInheritedSeedOfExactType<T extends Object>({Object? aspect}) =>
+  T? dependOnInheritedSeedOfExactType<T>({Object? aspect}) =>
       dependOnInheritedValueOfExactType<T>(aspect: aspect);
 
   /// Returns the nearest ancestor value provided via `InheritedComponent<T>` of
@@ -94,17 +99,21 @@ abstract class Element with Diagnosticable, DiagnosticableTree {
   /// ambient service in `State.initState`, inside an effect, during
   /// teardown); use the depend variant wherever this element must rebuild
   /// when the value changes.
-  T? getInheritedValueOfExactType<T extends Object>() =>
+  ///
+  /// [T] may be a nullable type. The match stays exact, so `X?` resolves an
+  /// `InheritedComponent<X?>` (the spelling the provider layer registers
+  /// under) and `X` an `InheritedComponent<X>`. Provided values are never
+  /// null, so a null result always means no such ancestor exists.
+  T? getInheritedValueOfExactType<T>() =>
       _findInheritedProviderOfExactType<T>()?.getValueAs<T>();
 
   /// Legacy spelling for [getInheritedValueOfExactType].
   @Deprecated('Use getInheritedValueOfExactType instead.')
-  T? getInheritedSeedOfExactType<T extends Object>() =>
-      getInheritedValueOfExactType<T>();
+  T? getInheritedSeedOfExactType<T>() => getInheritedValueOfExactType<T>();
 
   // The single provider-lookup site shared by the depend/get pair: walks the
   // parent chain for the nearest provider whose exact value-type is T.
-  InheritedElementBase? _findInheritedProviderOfExactType<T extends Object>() {
+  InheritedElementBase? _findInheritedProviderOfExactType<T>() {
     Element? ancestor = _parent;
     while (ancestor != null) {
       if (ancestor is InheritedElementBase &&
@@ -428,7 +437,7 @@ abstract class InheritedElementBase extends Element {
   /// Returns this element's wrapped value as [T] if its exact value-type
   /// equals [T]; null otherwise. Used by the parent-walk in
   /// [Element.dependOnInheritedValueOfExactType].
-  T? getValueAs<T extends Object>();
+  T? getValueAs<T>();
 
   /// Registers [element] as a dependent. Idempotent (set-add).
   ///

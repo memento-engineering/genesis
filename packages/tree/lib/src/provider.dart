@@ -24,24 +24,16 @@ typedef ProviderCreate<T extends Object> = T Function(BuildContext context);
 typedef ProviderDispose<T extends Object> = void Function(T value);
 
 /// Derives an owned [R] from one ambient [T] and the nullable previous [R].
-typedef ProxyProviderUpdate<T extends Object, R extends Object> =
+typedef ProxyProviderUpdate<T, R extends Object> =
     R Function(BuildContext context, T value, R? previous);
 
 /// Derives an owned [R] from two ambient values and the nullable previous [R].
-typedef ProxyProvider2Update<
-  T1 extends Object,
-  T2 extends Object,
-  R extends Object
-> = R Function(BuildContext context, T1 value1, T2 value2, R? previous);
+typedef ProxyProvider2Update<T1, T2, R extends Object> =
+    R Function(BuildContext context, T1 value1, T2 value2, R? previous);
 
 /// Derives an owned [R] from three ambient values and the nullable previous
 /// [R].
-typedef ProxyProvider3Update<
-  T1 extends Object,
-  T2 extends Object,
-  T3 extends Object,
-  R extends Object
-> =
+typedef ProxyProvider3Update<T1, T2, T3, R extends Object> =
     R Function(
       BuildContext context,
       T1 value1,
@@ -52,13 +44,7 @@ typedef ProxyProvider3Update<
 
 /// Derives an owned [R] from four ambient values and the nullable previous
 /// [R].
-typedef ProxyProvider4Update<
-  T1 extends Object,
-  T2 extends Object,
-  T3 extends Object,
-  T4 extends Object,
-  R extends Object
-> =
+typedef ProxyProvider4Update<T1, T2, T3, T4, R extends Object> =
     R Function(
       BuildContext context,
       T1 value1,
@@ -70,14 +56,7 @@ typedef ProxyProvider4Update<
 
 /// Derives an owned [R] from five ambient values and the nullable previous
 /// [R].
-typedef ProxyProvider5Update<
-  T1 extends Object,
-  T2 extends Object,
-  T3 extends Object,
-  T4 extends Object,
-  T5 extends Object,
-  R extends Object
-> =
+typedef ProxyProvider5Update<T1, T2, T3, T4, T5, R extends Object> =
     R Function(
       BuildContext context,
       T1 value1,
@@ -89,15 +68,7 @@ typedef ProxyProvider5Update<
     );
 
 /// Derives an owned [R] from six ambient values and the nullable previous [R].
-typedef ProxyProvider6Update<
-  T1 extends Object,
-  T2 extends Object,
-  T3 extends Object,
-  T4 extends Object,
-  T5 extends Object,
-  T6 extends Object,
-  R extends Object
-> =
+typedef ProxyProvider6Update<T1, T2, T3, T4, T5, T6, R extends Object> =
     R Function(
       BuildContext context,
       T1 value1,
@@ -166,7 +137,9 @@ abstract class _ProviderComponentBase<R extends Object>
 /// `.value`) is therefore fixed for the life of a mounted element.
 ///
 /// **Availability.** Descendants bind with [ProviderBuildContext.watch] —
-/// nullable always; absence is a designed posture (`docs/STYLE.md` rules 3-4).
+/// nullable when asked: `watch<T>()` throws [StateError] when no provider of
+/// `T` is in scope, `watch<T?>()` returns null, which is how a caller declares
+/// absence a designed posture (`docs/STYLE.md` rules 3-4).
 /// Mount and unmount are announced to the enclosing [ProviderScope] so
 /// availability notification is bidirectional; delivery is deferred past the
 /// announcing flush pass (see [ProviderScope] for the scheduling contract).
@@ -233,8 +206,9 @@ abstract class _ProxyProviderBase<R extends Object>
   @override
   bool get _treeOwnsValues => true;
 
-  /// Watches every declared input, then returns null when any is absent or
-  /// invokes this arity's typed callback with all resolved values.
+  /// Watches every declared input, then returns null when any REQUIRED
+  /// (non-nullable) input is absent, or invokes this arity's typed callback
+  /// with all resolved values — an absent nullable input resolves to null.
   R? _derive(BuildContext context, R? previous);
 
   @override
@@ -244,15 +218,19 @@ abstract class _ProxyProviderBase<R extends Object>
 
 /// Provides an owned [R] derived from an ambient [T].
 ///
-/// Every build watches [T]. Once it resolves, [update] receives the current
-/// value and the previous [R], and its result is projected to descendants.
+/// Every build watches [T]. Input nullability follows the type argument: a
+/// non-nullable [T] is required, so the proxy is unavailable (nothing is
+/// built or projected) until a provider of [T] is in scope; a nullable [T]
+/// never gates, and an absent value reaches [update] as null. Once the
+/// inputs resolve, [update] receives the current value and the previous [R],
+/// and its result is projected to descendants. The same rule applies to every
+/// input of [ProxyProvider2] through [ProxyProvider6].
 /// The optional [create] runs once at mount and seeds the first update's
 /// `previous`; without it, the first update receives null. Every distinct
 /// created or updated [R] is tree-owned and disposed when replaced or after
 /// descendant teardown. There is deliberately no `.value` form: adoption
 /// remains [Provider.value].
-final class ProxyProvider<T extends Object, R extends Object>
-    extends _ProxyProviderBase<R> {
+final class ProxyProvider<T, R extends Object> extends _ProxyProviderBase<R> {
   /// Creates a one-input proxy provider.
   const ProxyProvider({
     super.create,
@@ -267,18 +245,19 @@ final class ProxyProvider<T extends Object, R extends Object>
 
   @override
   R? _derive(BuildContext context, R? previous) {
-    final value = context.watch<T>();
-    if (value == null) return null;
-    return update(context, value, previous);
+    // Watch every input before checking any. An early return would leave
+    // later absent types unregistered with ProviderScope. A null for a
+    // non-nullable input withholds R; a nullable input passes it through.
+    final value = context.watch<T?>();
+    if ((value == null && null is! T)) {
+      return null;
+    }
+    return update(context, value as T, previous);
   }
 }
 
 /// Provides an owned [R] derived from two ambient values.
-final class ProxyProvider2<
-  T1 extends Object,
-  T2 extends Object,
-  R extends Object
->
+final class ProxyProvider2<T1, T2, R extends Object>
     extends _ProxyProviderBase<R> {
   /// Creates a two-input proxy provider.
   const ProxyProvider2({
@@ -294,20 +273,20 @@ final class ProxyProvider2<
 
   @override
   R? _derive(BuildContext context, R? previous) {
-    final value1 = context.watch<T1>();
-    final value2 = context.watch<T2>();
-    if (value1 == null || value2 == null) return null;
-    return update(context, value1, value2, previous);
+    // Watch every input before checking any. An early return would leave
+    // later absent types unregistered with ProviderScope. A null for a
+    // non-nullable input withholds R; a nullable input passes it through.
+    final value1 = context.watch<T1?>();
+    final value2 = context.watch<T2?>();
+    if ((value1 == null && null is! T1) || (value2 == null && null is! T2)) {
+      return null;
+    }
+    return update(context, value1 as T1, value2 as T2, previous);
   }
 }
 
 /// Provides an owned [R] derived from three ambient values.
-final class ProxyProvider3<
-  T1 extends Object,
-  T2 extends Object,
-  T3 extends Object,
-  R extends Object
->
+final class ProxyProvider3<T1, T2, T3, R extends Object>
     extends _ProxyProviderBase<R> {
   /// Creates a three-input proxy provider.
   const ProxyProvider3({
@@ -323,22 +302,23 @@ final class ProxyProvider3<
 
   @override
   R? _derive(BuildContext context, R? previous) {
-    final value1 = context.watch<T1>();
-    final value2 = context.watch<T2>();
-    final value3 = context.watch<T3>();
-    if (value1 == null || value2 == null || value3 == null) return null;
-    return update(context, value1, value2, value3, previous);
+    // Watch every input before checking any. An early return would leave
+    // later absent types unregistered with ProviderScope. A null for a
+    // non-nullable input withholds R; a nullable input passes it through.
+    final value1 = context.watch<T1?>();
+    final value2 = context.watch<T2?>();
+    final value3 = context.watch<T3?>();
+    if ((value1 == null && null is! T1) ||
+        (value2 == null && null is! T2) ||
+        (value3 == null && null is! T3)) {
+      return null;
+    }
+    return update(context, value1 as T1, value2 as T2, value3 as T3, previous);
   }
 }
 
 /// Provides an owned [R] derived from four ambient values.
-final class ProxyProvider4<
-  T1 extends Object,
-  T2 extends Object,
-  T3 extends Object,
-  T4 extends Object,
-  R extends Object
->
+final class ProxyProvider4<T1, T2, T3, T4, R extends Object>
     extends _ProxyProviderBase<R> {
   /// Creates a four-input proxy provider.
   const ProxyProvider4({
@@ -354,26 +334,32 @@ final class ProxyProvider4<
 
   @override
   R? _derive(BuildContext context, R? previous) {
-    final value1 = context.watch<T1>();
-    final value2 = context.watch<T2>();
-    final value3 = context.watch<T3>();
-    final value4 = context.watch<T4>();
-    if (value1 == null || value2 == null || value3 == null || value4 == null) {
+    // Watch every input before checking any. An early return would leave
+    // later absent types unregistered with ProviderScope. A null for a
+    // non-nullable input withholds R; a nullable input passes it through.
+    final value1 = context.watch<T1?>();
+    final value2 = context.watch<T2?>();
+    final value3 = context.watch<T3?>();
+    final value4 = context.watch<T4?>();
+    if ((value1 == null && null is! T1) ||
+        (value2 == null && null is! T2) ||
+        (value3 == null && null is! T3) ||
+        (value4 == null && null is! T4)) {
       return null;
     }
-    return update(context, value1, value2, value3, value4, previous);
+    return update(
+      context,
+      value1 as T1,
+      value2 as T2,
+      value3 as T3,
+      value4 as T4,
+      previous,
+    );
   }
 }
 
 /// Provides an owned [R] derived from five ambient values.
-final class ProxyProvider5<
-  T1 extends Object,
-  T2 extends Object,
-  T3 extends Object,
-  T4 extends Object,
-  T5 extends Object,
-  R extends Object
->
+final class ProxyProvider5<T1, T2, T3, T4, T5, R extends Object>
     extends _ProxyProviderBase<R> {
   /// Creates a five-input proxy provider.
   const ProxyProvider5({
@@ -389,32 +375,35 @@ final class ProxyProvider5<
 
   @override
   R? _derive(BuildContext context, R? previous) {
-    final value1 = context.watch<T1>();
-    final value2 = context.watch<T2>();
-    final value3 = context.watch<T3>();
-    final value4 = context.watch<T4>();
-    final value5 = context.watch<T5>();
-    if (value1 == null ||
-        value2 == null ||
-        value3 == null ||
-        value4 == null ||
-        value5 == null) {
+    // Watch every input before checking any. An early return would leave
+    // later absent types unregistered with ProviderScope. A null for a
+    // non-nullable input withholds R; a nullable input passes it through.
+    final value1 = context.watch<T1?>();
+    final value2 = context.watch<T2?>();
+    final value3 = context.watch<T3?>();
+    final value4 = context.watch<T4?>();
+    final value5 = context.watch<T5?>();
+    if ((value1 == null && null is! T1) ||
+        (value2 == null && null is! T2) ||
+        (value3 == null && null is! T3) ||
+        (value4 == null && null is! T4) ||
+        (value5 == null && null is! T5)) {
       return null;
     }
-    return update(context, value1, value2, value3, value4, value5, previous);
+    return update(
+      context,
+      value1 as T1,
+      value2 as T2,
+      value3 as T3,
+      value4 as T4,
+      value5 as T5,
+      previous,
+    );
   }
 }
 
 /// Provides an owned [R] derived from six ambient values.
-final class ProxyProvider6<
-  T1 extends Object,
-  T2 extends Object,
-  T3 extends Object,
-  T4 extends Object,
-  T5 extends Object,
-  T6 extends Object,
-  R extends Object
->
+final class ProxyProvider6<T1, T2, T3, T4, T5, T6, R extends Object>
     extends _ProxyProviderBase<R> {
   /// Creates a six-input proxy provider.
   const ProxyProvider6({
@@ -430,30 +419,31 @@ final class ProxyProvider6<
 
   @override
   R? _derive(BuildContext context, R? previous) {
-    // Resolve every dependency before checking for a miss. An early return
-    // would leave later absent types unregistered with ProviderScope.
-    final value1 = context.watch<T1>();
-    final value2 = context.watch<T2>();
-    final value3 = context.watch<T3>();
-    final value4 = context.watch<T4>();
-    final value5 = context.watch<T5>();
-    final value6 = context.watch<T6>();
-    if (value1 == null ||
-        value2 == null ||
-        value3 == null ||
-        value4 == null ||
-        value5 == null ||
-        value6 == null) {
+    // Watch every input before checking any. An early return would leave
+    // later absent types unregistered with ProviderScope. A null for a
+    // non-nullable input withholds R; a nullable input passes it through.
+    final value1 = context.watch<T1?>();
+    final value2 = context.watch<T2?>();
+    final value3 = context.watch<T3?>();
+    final value4 = context.watch<T4?>();
+    final value5 = context.watch<T5?>();
+    final value6 = context.watch<T6?>();
+    if ((value1 == null && null is! T1) ||
+        (value2 == null && null is! T2) ||
+        (value3 == null && null is! T3) ||
+        (value4 == null && null is! T4) ||
+        (value5 == null && null is! T5) ||
+        (value6 == null && null is! T6)) {
       return null;
     }
     return update(
       context,
-      value1,
-      value2,
-      value3,
-      value4,
-      value5,
-      value6,
+      value1 as T1,
+      value2 as T2,
+      value3 as T3,
+      value4 as T4,
+      value5 as T5,
+      value6 as T6,
       previous,
     );
   }
@@ -503,15 +493,25 @@ final class ProviderScope extends SingleChildStatefulComponent {
   SingleChildState<ProviderScope> createState() => _ProviderScopeState();
 }
 
-/// Adds nullable provider lookup verbs to [BuildContext] (ADR-0008 D3/D-H —
-/// two verbs, one lookup system).
+/// Adds the provider lookup verbs to [BuildContext] — two verbs, one lookup
+/// system.
+///
+/// **Nullability follows the type argument.** Each verb is one lookup and one
+/// cast. Every provider registers under the NULLABLE spelling of its type and
+/// every lookup asks for that spelling, so `T` and `T?` resolve the same
+/// `Provider<T>`. `watch<T>()` / `read<T>()` throw a [StateError] naming the
+/// type and the requesting element when no provider of `T` is in scope — a
+/// missing dependency is a composition defect. `watch<T?>()` / `read<T?>()`
+/// return null for absence — nullable when asked, which is how a caller
+/// declares absence a designed posture (`docs/STYLE.md` rules 3-4).
 extension ProviderBuildContext on BuildContext {
   /// The build-time BINDING verb: the nearest [T], registering the dependency
   /// edge UNCONDITIONALLY — with the provider's element on a hit, or with the
   /// enclosing [ProviderScope]'s pending map on a miss.
   ///
-  /// Nullable ALWAYS, and deliberately without a throwing variant:
-  /// unavailability is a designed posture (`docs/STYLE.md` rule 3). The
+  /// Nullable when asked: a miss throws [StateError] for a non-nullable [T]
+  /// (after parking the pending registration, so the element still learns
+  /// when a provider mounts) and returns null for a nullable [T]. The
   /// notification is bidirectional — mount and unmount announcements both
   /// reach the registered dependents — and DEFERRED: delivery is a microtask
   /// after the flush pass the provider (un)mounted in, so the rebuild lands
@@ -519,42 +519,58 @@ extension ProviderBuildContext on BuildContext {
   /// what each direction observably does on this substrate).
   ///
   /// Use [read] for a non-binding snapshot lookup from an effect path.
-  T? watch<T extends Object>() {
-    final value = dependOnInheritedValueOfExactType<T>();
-    if (value != null) return value;
-    // MISS: the walk found no provider, so no element holds the edge. Park the
-    // registration with the availability registry. The registration rides the
-    // substrate's own addDependent path (see _RegistryElement): the registry
-    // element never notifies (its value is scope-lifetime stable), and the
-    // dependency edge auto-releases when this element unmounts.
-    final registry = getInheritedValueOfExactType<AvailabilityRegistry>();
-    // Debug guard, release behavior unchanged (return null): a scope-less
-    // miss is almost always a composition mistake — the registration cannot
-    // park anywhere, so the element would never learn when a Provider<T>
-    // mounts. Applications should mount the scope near the tree root.
-    assert(
-      registry != null,
-      'watch<$T>() missed with no ProviderScope ancestor: there is no '
-      'availability registry to park the pending registration with, so this '
-      'element can never be notified when a Provider<$T> mounts. Mount a '
-      'ProviderScope near the tree root (above every watching element), or '
-      'use read<$T>() if a one-shot snapshot is all that is needed.',
-    );
-    if (registry != null) {
-      registry._registering = T;
-      try {
-        dependOnInheritedValueOfExactType<AvailabilityRegistry>();
-      } finally {
-        registry._registering = null;
+  T watch<T>() {
+    final value = dependOnInheritedValueOfExactType<T?>();
+    if (value == null) {
+      // MISS: the walk found no provider, so no element holds the edge. Park
+      // the registration with the availability registry under `T?` — the
+      // spelling every provider registers under, so `watch<X>()` and
+      // `watch<X?>()` share one bucket. The registration rides the
+      // substrate's own addDependent path (see _RegistryElement): the
+      // registry element never notifies (its value is scope-lifetime stable),
+      // and the dependency edge auto-releases when this element unmounts.
+      final registry = getInheritedValueOfExactType<AvailabilityRegistry?>();
+      // Debug guard, release behavior unchanged: a scope-less miss is almost
+      // always a composition mistake — the registration cannot park
+      // anywhere, so the element would never learn when a Provider<T> mounts.
+      // Applications should mount the scope near the tree root.
+      assert(
+        registry != null,
+        'watch<$T>() missed with no ProviderScope ancestor: there is no '
+        'availability registry to park the pending registration with, so this '
+        'element can never be notified when a Provider<$T> mounts. Mount a '
+        'ProviderScope near the tree root (above every watching element), or '
+        'use read<$T>() if a one-shot snapshot is all that is needed.',
+      );
+      registry?._park<T?>(this);
+      if (null is! T) {
+        throw StateError(
+          'watch<$T>() found no provider of $T in scope for element '
+          '$elementId (key $key). Provide it above this element '
+          '(Provider<$T>), or write watch<$T?>() if absence is acceptable.',
+        );
       }
     }
-    return null;
+    return value as T;
   }
 
   /// The effect-path SNAPSHOT verb: the nearest [T] without registering any
   /// dependency — neither live nor pending. A later change, mount, or unmount
   /// of the provider does not rebuild this element.
-  T? read<T extends Object>() => getInheritedValueOfExactType<T>();
+  ///
+  /// Nullable when asked: a miss throws [StateError] for a non-nullable [T]
+  /// and returns null for a nullable [T].
+  T read<T>() {
+    final value = getInheritedValueOfExactType<T?>();
+    if (value == null && null is! T) {
+      throw StateError(
+        'read<$T>() found no provider of $T in scope for element '
+        '$elementId (key $key). Provide it above this element '
+        '(Provider<$T>), or write read<$T?>() if absence is acceptable.',
+      );
+    }
+    return value as T;
+  }
 }
 
 // --- Provider internals -----------------------------------------------------
@@ -622,7 +638,9 @@ abstract class _ProviderStateBase<
   Component buildWithChild(BuildContext context, Component child) {
     final value = valueForBuild(context);
     if (value == null) return child;
-    return _ProviderInherited<R>(value: value, child: child, owner: _owner);
+    // Registered under the NULLABLE spelling `R?`: every lookup verb asks for
+    // `T?`, so `watch<R>()` and `watch<R?>()` resolve the same exact key.
+    return _ProviderInherited<R?>(value: value, child: child, owner: _owner);
   }
 }
 
@@ -723,23 +741,25 @@ final class _ProviderElement extends SingleChildStatefulElement {
 
 /// The provider's projection over its child: a plain [InheritedComponent] whose
 /// element additionally announces mount/unmount to the availability registry.
-final class _ProviderInherited<T extends Object> extends InheritedComponent<T> {
+///
+/// [T] is always the nullable spelling of the provided type (`X?` for a
+/// `Provider<X>`); the value itself is never null.
+final class _ProviderInherited<T> extends InheritedComponent<T> {
   const _ProviderInherited({
     required super.value,
     required super.child,
     required this.owner,
-  });
+  }) : assert(null is T, 'a provider registers under the nullable spelling');
 
   /// The stable owner whose disposal policy was captured at mount. Null only
   /// for an adopted Provider.value instance.
-  final _ProviderValueOwner<T>? owner;
+  final _ProviderValueOwner<Object>? owner;
 
   @override
   InheritedElement<T> createElement() => _ProviderInheritedElement<T>(this);
 }
 
-final class _ProviderInheritedElement<T extends Object>
-    extends InheritedElement<T> {
+final class _ProviderInheritedElement<T> extends InheritedElement<T> {
   _ProviderInheritedElement(_ProviderInherited<T> super.component);
 
   /// The registry captured at mount — the unmount announcement must not
@@ -771,7 +791,7 @@ final class _ProviderInheritedElement<T extends Object>
     // build); only then are the scope's parked dependents notified.
     super.mount(parent, slot);
     final registry = _registry =
-        getInheritedValueOfExactType<AvailabilityRegistry>();
+        getInheritedValueOfExactType<AvailabilityRegistry?>();
     registry?.providerMounted(T);
   }
 
@@ -811,12 +831,14 @@ final class _ProviderScopeState extends SingleChildState<ProviderScope> {
       _RegistryComponent(value: _registry, child: child);
 }
 
+/// Registered under the nullable spelling, like every provider-layer value,
+/// so `read<AvailabilityRegistry>()` resolves it.
 final class _RegistryComponent
-    extends InheritedComponent<AvailabilityRegistry> {
+    extends InheritedComponent<AvailabilityRegistry?> {
   const _RegistryComponent({required super.value, required super.child});
 
   @override
-  InheritedElement<AvailabilityRegistry> createElement() =>
+  InheritedElement<AvailabilityRegistry?> createElement() =>
       _RegistryElement(this);
 }
 
@@ -825,7 +847,7 @@ final class _RegistryComponent
 /// element (see [ProviderBuildContext.watch]); the interception below files it
 /// under the missed type, and the substrate's unmount bookkeeping calls
 /// [removeDependent], auto-releasing the parked registration.
-final class _RegistryElement extends InheritedElement<AvailabilityRegistry> {
+final class _RegistryElement extends InheritedElement<AvailabilityRegistry?> {
   _RegistryElement(_RegistryComponent super.component);
 
   @override
@@ -833,13 +855,14 @@ final class _RegistryElement extends InheritedElement<AvailabilityRegistry> {
     // Forward first so a rejected aspect cannot park a pending registration
     // without a corresponding dependency edge in the substrate.
     super.addDependent(element, aspect: aspect);
-    final type = value._registering;
-    if (type != null) value._addPending(type, element);
+    final registry = value!;
+    final type = registry._registering;
+    if (type != null) registry._addPending(type, element);
   }
 
   @override
   void removeDependent(Element element) {
-    value._dropPending(element);
+    value!._dropPending(element);
     super.removeDependent(element);
   }
 }
@@ -891,6 +914,18 @@ final class AvailabilityRegistry {
   /// element; the substrate's own dependency path is the one place the element
   /// surfaces).
   Type? _registering;
+
+  /// Parks [context]'s element under [K] — the nullable spelling `X?` the
+  /// watch verb passes, matching the key every provider announces under —
+  /// by depending on the registry element with [_registering] set.
+  void _park<K>(BuildContext context) {
+    _registering = K;
+    try {
+      context.dependOnInheritedValueOfExactType<AvailabilityRegistry?>();
+    } finally {
+      _registering = null;
+    }
+  }
 
   void _addPending(Type type, Element dependent) =>
       (_pending[type] ??= {}).add(dependent);
@@ -944,7 +979,8 @@ final class AvailabilityRegistry {
     });
   }
 
-  /// A [Provider] of [type] mounted: drain its pending dependents and notify
+  /// A [Provider] mounted under [type] — always the nullable spelling `X?` of
+  /// its provided type, the one bucket its watchers park in: drain its pending dependents and notify
   /// each through [Element.dependencyChanged] — mark-needs-rebuild through the
   /// owner, DEFERRED past the flush pass the mount happened in. A notified
   /// dependent rebuilds in the owner's next flush; one that now resolves the
@@ -970,8 +1006,13 @@ final class AvailabilityRegistry {
   /// The pending dependents parked under [type] — a read-only test probe
   /// (leak regressions assert no unmounted element is ever retained here).
   @visibleForTesting
-  Set<Element> debugPendingOf(Type type) =>
-      Set.unmodifiable(_pending[type] ?? const <Element>{});
+  ///
+  /// `watch<T>()` and `watch<T?>()` misses park in ONE bucket, keyed by the
+  /// nullable spelling `T?`, so either spelling of [T] reads the same set.
+  Set<Element> debugPendingOf<T>() => _pendingOf<T?>();
+
+  Set<Element> _pendingOf<K>() =>
+      Set.unmodifiable(_pending[K] ?? const <Element>{});
 
   /// The elements queued for the next delivery microtask — a read-only test
   /// probe. Pins the TRANSMIT side of the unmount announcement end-to-end:

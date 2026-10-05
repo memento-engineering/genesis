@@ -104,7 +104,7 @@ class StatefulElement extends BuildableElement {
   Component build(BuildContext context) => _state.build(context);
 
   @override
-  T? dependOnInheritedValueOfExactType<T extends Object>({Object? aspect}) {
+  T? dependOnInheritedValueOfExactType<T>({Object? aspect}) {
     owner!.lifecyclePhaseGuard.checkCanDependOnInheritedValueOfExactType<T>();
     return super.dependOnInheritedValueOfExactType<T>(aspect: aspect);
   }

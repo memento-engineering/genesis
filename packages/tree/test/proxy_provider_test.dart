@@ -79,7 +79,7 @@ final class _DerivedWatch extends StatelessComponent {
 
   @override
   Component build(BuildContext context) {
-    observations.add(context.watch<_Derived>()?.values);
+    observations.add(context.watch<_Derived?>()?.values);
     return const _Leaf();
   }
 }
@@ -190,7 +190,7 @@ final class _DerivedTeardownReadState extends State<_DerivedTeardownRead> {
   @override
   void dispose() {
     component.events.add(
-      'teardown read ${context.read<_Derived>()?.values.single}',
+      'teardown read ${context.read<_Derived?>()?.values.single}',
     );
   }
 }
@@ -253,7 +253,7 @@ final class _OwnedWatch extends StatelessComponent {
 
   @override
   Component build(BuildContext context) {
-    observations.add(context.watch<_OwnedResult>()?.name);
+    observations.add(context.watch<_OwnedResult?>()?.name);
     return const _Leaf();
   }
 }
@@ -667,8 +667,8 @@ void main() {
         ),
       );
       expect(observations, [null]);
-      final registry = slot.context.read<AvailabilityRegistry>()!;
-      expect(registry.debugPendingOf(_Derived), hasLength(1));
+      final registry = slot.context.read<AvailabilityRegistry>();
+      expect(registry.debugPendingOf<_Derived>(), hasLength(1));
 
       slot.swap(
         () => Nest(
@@ -682,14 +682,14 @@ void main() {
         ),
       );
       owner.flush();
-      expect(registry.debugPendingOf(_Derived), isEmpty);
+      expect(registry.debugPendingOf<_Derived>(), isEmpty);
       expect(registry.debugNotifying, hasLength(1));
       expect(observations, [null]);
 
       await _pump();
       owner.flush();
       expect(observations, [null, null]);
-      expect(registry.debugPendingOf(_Derived), hasLength(1));
+      expect(registry.debugPendingOf<_Derived>(), hasLength(1));
     },
   );
 
@@ -736,14 +736,14 @@ void main() {
       ),
     );
 
-    final registry = host.context.read<AvailabilityRegistry>()!;
+    final registry = host.context.read<AvailabilityRegistry>();
     final pending = [
-      registry.debugPendingOf(_Source1),
-      registry.debugPendingOf(_Source2),
-      registry.debugPendingOf(_Source3),
-      registry.debugPendingOf(_Source4),
-      registry.debugPendingOf(_Source5),
-      registry.debugPendingOf(_Source6),
+      registry.debugPendingOf<_Source1>(),
+      registry.debugPendingOf<_Source2>(),
+      registry.debugPendingOf<_Source3>(),
+      registry.debugPendingOf<_Source4>(),
+      registry.debugPendingOf<_Source5>(),
+      registry.debugPendingOf<_Source6>(),
     ];
     expect(pending.every((bucket) => bucket.length == 1), isTrue);
     final proxyElement = pending.first.single;
@@ -753,7 +753,7 @@ void main() {
     );
     expect(updates, 0);
     expect(observations, [null]);
-    expect(registry.debugPendingOf(_Derived), hasLength(1));
+    expect(registry.debugPendingOf<_Derived>(), hasLength(1));
 
     owner.dispose();
     expect(disposed, hasLength(1));

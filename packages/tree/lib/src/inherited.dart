@@ -22,7 +22,7 @@ import 'component.dart';
 /// [updateShouldNotify] is true. When dependents care about DIFFERENT parts
 /// of one value and should not rebuild for each other's changes, use
 /// [InheritedModel] instead: it scopes each dependency to an aspect.
-class InheritedComponent<T extends Object> extends Component {
+class InheritedComponent<T> extends Component {
   /// Creates a provider of [value] over [child].
   const InheritedComponent({
     required this.value,
@@ -52,7 +52,7 @@ class InheritedComponent<T extends Object> extends Component {
 /// Mounted element for [InheritedComponent]. Owns the dependent set, reconciles the
 /// single child via the rebuild hook, and invalidates dependents through
 /// [Element.dependencyChanged] when the value changes.
-class InheritedElement<T extends Object> extends InheritedElementBase {
+class InheritedElement<T> extends InheritedElementBase {
   /// Creates the element for [component].
   InheritedElement(InheritedComponent<T> super.component);
 
@@ -67,7 +67,7 @@ class InheritedElement<T extends Object> extends InheritedElementBase {
   // --- InheritedElementBase ---
 
   @override
-  U? getValueAs<U extends Object>() => T == U ? value as U : null;
+  U? getValueAs<U>() => T == U ? value as U : null;
 
   @override
   void addDependent(Element element, {Object? aspect}) {
