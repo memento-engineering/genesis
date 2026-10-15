@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0
+
+Stable promotion of `0.6.0-dev.1`: the same content, published on the stable
+rung on Nico's promotion call (2026-10-15). The `0.6.0-dev.1` and `0.5.0-dev.1`
+entries below carry the full list, both breaking against 0.4.0: the canonical
+`Component` → `Element` spine (deprecated `Seed`/`Branch` bridges remain) and
+provider lookup nullability that follows the type argument.
+
+- Require `genesis_foundation ^0.3.0`.
+
 ## 0.6.0-dev.1
 - **Breaking:** provider lookup nullability now follows the type argument. `context.watch<T>()` and `context.read<T>()` (and the lifecycle readers `TreeWatchingReader.watch<T>()` / `TreeSnapshotReader.read<T>()`) return `T` and throw a `StateError` naming the type and the requesting element when no provider of `T` is in scope; `watch<T?>()` and `read<T?>()` return `null` for absence. The `extends Object` bound on both verbs is gone.
 - **Breaking:** every provider registers its value under the nullable spelling of its type (a `Provider<X>` projects an `InheritedComponent<X?>`), and every verb looks up that spelling, so `T` and `T?` resolve the same provider and its waiting watchers share one pending bucket in `ProviderScope`. The verbs therefore resolve only provider-layer values: a plain `InheritedComponent<X>` is no longer visible to `watch`/`read` (provide it with `Provider<X>.value`, or as `InheritedComponent<X?>`), and a direct `dependOnInheritedValueOfExactType` / `getInheritedValueOfExactType` lookup of a provider's value must ask for `X?`.
