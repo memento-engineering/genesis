@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+Stable promotion of `0.3.0-dev.2`: the same content, published on the stable
+rung on Nico's promotion call (2026-10-15). The `0.3.0-dev.1` and `0.3.0-dev.2`
+entries below carry the full list, including the breaking
+`TreeNode.componentType` rename.
+
 ## 0.3.0-dev.2
 - Add the marker annotations `genesis_lint` reads: `deriveOnly` (`DeriveOnly`) for classes constructed only inside their own library, `effect` (`EffectMarker`) for members that perform an effect, and `effectLeaf` (`EffectLeafMarker`) for classes that own effects through their lifecycle. Additive; the package stays dependency-free.
 

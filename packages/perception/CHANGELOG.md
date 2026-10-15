@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+Stable promotion of `0.4.0-dev.2`: the same content, published on the stable
+rung on Nico's promotion call (2026-10-15). The `0.4.0-dev.1` and `0.4.0-dev.2`
+entries below carry the full list, including the breaking move to the canonical
+`Component` / `Element` / `BuildContext` / `BuildOwner` spine.
+
+- Require `genesis_foundation ^0.3.0` and `genesis_tree ^0.6.0`.
+
 ## 0.4.0-dev.2
 - Require `genesis_tree ^0.6.0-dev.1`: the perception context's inherited-value lookups drop their `extends Object` bound to match the tree spine, so a nullable type argument passes through.
 
