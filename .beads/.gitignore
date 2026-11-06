@@ -78,3 +78,6 @@ bd.db
 # Machine-local bd config, written by `beads configure`: the
 # external_projects map holds THIS machine's absolute paths.
 config.local.yaml
+
+# Server mode: the managed dolt sql-server config is machine-local (absolute paths, port).
+dolt-server-config.yaml
