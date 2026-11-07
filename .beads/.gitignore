@@ -81,3 +81,6 @@ config.local.yaml
 
 # Server mode: the managed dolt sql-server config is machine-local (absolute paths, port).
 dolt-server-config.yaml
+
+# Interaction log: bd writes it locally; the store holds the history
+interactions.jsonl
