@@ -8,6 +8,8 @@
 /// verbatim flush return.
 library;
 
+import 'dart:async';
+
 import 'package:genesis_tree/genesis_tree.dart';
 import 'package:genesis_typesetting/genesis_typesetting.dart';
 import 'package:test/test.dart';
@@ -32,6 +34,79 @@ Element innerOf(Element element) {
   });
   expect(count, 1, reason: 'expected exactly one child under $element');
   return inner;
+}
+
+/// Fault and counter hooks for one [_ProbeText]. Test-only: the probe is the
+/// shipped [Text] leaf with fault injection, not a new node vocabulary.
+class _Probe {
+  /// When set, the probe's paint calls [beforeThrow] and then throws.
+  bool throwOnPaint = false;
+
+  /// When set, the probe's layout throws.
+  bool throwOnLayout = false;
+
+  /// Layout passes the probe has run.
+  int layouts = 0;
+
+  /// Called just before a paint throw.
+  void Function()? beforeThrow;
+
+  /// The mounted probe element.
+  _ProbeTextElement? element;
+}
+
+/// The real [Text] leaf, mounting a [_ProbeTextElement].
+class _ProbeText extends Text {
+  const _ProbeText(this.probe, super.content);
+
+  final _Probe probe;
+
+  @override
+  TextElement createElement() => _ProbeTextElement(this);
+}
+
+/// The real [TextElement], plus [_Probe]'s fault and counter hooks.
+class _ProbeTextElement extends TextElement {
+  _ProbeTextElement(_ProbeText super.component);
+
+  _Probe get _probe => (component as _ProbeText).probe;
+
+  @override
+  void mount(Element? parent, Object? slot) {
+    _probe.element = this;
+    super.mount(parent, slot);
+  }
+
+  @override
+  void paint(CellGrid grid) {
+    if (_probe.throwOnPaint) {
+      _probe.beforeThrow?.call();
+      throw StateError('probe paint');
+    }
+    super.paint(grid);
+  }
+
+  @override
+  void performLayout() {
+    _probe.layouts++;
+    if (_probe.throwOnLayout) throw StateError('probe layout');
+    super.performLayout();
+  }
+}
+
+/// Byte sink fake that records payloads and calls [onAdd] after each one.
+class _HookSink implements Sink<List<int>> {
+  final List<List<int>> payloads = [];
+  void Function()? onAdd;
+
+  @override
+  void add(List<int> data) {
+    payloads.add(data);
+    onAdd?.call();
+  }
+
+  @override
+  void close() {}
 }
 
 void main() {
@@ -278,6 +353,208 @@ void main() {
         isTrue,
         reason: 'FrameRecord.rebuilt must be the verbatim flush return',
       );
+    });
+  });
+
+  group('Stage follow-up frames', () {
+    late List<BuildOwner> owners;
+    late List<Future<void> Function()> closers;
+    late _HookSink sink;
+    void Function(FrameRecord frame)? onFrameHook;
+
+    setUp(() {
+      owners = [];
+      closers = [];
+      sink = _HookSink();
+      onFrameHook = null;
+    });
+
+    tearDown(() async {
+      for (final owner in owners) {
+        owner.dispose();
+      }
+      for (final close in closers) {
+        await close();
+      }
+    });
+
+    StreamController<T> controller<T>() {
+      final c = StreamController<T>();
+      closers.add(c.close);
+      return c;
+    }
+
+    StageElement mountStage(List<Component> children) {
+      final owner = BuildOwner();
+      owners.add(owner);
+      return owner.mountRoot(
+            Stage(
+              width: 20,
+              height: 8,
+              sink: sink,
+              children: children,
+              onFrame: (frame) => onFrameHook?.call(frame),
+            ),
+          )
+          as StageElement;
+    }
+
+    test('a repaint requested from onFrame gets exactly one follow-up '
+        'frame', () async {
+      final events = controller<String>();
+      final stage = mountStage([
+        Watch<String>(events.stream, (v) => Text(v), initialValue: 'a'),
+        const Text('b'),
+      ]);
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(1));
+      final b = stage.renderChildren[1];
+      onFrameHook = (frame) {
+        onFrameHook = null;
+        b.markNeedsPaint();
+      };
+
+      events.add('x');
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(3), reason: 'frame 1 + one follow-up');
+      expect(stage.frames[2].repainted, {b.rect});
+      expect(stage.flushCount, 2);
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(3), reason: 'no further frame');
+    });
+
+    test('a repaint requested from the sink add gets exactly one follow-up '
+        'frame', () async {
+      final events = controller<String>();
+      final stage = mountStage([
+        Watch<String>(events.stream, (v) => Text(v), initialValue: 'a'),
+        const Text('b'),
+      ]);
+      await pumpEventQueue();
+      final b = stage.renderChildren[1];
+      sink.onAdd = () {
+        sink.onAdd = null;
+        b.markNeedsPaint();
+      };
+
+      events.add('x');
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(3));
+      expect(stage.frames[1].bytes, isNotEmpty, reason: 'the sink was fed');
+      expect(stage.frames[2].repainted, {b.rect});
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(3), reason: 'no further frame');
+    });
+
+    test('a repaint requested from onFrame during frame 0 gets exactly one '
+        'follow-up frame', () async {
+      final probe = _Probe();
+      onFrameHook = (frame) {
+        onFrameHook = null;
+        probe.element!.markNeedsPaint();
+      };
+      final stage = mountStage([_ProbeText(probe, 'p'), const Text('b')]);
+      expect(stage.frames, hasLength(1));
+
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(2));
+      expect(stage.frames[1].repainted, {probe.element!.rect});
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(2), reason: 'no further frame');
+    });
+
+    test('a repaint requested from a component build during flush is '
+        'painted in that same pass', () async {
+      final events = controller<String>();
+      late RenderElement target;
+      final stage = mountStage([
+        Watch<String>(events.stream, (value) {
+          // Deliberately impure and test-only: a build-time repaint request
+          // is one of the covered sources under test.
+          if (value == 'poke') target.markNeedsPaint();
+          return Text(value);
+        }, initialValue: 'idle'),
+        const Text('t'),
+      ]);
+      await pumpEventQueue();
+      target = stage.renderChildren[1];
+
+      events.add('poke');
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(2));
+      expect(stage.frames[1].repainted, contains(target.rect));
+      await pumpEventQueue();
+      expect(
+        stage.frames,
+        hasLength(2),
+        reason: 'the running pass consumed the request',
+      );
+    });
+
+    test('three requests raised within one pass coalesce into one follow-up '
+        'frame', () async {
+      final events = controller<String>();
+      final stage = mountStage([
+        Watch<String>(events.stream, (v) => Text(v), initialValue: 'a'),
+        const Text('b'),
+      ]);
+      await pumpEventQueue();
+      final wrappers = <Element>[];
+      stage.visitChildren(wrappers.add);
+      final watch = innerOf(wrappers[0]);
+      final b = stage.renderChildren[1];
+      onFrameHook = (frame) {
+        onFrameHook = null;
+        b.markNeedsPaint();
+        stage.markNeedsLayout();
+        watch.markNeedsRebuild();
+      };
+
+      events.add('x');
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(3), reason: 'frame 1 + one follow-up');
+      expect(stage.flushCount, 2);
+      final followUp = stage.frames[2];
+      expect(followUp.rebuilt, hasLength(1));
+      expect(identical(followUp.rebuilt.single, watch), isTrue);
+      expect(followUp.repainted, contains(b.rect));
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(3), reason: 'no further frame');
+    });
+
+    test('a pass whose layout moves rects buys no follow-up frame', () async {
+      final counts = controller<int>();
+      final stage = mountStage([
+        Watch<int>(
+          counts.stream,
+          (n) => Box(
+            title: 'g',
+            children: [
+              for (var i = 0; i < n; i++) Text('line $i', key: ValueKey(i)),
+            ],
+          ),
+          initialValue: 1,
+        ),
+        const Text('tail'),
+      ]);
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(1), reason: 'mount buys only frame 0');
+      expect(stage.flushCount, 0);
+      final tail = stage.renderChildren[1];
+      final tailBefore = tail.rect;
+
+      counts.add(3);
+      await pumpEventQueue();
+
+      expect(tail.rect, isNot(tailBefore), reason: 'the relayout moved it');
+      expect(stage.frames, hasLength(2));
+      expect(stage.flushCount, 1);
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(2), reason: 'no further frame');
     });
   });
 }

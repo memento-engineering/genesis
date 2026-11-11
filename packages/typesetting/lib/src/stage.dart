@@ -124,7 +124,7 @@ class StageElement extends RenderElement {
     );
     _ownedBinding = binding;
     attachBinding(binding);
-    owner.onNeedsFlush = binding._requestFrame;
+    owner.onNeedsFlush = binding._onOwnerNeedsFlush;
   }
 
   @override
@@ -195,6 +195,26 @@ class StageElement extends RenderElement {
 /// first, so container blanking never erases freshly painted child content;
 /// overlapping repaints are deduped by the double buffer, not by skipping.
 ///
+/// Requests raised during a pass: a pass runs public callbacks — component
+/// builds during `owner.flush()`, layout, paint, the sink's `add`, and
+/// `onFrame` — and any of them may request a repaint, a relayout or a
+/// rebuild. Such a request is never dropped. If the running pass still
+/// consumes the work (a build's repaint lands before the paint step), that
+/// pass serves it and no extra frame is spent. If the pass completes and work
+/// is left over, exactly one follow-up pass is scheduled by microtask; every
+/// request raised during the pass coalesces into it. Frame 0, painted
+/// synchronously at mount, follows the same rule.
+///
+/// A pass that throws: the error propagates unchanged (out of the microtask,
+/// or out of mount for frame 0) and no follow-up is scheduled, so a
+/// deterministic fault cannot loop. The scheduler stays live — the next
+/// request schedules a pass normally — and work the throwing pass had not yet
+/// reached stays queued for it: elements not yet painted remain dirty and an
+/// unfinished relayout remains flagged. An element whose own paint threw
+/// counts as attempted and is not retried. Nothing is retried automatically.
+///
+/// Once the stage unmounts, the binding ignores every request.
+///
 /// Constructed only by [StageElement] at mount; consumers reach it through
 /// the stage element's instrumentation getters.
 class StageBinding {
@@ -236,6 +256,12 @@ class StageBinding {
   bool _passScheduled = false;
   bool _inPass = false;
   bool _detached = false;
+
+  /// A frame request arrived while a pass was running.
+  bool _requestedInPass = false;
+
+  /// The owner reported new dirty work after the last `flush()` returned.
+  bool _ownerNeedsFlush = false;
   int _flushCount = 0;
 
   /// Every frame recorded so far, frame 0 first (unmodifiable view).
@@ -246,14 +272,18 @@ class StageBinding {
 
   /// Adds [element] to the dirty-paint set and requests a frame pass. Called
   /// by [RenderElement.markNeedsPaint].
+  /// Ignored once the stage has unmounted.
   void scheduleRepaint(RenderElement element) {
+    if (_detached) return;
     _needsPaint.add(element);
     _requestFrame();
   }
 
   /// Flags the stage-rooted flow relayout and requests a frame pass. Called
-  /// by [RenderElement.markNeedsLayout].
+  /// by [RenderElement.markNeedsLayout]. Ignored once the stage has
+  /// unmounted.
   void scheduleRelayout() {
+    if (_detached) return;
     _needsLayout = true;
     _requestFrame();
   }
@@ -265,36 +295,73 @@ class StageBinding {
     _rectChanged = true;
   }
 
+  /// The owner's dirty-set edge: notes owner work, then requests a frame.
+  void _onOwnerNeedsFlush() {
+    if (_detached) return;
+    _ownerNeedsFlush = true;
+    _requestFrame();
+  }
+
   void _requestFrame() {
-    if (_passScheduled || _inPass || _detached) return;
+    if (_detached) return;
+    if (_inPass) {
+      // Served by the running pass if it still consumes the work, else by
+      // the one follow-up scheduled when the pass completes.
+      _requestedInPass = true;
+      return;
+    }
+    if (_passScheduled) return;
     _passScheduled = true;
     scheduleMicrotask(_framePass);
+  }
+
+  /// Whether dirty work remains that no pass has served yet.
+  bool get _hasOutstandingWork =>
+      _ownerNeedsFlush || _needsPaint.isNotEmpty || _needsLayout;
+
+  /// Ends a pass: clears the in-pass state and, only when the pass
+  /// [completed] normally, schedules the one follow-up an in-pass request
+  /// earned for work the pass left over. A throwing pass schedules nothing.
+  void _endPass({required bool completed}) {
+    _inPass = false;
+    final requested = _requestedInPass;
+    _requestedInPass = false;
+    if (completed && requested && _hasOutstandingWork) _requestFrame();
   }
 
   void _framePass() {
     _passScheduled = false;
     if (_detached) return;
     _inPass = true;
+    _requestedInPass = false;
+    var completed = false;
     try {
       final rebuilt = _owner.flush();
+      // Owner work raised during the flush was rebuilt by that flush.
+      _ownerNeedsFlush = false;
       if (rebuilt.isEmpty && _needsPaint.isEmpty && !_needsLayout) {
         // A spurious wakeup (e.g. the pass scheduled during mount, already
         // consumed by frame 0): nothing to do, record nothing.
+        completed = true;
         return;
       }
       _flushCount++;
       _renderFrame(rebuilt);
+      completed = true;
     } finally {
-      _inPass = false;
+      _endPass(completed: completed);
     }
   }
 
   void _renderInitialFrame() {
     _inPass = true;
+    _requestedInPass = false;
+    var completed = false;
     try {
       _renderFrame(const []);
+      completed = true;
     } finally {
-      _inPass = false;
+      _endPass(completed: completed);
     }
   }
 
