@@ -253,7 +253,14 @@ abstract class RenderElement extends Element {
 
   /// Paints this element, then its render subtree, parent-first (so container
   /// blanking never erases child content). Called by the stage's paint pass.
+  ///
+  /// Each element tells its binding just before its own [paint] runs, so a
+  /// dirty element this subtree paint reaches is served by it and is not
+  /// painted a second time in the same frame. An override that does not call
+  /// `super.paintSubtree` still paints correctly: dirty elements it skips
+  /// stay queued and are painted on their own.
   void paintSubtree(CellGrid grid) {
+    _binding?.notePainting(this);
     paint(grid);
     for (final child in renderChildren) {
       child.paintSubtree(grid);

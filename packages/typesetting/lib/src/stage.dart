@@ -192,8 +192,11 @@ class StageElement extends RenderElement {
 /// dirty set in depth order and paints each still-attached element's subtree
 /// (Flutter: `final List<RenderObject> dirtyNodes = _nodesNeedingPaint;`
 /// then paint each node still owned and dirty). Depth order runs parents
-/// first, so container blanking never erases freshly painted child content;
-/// overlapping repaints are deduped by the double buffer, not by skipping.
+/// first, so container blanking never erases freshly painted child content.
+/// A dirty element that a render ancestor's subtree paint already reached in
+/// this pass is not painted again — the ancestor's paint covered it — so each
+/// render element paints at most once per frame, and a covered element still
+/// counts as repainted in the frame's record.
 ///
 /// Requests raised during a pass: a pass runs public callbacks — component
 /// builds during `owner.flush()`, layout, paint, the sink's `add`, and
@@ -210,8 +213,9 @@ class StageElement extends RenderElement {
 /// deterministic fault cannot loop. The scheduler stays live — the next
 /// request schedules a pass normally — and work the throwing pass had not yet
 /// reached stays queued for it: elements not yet painted remain dirty and an
-/// unfinished relayout remains flagged. An element whose own paint threw
-/// counts as attempted and is not retried. Nothing is retried automatically.
+/// unfinished relayout remains flagged. An element whose own paint threw —
+/// painting on its own or inside an ancestor's subtree paint — counts as
+/// attempted and is not retried. Nothing is retried automatically.
 ///
 /// Once the stage unmounts, the binding ignores every request.
 ///
@@ -297,6 +301,26 @@ class StageBinding {
   /// [RenderElement.layout].
   void noteRectChanged() {
     _rectChanged = true;
+  }
+
+  /// Elements whose paint began in the running paint step; null outside it.
+  Set<RenderElement>? _paintedInPass;
+
+  /// The running paint step's repainted rects; null outside it.
+  Set<Rect>? _repaintedInPass;
+
+  /// Notes that [element]'s own paint is about to run. Called by
+  /// [RenderElement.paintSubtree] before each element paints.
+  ///
+  /// During this binding's paint step, a dirty [element] leaves the
+  /// dirty-paint set here — before it paints, so a repaint requested during
+  /// or after its paint stays queued — and its rect counts as repainted this
+  /// frame. Outside the paint step this does nothing.
+  void notePainting(RenderElement element) {
+    final painted = _paintedInPass;
+    if (painted == null || !identical(element.binding, this)) return;
+    painted.add(element);
+    if (_needsPaint.remove(element)) _repaintedInPass!.add(element.rect);
   }
 
   /// The owner's dirty-set edge: notes owner work, then requests a frame.
@@ -400,16 +424,30 @@ class StageBinding {
       if (_rectChanged) scheduleRepaint(_stage);
     }
     // Paint (flushPaint analog): drain depth-ordered, parents first. Each
-    // element leaves the set just before it paints, so a throw leaves the
-    // elements not yet reached queued for the next pass, while the element
-    // that threw counts as attempted.
+    // element leaves the set just before its own paint runs — whether the
+    // loop paints it or an ancestor's subtree paint reaches it first
+    // (notePainting) — so a throw leaves the elements not yet reached queued
+    // for the next pass, while the element that threw counts as attempted.
+    // An element an ancestor's paint already covered this pass is skipped:
+    // each element paints at most once per frame, and a repaint requested
+    // after its paint began stays queued for the follow-up pass.
     final dirty = List<RenderElement>.of(_needsPaint);
+    final painted = Set<RenderElement>.identity();
     final repainted = <Rect>{};
-    for (final element in dirty) {
-      if (!_needsPaint.remove(element)) continue;
-      if (!element.mounted || !identical(element.binding, this)) continue;
-      element.paintSubtree(grid);
-      repainted.add(element.rect);
+    _paintedInPass = painted;
+    _repaintedInPass = repainted;
+    try {
+      for (final element in dirty) {
+        if (painted.contains(element)) continue;
+        if (!_needsPaint.remove(element)) continue;
+        if (!element.mounted || !identical(element.binding, this)) continue;
+        element.paintSubtree(grid);
+        painted.add(element);
+        repainted.add(element.rect);
+      }
+    } finally {
+      _paintedInPass = null;
+      _repaintedInPass = null;
     }
     // Swap, encode, emit, record.
     final changes = grid.swap();
