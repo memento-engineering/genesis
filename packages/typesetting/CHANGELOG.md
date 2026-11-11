@@ -3,6 +3,7 @@
 ## 0.2.0-dev.2
 
 - Fix: a repaint, relayout or rebuild requested while a frame is being produced (from a build, layout, paint, the output sink, or onFrame) now gets exactly one follow-up frame instead of waiting for an unrelated request; a frame pass that throws propagates its error, schedules nothing further, and leaves unpainted elements and a pending relayout queued for the next requested frame.
+- Fix: a render element now paints at most once per frame; a dirty element inside a dirty container is covered by the container's paint instead of being painted again, so a whole-tree repaint costs one paint per element instead of growing with tree depth. Frame records and emitted bytes are unchanged. A repaint an element requests after its paint began still gets its follow-up frame. Adds `StageBinding.notePainting`, which `RenderElement.paintSubtree` calls before each element paints.
 
 ## 0.2.0-dev.1
 - **Breaking:** render descendants now follow the canonical tree vocabulary: migrate `RenderSeed`/`RenderBranch` and `StageBranch`/`BoxBranch`/`TextBranch` to `RenderComponent`/`RenderElement` and `*Element`; migrate `RenderParentLink.branch` to `.element`. Deprecated aliases and the forwarding getter retain compatibility.

@@ -26,8 +26,9 @@ class FrameRecord {
   /// channel.
   final List<Element> rebuilt;
 
-  /// The rects of the dirty render elements repainted into the back buffer
-  /// this pass.
+  /// The rects of the dirty render elements this pass repainted into the back
+  /// buffer, whether each painted on its own or was covered by a dirty
+  /// ancestor's subtree paint.
   final Set<Rect> repainted;
 
   /// Minimal cell diff from `CellGrid.swap`.
