@@ -262,6 +262,10 @@ class StageBinding {
 
   /// The owner reported new dirty work after the last `flush()` returned.
   bool _ownerNeedsFlush = false;
+
+  /// Bumped by a throwing pass; a queued pass from an older generation is
+  /// void and does nothing when its microtask runs.
+  int _passGeneration = 0;
   int _flushCount = 0;
 
   /// Every frame recorded so far, frame 0 first (unmodifiable view).
@@ -312,7 +316,13 @@ class StageBinding {
     }
     if (_passScheduled) return;
     _passScheduled = true;
-    scheduleMicrotask(_framePass);
+    final generation = _passGeneration;
+    scheduleMicrotask(() {
+      // A throwing pass voids every pass queued before it ended: running one
+      // would retry the faulted work automatically.
+      if (generation != _passGeneration) return;
+      _framePass();
+    });
   }
 
   /// Whether dirty work remains that no pass has served yet.
@@ -326,7 +336,15 @@ class StageBinding {
     _inPass = false;
     final requested = _requestedInPass;
     _requestedInPass = false;
-    if (completed && requested && _hasOutstandingWork) _requestFrame();
+    if (!completed) {
+      // Void any pass already queued (frame 0's throw leaves the one its
+      // mount-time builds scheduled) and leave the scheduler idle, so the
+      // next request schedules a pass normally.
+      _passGeneration++;
+      _passScheduled = false;
+      return;
+    }
+    if (requested && _hasOutstandingWork) _requestFrame();
   }
 
   void _framePass() {

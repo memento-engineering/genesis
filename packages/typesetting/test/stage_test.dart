@@ -632,6 +632,32 @@ void main() {
       expect(stage.frames, hasLength(2));
     });
 
+    test('a throwing frame 0 propagates out of mount and the pass its mount '
+        'builds queued does not retry it', () async {
+      final probe = _Probe()..throwOnLayout = true;
+      final errors = <Object>[];
+      Object? mountError;
+      runZonedGuarded(() {
+        try {
+          mountStage([_ProbeText(probe, 'p'), const Text('s')]);
+        } on StateError catch (e) {
+          mountError = e;
+        }
+      }, (error, _) => errors.add(error));
+      expect(mountError, isA<StateError>());
+      expect(probe.layouts, 1);
+
+      await pumpEventQueue();
+
+      expect(
+        probe.layouts,
+        1,
+        reason: 'the queued mount-time pass must not re-run the layout',
+      );
+      expect(errors, isEmpty, reason: 'no automatic retry threw again');
+      expect(probe.element!.binding!.frames, isEmpty);
+    });
+
     test('a detached binding schedules nothing for a request', () async {
       final stage = mountStage([const Text('a')]);
       await pumpEventQueue();
