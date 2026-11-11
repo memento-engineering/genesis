@@ -372,14 +372,23 @@ class StageBinding {
     if (_needsLayout) {
       _needsLayout = false;
       _rectChanged = false;
-      _stage.layout(Rect.fromLTWH(0, 0, grid.width, grid.height));
+      try {
+        _stage.layout(Rect.fromLTWH(0, 0, grid.width, grid.height));
+      } catch (_) {
+        // The relayout did not finish: keep it flagged for the next pass.
+        _needsLayout = true;
+        rethrow;
+      }
       if (_rectChanged) scheduleRepaint(_stage);
     }
-    // Paint (flushPaint analog): drain depth-ordered, parents first.
+    // Paint (flushPaint analog): drain depth-ordered, parents first. Each
+    // element leaves the set just before it paints, so a throw leaves the
+    // elements not yet reached queued for the next pass, while the element
+    // that threw counts as attempted.
     final dirty = List<RenderElement>.of(_needsPaint);
-    _needsPaint.clear();
     final repainted = <Rect>{};
     for (final element in dirty) {
+      if (!_needsPaint.remove(element)) continue;
       if (!element.mounted || !identical(element.binding, this)) continue;
       element.paintSubtree(grid);
       repainted.add(element.rect);
@@ -404,6 +413,8 @@ class StageBinding {
     _detached = true;
     _owner.onNeedsFlush = null;
     _needsPaint.clear();
+    _requestedInPass = false;
+    _ownerNeedsFlush = false;
   }
 }
 

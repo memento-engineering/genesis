@@ -556,5 +556,115 @@ void main() {
       await pumpEventQueue();
       expect(stage.frames, hasLength(2), reason: 'no further frame');
     });
+
+    test('a throwing paint reaches the zone, schedules no follow-up, and '
+        'keeps unpainted elements queued', () async {
+      final probe = _Probe();
+      final stage = mountStage([
+        _ProbeText(probe, 'p'),
+        const Box(title: 'v', children: [Text('victim')]),
+      ]);
+      await pumpEventQueue();
+      final thrower = probe.element!;
+      final victim = stage.renderChildren[1].renderChildren.single;
+      expect(
+        thrower.depth,
+        lessThan(victim.depth),
+        reason: 'the thrower drains before the deeper victim',
+      );
+      final errors = <Object>[];
+      runZonedGuarded(() {
+        probe.throwOnPaint = true;
+        probe.beforeThrow = thrower.markNeedsLayout;
+        victim.markNeedsPaint();
+        thrower.markNeedsPaint();
+      }, (error, _) => errors.add(error));
+
+      await pumpEventQueue();
+
+      expect(errors, hasLength(1));
+      expect(errors.single, isA<StateError>());
+      expect(
+        stage.frames,
+        hasLength(1),
+        reason:
+            'the throwing pass records nothing and buys no follow-up, '
+            'despite the relayout its paint requested',
+      );
+
+      // The thrower stays armed: a retry would throw outside the zone.
+      stage.markNeedsLayout();
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(2));
+      expect(stage.frames.last.repainted, {victim.rect});
+      expect(errors, hasLength(1), reason: 'the thrower is not retried');
+    });
+
+    test('a throwing layout keeps the relayout flagged for the next '
+        'pass', () async {
+      final probe = _Probe();
+      final stage = mountStage([_ProbeText(probe, 'p'), const Text('s')]);
+      await pumpEventQueue();
+      final sibling = stage.renderChildren[1];
+      final errors = <Object>[];
+      runZonedGuarded(() {
+        probe.throwOnLayout = true;
+        stage.markNeedsLayout();
+      }, (error, _) => errors.add(error));
+
+      await pumpEventQueue();
+
+      expect(errors, hasLength(1));
+      expect(errors.single, isA<StateError>());
+      expect(stage.frames, hasLength(1), reason: 'no follow-up frame');
+
+      probe.throwOnLayout = false;
+      final layoutsBefore = probe.layouts;
+      sibling.markNeedsPaint();
+      await pumpEventQueue();
+
+      expect(
+        probe.layouts,
+        layoutsBefore + 1,
+        reason: 'the unfinished relayout runs in the next pass',
+      );
+      expect(stage.frames, hasLength(2));
+    });
+
+    test('a detached binding schedules nothing for a request', () async {
+      final stage = mountStage([const Text('a')]);
+      await pumpEventQueue();
+      owners.single.dispose();
+      final binding = stage.binding!;
+      binding.scheduleRepaint(stage);
+      binding.scheduleRelayout();
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(1));
+
+      final events = controller<String>();
+      final second = mountStage([
+        Watch<String>(events.stream, (v) => Text(v), initialValue: 'a'),
+        const Text('b'),
+      ]);
+      await pumpEventQueue();
+      final b = second.renderChildren[1];
+      final secondOwner = owners.last;
+      onFrameHook = (frame) {
+        onFrameHook = null;
+        b.markNeedsPaint();
+        secondOwner.dispose();
+      };
+
+      events.add('x');
+      await pumpEventQueue();
+      await pumpEventQueue();
+
+      expect(
+        second.frames,
+        hasLength(2),
+        reason: 'frame 1 only; the detach dropped the in-pass request',
+      );
+    });
   });
 }
