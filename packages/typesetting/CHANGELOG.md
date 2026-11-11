@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0-dev.2
+
+- Fix: a repaint, relayout or rebuild requested while a frame is being produced (from a build, layout, paint, the output sink, or onFrame) now gets exactly one follow-up frame instead of waiting for an unrelated request; a frame pass that throws propagates its error, schedules nothing further, and leaves unpainted elements and a pending relayout queued for the next requested frame.
+
 ## 0.2.0-dev.1
 - **Breaking:** render descendants now follow the canonical tree vocabulary: migrate `RenderSeed`/`RenderBranch` and `StageBranch`/`BoxBranch`/`TextBranch` to `RenderComponent`/`RenderElement` and `*Element`; migrate `RenderParentLink.branch` to `.element`. Deprecated aliases and the forwarding getter retain compatibility.
 
