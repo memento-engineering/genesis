@@ -691,10 +691,11 @@ final class _ProxyProviderState<R extends Object>
 /// a mount throws mid-reconcile, `updateChild` propagates the error BEFORE the
 /// caller's child-slot assignment, at every level of the failing spine. Every
 /// element mounted within the failed reconcile call is left orphaned — still
-/// `mounted == true`, unreachable from the root, its `unmount()` never to be
-/// called. For providers that means the disposal site
-/// ([_ProviderInheritedElement.unmount]) is unreachable: an owned value created
-/// before the failure would be STRANDED, never disposed.
+/// `mounted == true` and unreachable from the root. No reconcile ever calls its
+/// `unmount()`; [BuildOwner.mountRoot]'s unwind reaches it only when the
+/// failure happened under a root mount. For providers that means the disposal
+/// site ([_ProviderInheritedElement.unmount]) may be unreachable: an owned
+/// value created before the failure would be STRANDED, never disposed.
 ///
 /// The unwind therefore rides the exception's own propagation: the mount-time
 /// [performRebuild] frame of a provider encloses its `create` call AND the
@@ -709,9 +710,12 @@ final class _ProxyProviderState<R extends Object>
 /// Known extent: a provider subtree that fully mounted under a NON-provider
 /// multi-child container before a LATER sibling of that container failed is
 /// orphaned by an assignment skipped ABOVE any provider frame; no provider
-/// code is on that stack, so its disposal is out of this seam's reach. The
-/// multi-provider composition surface is [Nest] (which nests, and is fully
-/// covered), so that shape has no production author today.
+/// code is on that stack, so its disposal is out of this seam's reach. During
+/// a root mount, [BuildOwner.mountRoot]'s unwind tears that subtree down and
+/// its value disposes through the normal unmount path. During a rebuild inside
+/// a flush it stays out of reach. The multi-provider composition surface is
+/// [Nest] (which nests, and is fully covered), so that shape has no production
+/// author today.
 final class _ProviderElement extends SingleChildStatefulElement {
   _ProviderElement(_ProviderComponentBase<Object> super.component);
 

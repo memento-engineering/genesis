@@ -38,6 +38,10 @@ class BuildOwner {
   // unbounded by design, and one build per element per pass is what bounds it.
   Set<Element>? _builtThisPass;
 
+  // Non-null only while [mountRoot] runs: every element that mount has
+  // attached, in mount order. Read only when the mount throws.
+  List<Element>? _mountRecord;
+
   // Set only while assertions are enabled. Unlike [_builtThisPass], this
   // follows nested rebuilds so a synchronous update cascade is checked against
   // the element whose hook is actually executing.
@@ -78,7 +82,26 @@ class BuildOwner {
   void runBranchBuild(Element element, VoidCallback build) =>
       runElementBuild(element, build);
 
+  /// Package-internal: records [element] as mounted by the root mount now
+  /// running.
+  ///
+  /// Called only by [Element.mount]. Records only while [mountRoot] runs;
+  /// at any other time it does nothing.
+  @internal
+  void recordMount(Element element) => _mountRecord?.add(element);
+
   /// Mounts [component] as the root element of this owner's tree.
+  ///
+  /// When the mount throws, nothing stays mounted: every element the mount
+  /// had already attached is unmounted, children before parents, so each
+  /// `State.dispose` that is owed runs once and each value a provider created
+  /// is disposed. The original error then propagates unchanged, with its
+  /// original stack trace, and this owner holds no root: [unmountRoot] and
+  /// [dispose] do nothing, and a later [mountRoot] is accepted.
+  ///
+  /// An error thrown by a teardown during that unwind is dropped, so the
+  /// caller always sees the mount error. An element whose own teardown threw
+  /// is left as that teardown left it, as it would be under [unmountRoot].
   Element mountRoot(Component component) {
     assert(
       _root == null,
@@ -86,9 +109,44 @@ class BuildOwner {
     );
     final element = component.createElement();
     element.owner = this;
-    element.mount(null, null);
+    final enclosing = _mountRecord;
+    final record = _mountRecord = <Element>[];
+    try {
+      element.mount(null, null);
+    } catch (error, stackTrace) {
+      _mountRecord = enclosing;
+      _unwindFailedMount(record);
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+    _mountRecord = enclosing;
     _root = element;
     return element;
+  }
+
+  // Unmounts what a failed [mountRoot] left mounted. Only the unreachable
+  // tops are unmounted directly: an element some recorded element reports as
+  // a child comes down through that parent's own unmount. Walking the record
+  // backwards takes every unreachable descendant before its unreachable
+  // ancestor, because a descendant always mounts after its ancestor.
+  void _unwindFailedMount(List<Element> record) {
+    final live = [
+      for (final element in record)
+        if (element.mounted) element,
+    ];
+    final attached = <Element>{};
+    for (final element in live) {
+      element.visitChildren(attached.add);
+    }
+    for (final element in live.reversed) {
+      if (attached.contains(element) || !element.mounted) continue;
+      try {
+        element.unmount();
+      } catch (_) {
+        // A teardown error never replaces the mount error the caller is
+        // owed; the element stays as its own teardown left it.
+      }
+    }
+    _dirtyElements.removeAll(record);
   }
 
   /// Adds [element] to the dirty set; called by [Element.markNeedsRebuild].
