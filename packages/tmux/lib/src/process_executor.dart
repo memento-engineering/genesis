@@ -72,11 +72,13 @@ class ProcessTmuxExecutor implements TmuxExecutor {
     final lines = StreamController<String>();
     final stdinCtrl = StreamController<String>();
     final done = Completer<void>();
-    unawaited(_drive(argv, lines, stdinCtrl, done));
+    final handle = _ControlHandle();
+    unawaited(_drive(argv, lines, stdinCtrl, done, handle));
     return TmuxControlConn(
       stdin: stdinCtrl.sink,
       lines: lines.stream,
       done: done.future,
+      kill: handle.kill,
     );
   }
 
@@ -85,11 +87,14 @@ class ProcessTmuxExecutor implements TmuxExecutor {
     StreamController<String> lines,
     StreamController<String> stdinCtrl,
     Completer<void> done,
+    _ControlHandle handle,
   ) async {
     final Process proc;
     try {
       proc = await Process.start(executable, argv);
     } on ProcessException {
+      // A kill asked for a child that never started has nothing to end.
+      handle.startFailed();
       await lines.close();
       await stdinCtrl.close();
       if (!done.isCompleted) done.complete();
@@ -101,6 +106,8 @@ class ProcessTmuxExecutor implements TmuxExecutor {
         .transform(latin1.decoder)
         .transform(const LineSplitter())
         .listen(lines.add, onError: (_) {});
+    // A kill asked for before the process existed applies now.
+    handle.attach(proc);
 
     // Forward refresh-client frames (the only thing we ever write) to stdin.
     final inSub = stdinCtrl.stream.listen((frame) {
@@ -109,7 +116,7 @@ class ProcessTmuxExecutor implements TmuxExecutor {
       } on Object {
         // Broken pipe after exit — the connection is ending anyway.
       }
-    });
+    }, onDone: () => _closeStdin(proc));
 
     await proc.exitCode;
     await outSub.cancel();
@@ -117,5 +124,45 @@ class ProcessTmuxExecutor implements TmuxExecutor {
     await lines.close();
     await stdinCtrl.close();
     if (!done.isCompleted) done.complete();
+  }
+
+  /// Closes the child's real stdin so tmux sees EOF; a broken pipe after the
+  /// child already exited is ignored.
+  static void _closeStdin(Process proc) {
+    try {
+      unawaited(proc.stdin.close().then<void>((_) {}, onError: (_) {}));
+    } on Object {
+      // The child is already gone.
+    }
+  }
+}
+
+/// The kill switch for one control-mode child, which may not exist yet when
+/// the kill is asked for.
+class _ControlHandle {
+  Process? _proc;
+  bool _killRequested = false;
+  bool _startFailed = false;
+
+  /// Sends SIGKILL to the child, or remembers the request until it starts.
+  void kill() {
+    final proc = _proc;
+    if (proc != null) {
+      proc.kill(ProcessSignal.sigkill);
+    } else if (!_startFailed) {
+      _killRequested = true;
+    }
+  }
+
+  /// Binds the started [proc], applying a kill asked for before it existed.
+  void attach(Process proc) {
+    _proc = proc;
+    if (_killRequested) proc.kill(ProcessSignal.sigkill);
+  }
+
+  /// Records that the child never started, so a later kill is a no-op.
+  void startFailed() {
+    _startFailed = true;
+    _killRequested = false;
   }
 }
