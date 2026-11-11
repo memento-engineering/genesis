@@ -93,7 +93,29 @@ void main() {
         );
         expect(got, isTrue, reason: 'control mode should stream pane output');
 
+        // The control client the source spawned, by pid.
+        final clients = await exec.runOnce([
+          ...socket.args,
+          'list-clients',
+          '-t',
+          'ctl',
+          '-F',
+          '#{client_pid}',
+        ]);
+        expect(clients.ok, isTrue, reason: '$clients');
+        final clientPid = int.parse(clients.line.trim());
+
+        final watch = Stopwatch()..start();
         await source.close();
+        watch.stop();
+
+        // Under the two-second bound: stdin EOF, not the kill, ended it.
+        expect(watch.elapsed, lessThan(const Duration(seconds: 2)));
+        expect(
+          Process.runSync('kill', ['-0', '$clientPid']).exitCode,
+          isNot(0),
+          reason: 'the control client should have exited',
+        );
         await client.killSession('ctl');
       });
     },
