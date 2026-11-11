@@ -245,6 +245,8 @@ abstract class Element with Diagnosticable, DiagnosticableTree {
     elementId = owner!.issueId();
     _mounted = true;
     depth = (parent?.depth ?? -1) + 1;
+    // The owner records mounts only while a root mount runs.
+    owner!.recordMount(this);
   }
 
   /// Updates the config node when [Component.canUpdate] is true, then invokes the
