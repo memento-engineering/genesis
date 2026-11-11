@@ -95,7 +95,241 @@ class _CascadeElement extends Element {
   }
 }
 
+/// Records lifecycle events and the contexts the probes saw.
+class _Ledger {
+  final log = <String>[];
+  final contexts = <String, BuildContext>{};
+
+  int count(String entry) => log.where((e) => e == entry).length;
+}
+
+class _BuildFailure implements Exception {}
+
+class _DisposeFailure implements Exception {}
+
+class _Probe extends StatefulComponent {
+  const _Probe(
+    this.name,
+    this.ledger, {
+    this.child,
+    this.buildError,
+    this.disposeError,
+  });
+
+  final String name;
+  final _Ledger ledger;
+  final Component? child;
+  final Object? buildError;
+  final Object? disposeError;
+
+  @override
+  State<_Probe> createState() => _ProbeState();
+}
+
+class _ProbeState extends State<_Probe> {
+  @override
+  void initState() {
+    super.initState();
+    component.ledger.log.add('init:${component.name}');
+    component.ledger.contexts[component.name] = context;
+  }
+
+  @override
+  void dispose() {
+    component.ledger.log.add('dispose:${component.name}');
+    final error = component.disposeError;
+    if (error != null) throw error;
+    super.dispose();
+  }
+
+  @override
+  Component build(BuildContext context) {
+    final error = component.buildError;
+    if (error != null) throw error;
+    return component.child ?? const _FakeS();
+  }
+}
+
+class _Row extends MultiChildComponent {
+  const _Row(List<Component> children) : super(children: children);
+}
+
+class _Resource {}
+
 void main() {
+  group('BuildOwner.mountRoot failure unwind', () {
+    test('a third-level build throw rethrows it and disposes every mounted '
+        'State once, children first', () {
+      final ledger = _Ledger();
+      final failure = _BuildFailure();
+      final owner = BuildOwner();
+      Object? caught;
+      StackTrace? trace;
+      try {
+        owner.mountRoot(
+          _Probe(
+            'a',
+            ledger,
+            child: _Probe(
+              'b',
+              ledger,
+              child: _Probe('c', ledger, buildError: failure),
+            ),
+          ),
+        );
+      } catch (e, st) {
+        caught = e;
+        trace = st;
+      }
+      expect(caught, same(failure));
+      expect(trace.toString(), contains('_ProbeState.build'));
+      for (final name in ['a', 'b', 'c']) {
+        expect(ledger.count('init:$name'), 1, reason: name);
+        expect(ledger.count('dispose:$name'), 1, reason: name);
+      }
+      expect(ledger.log.where((e) => e.startsWith('dispose:')), [
+        'dispose:c',
+        'dispose:b',
+        'dispose:a',
+      ]);
+      for (final context in ledger.contexts.values) {
+        expect(context.mounted, isFalse);
+      }
+    });
+
+    test('an earlier sibling subtree under a container is torn down once', () {
+      final ledger = _Ledger();
+      final owner = BuildOwner();
+      expect(
+        () => owner.mountRoot(
+          _Probe(
+            'root',
+            ledger,
+            child: _Row([
+              _Probe('x', ledger, child: _Probe('x1', ledger)),
+              _Probe('y', ledger, buildError: _BuildFailure()),
+            ]),
+          ),
+        ),
+        throwsA(isA<_BuildFailure>()),
+      );
+      for (final name in ['root', 'x', 'x1', 'y']) {
+        expect(ledger.count('init:$name'), 1, reason: name);
+        expect(ledger.count('dispose:$name'), 1, reason: name);
+      }
+      expect(ledger.contexts, hasLength(4));
+      for (final context in ledger.contexts.values) {
+        expect(context.mounted, isFalse);
+      }
+    });
+
+    test('a Provider above the throwing child disposes its value once', () {
+      final ledger = _Ledger();
+      final failure = _BuildFailure();
+      final resource = _Resource();
+      final disposed = <_Resource>[];
+      final owner = BuildOwner();
+      expect(
+        () => owner.mountRoot(
+          _Probe(
+            'a',
+            ledger,
+            child: Provider<_Resource>(
+              create: (_) => resource,
+              dispose: disposed.add,
+              child: _Probe(
+                'b',
+                ledger,
+                child: _Probe('c', ledger, buildError: failure),
+              ),
+            ),
+          ),
+        ),
+        throwsA(same(failure)),
+      );
+      expect(disposed, [same(resource)]);
+      for (final name in ['a', 'b', 'c']) {
+        expect(ledger.count('dispose:$name'), 1, reason: name);
+      }
+    });
+
+    test(
+      'a Provider beside a later failing sibling disposes its value once',
+      () {
+        final ledger = _Ledger();
+        final failure = _BuildFailure();
+        final resource = _Resource();
+        final disposed = <_Resource>[];
+        final owner = BuildOwner();
+        expect(
+          () => owner.mountRoot(
+            _Row([
+              Provider<_Resource>(
+                create: (_) => resource,
+                dispose: disposed.add,
+                child: const _FakeS(),
+              ),
+              _Probe('y', ledger, buildError: failure),
+            ]),
+          ),
+          throwsA(same(failure)),
+        );
+        expect(disposed, [same(resource)]);
+        expect(ledger.count('dispose:y'), 1);
+      },
+    );
+
+    test('after a failure dispose and unmountRoot are no-ops and a healthy '
+        'remount succeeds', () {
+      final ledger = _Ledger();
+      final owner = BuildOwner();
+      expect(
+        () => owner.mountRoot(
+          _Probe(
+            'a',
+            ledger,
+            child: _Probe('b', ledger, buildError: _BuildFailure()),
+          ),
+        ),
+        throwsA(isA<_BuildFailure>()),
+      );
+      final snapshot = List.of(ledger.log);
+      expect(owner.dispose, returnsNormally);
+      expect(owner.unmountRoot, returnsNormally);
+      expect(ledger.log, snapshot);
+
+      final root = owner.mountRoot(_Probe('z', ledger));
+      expect(root.mounted, isTrue);
+      owner.dispose();
+      expect(ledger.count('dispose:z'), 1);
+      expect(root.mounted, isFalse);
+    });
+
+    test('a throwing dispose does not mask the build error', () {
+      final ledger = _Ledger();
+      final failure = _BuildFailure();
+      final owner = BuildOwner();
+      expect(
+        () => owner.mountRoot(
+          _Probe(
+            'a',
+            ledger,
+            child: _Probe(
+              'b',
+              ledger,
+              disposeError: _DisposeFailure(),
+              child: _Probe('c', ledger, buildError: failure),
+            ),
+          ),
+        ),
+        throwsA(same(failure)),
+      );
+      for (final name in ['a', 'b', 'c']) {
+        expect(ledger.count('dispose:$name'), 1, reason: name);
+      }
+    });
+  });
+
   group('BuildOwner.mountRoot', () {
     test('assigns owner to root element before mount', () {
       final owner = BuildOwner();
