@@ -75,8 +75,13 @@ class ControlModeObservationSource implements ObservationSource {
       StreamController<TmuxEvent>.broadcast();
   final ControlModeParser _parser = ControlModeParser();
 
+  /// How long [close] waits for the child to exit after closing its stdin
+  /// before killing it.
+  static const Duration _exitBound = Duration(seconds: 2);
+
   TmuxControlConn? _conn;
   StreamSubscription<String>? _linesSub;
+  Future<void>? _closing;
 
   @override
   Stream<TmuxEvent> get events => _events.stream;
@@ -113,12 +118,36 @@ class ControlModeObservationSource implements ObservationSource {
     if (!_events.isClosed) _events.add(e);
   }
 
+  /// Stops observing and ends the tmux control child.
+  ///
+  /// Closes the child's stdin, then waits for the child to exit. A child that
+  /// has not exited two seconds after its stdin closed is killed, and the
+  /// close waits for that exit too, so a completed close never leaves the
+  /// child running. Output the child delivered before exiting is emitted;
+  /// only then does the source stop reading and close [events].
+  ///
+  /// Idempotent: every call — including the one the connection ending makes
+  /// — returns the same future, and the work runs once. On a source that was
+  /// never started it only closes [events].
   @override
-  Future<void> close() async {
-    await _linesSub?.cancel();
-    _linesSub = null;
-    _conn?.stdin.close();
-    _conn = null;
+  Future<void> close() => _closing ??= _close();
+
+  Future<void> _close() async {
+    final conn = _conn;
+    if (conn != null) {
+      conn.stdin.close();
+      try {
+        await conn.done.timeout(_exitBound);
+      } on TimeoutException {
+        conn.kill();
+        // A killed child always exits; wait for it without a bound.
+        await conn.done;
+      }
+      // Let lines the connection already delivered be parsed and emitted.
+      await Future<void>.delayed(Duration.zero);
+      await _linesSub?.cancel();
+      _linesSub = null;
+    }
     if (!_events.isClosed) await _events.close();
   }
 }
