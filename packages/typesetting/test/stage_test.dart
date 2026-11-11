@@ -174,6 +174,33 @@ class _LeafOverrideElement extends _CountingBoxElement {
   void paintSubtree(CellGrid grid) => paint(grid);
 }
 
+/// A [_CountingBox] whose element overrides `paintSubtree` to paint itself
+/// and then each render child's subtree directly, without calling `super` —
+/// a container's legitimate override that reports nothing to the binding.
+class _ContainerOverrideBox extends _CountingBox {
+  const _ContainerOverrideBox(
+    super.log, {
+    required super.title,
+    super.children,
+  });
+
+  @override
+  BoxElement createElement() => _ContainerOverrideElement(this);
+}
+
+/// A [_CountingBoxElement] whose `paintSubtree` walks its children itself.
+class _ContainerOverrideElement extends _CountingBoxElement {
+  _ContainerOverrideElement(super.component);
+
+  @override
+  void paintSubtree(CellGrid grid) {
+    paint(grid);
+    for (final child in renderChildren) {
+      child.paintSubtree(grid);
+    }
+  }
+}
+
 /// A chain of [depth] nested [_CountingBox]es sharing [log].
 Component _countingChain(_PaintLog log, int depth) {
   Component? inner;
@@ -1002,6 +1029,72 @@ void main() {
         hasLength(framesBefore + 1),
         reason: 'the covered leaf buys no follow-up frame',
       );
+    });
+
+    test('a dirty leaf override under a dirty container override paints '
+        'once per frame', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _ContainerOverrideBox(
+          log,
+          title: 'a',
+          children: [_LeafOverrideBox(log, title: 'b')],
+        ),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren.single;
+      final b = a.renderChildren.single;
+      expect(a, isA<_ContainerOverrideElement>());
+      expect(b, isA<_LeafOverrideElement>());
+      final framesBefore = stage.frames.length;
+      final mark = log.painted.length;
+
+      b.markNeedsPaint();
+      a.markNeedsPaint();
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(framesBefore + 1));
+      expect(log.painted.sublist(mark), [a, b]);
+      expect(stage.frames.last.repainted, {a.rect, b.rect});
+      await pumpEventQueue();
+      expect(
+        stage.frames,
+        hasLength(framesBefore + 1),
+        reason: 'the covered leaf buys no follow-up frame',
+      );
+    });
+
+    test('a repaint requested inside a non-reporting override is served by '
+        'the follow-up frame, not painted twice', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _ContainerOverrideBox(
+          log,
+          title: 'a',
+          children: [_LeafOverrideBox(log, title: 'b')],
+        ),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren.single;
+      final b = a.renderChildren.single;
+      final framesBefore = stage.frames.length;
+      log.requester = b;
+      final mark = log.painted.length;
+
+      b.markNeedsPaint();
+      a.markNeedsPaint();
+      await pumpEventQueue();
+
+      expect(
+        stage.frames,
+        hasLength(framesBefore + 2),
+        reason: 'the frame + one follow-up',
+      );
+      expect(stage.frames[framesBefore].repainted, {a.rect});
+      expect(stage.frames[framesBefore + 1].repainted, {b.rect});
+      expect(log.painted.sublist(mark), [a, b, b]);
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(framesBefore + 2));
     });
 
     test('a covered element that requests a repaint while painting gets '
