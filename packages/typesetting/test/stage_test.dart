@@ -157,6 +157,23 @@ class _CountingBoxElement extends BoxElement {
   }
 }
 
+/// A [_CountingBox] whose element overrides `paintSubtree` to paint only
+/// itself, without calling `super` — a leaf's legitimate override.
+class _LeafOverrideBox extends _CountingBox {
+  const _LeafOverrideBox(super.log, {required super.title});
+
+  @override
+  BoxElement createElement() => _LeafOverrideElement(this);
+}
+
+/// A [_CountingBoxElement] whose `paintSubtree` is just its own `paint`.
+class _LeafOverrideElement extends _CountingBoxElement {
+  _LeafOverrideElement(super.component);
+
+  @override
+  void paintSubtree(CellGrid grid) => paint(grid);
+}
+
 /// A chain of [depth] nested [_CountingBox]es sharing [log].
 Component _countingChain(_PaintLog log, int depth) {
   Component? inner;
@@ -953,6 +970,38 @@ void main() {
       );
       expect(log.painted.sublist(mark), [c]);
       expect(errors, hasLength(1), reason: 'the thrower is not retried');
+    });
+
+    test('a dirty leaf overriding paintSubtree without super paints once '
+        'under a dirty parent', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _CountingBox(
+          log,
+          title: 'a',
+          children: [_LeafOverrideBox(log, title: 'b')],
+        ),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren.single;
+      final b = a.renderChildren.single;
+      expect(b, isA<_LeafOverrideElement>());
+      final framesBefore = stage.frames.length;
+      final mark = log.painted.length;
+
+      b.markNeedsPaint();
+      a.markNeedsPaint();
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(framesBefore + 1));
+      expect(log.painted.sublist(mark), [a, b]);
+      expect(stage.frames.last.repainted, {a.rect, b.rect});
+      await pumpEventQueue();
+      expect(
+        stage.frames,
+        hasLength(framesBefore + 1),
+        reason: 'the covered leaf buys no follow-up frame',
+      );
     });
 
     test('a covered element that requests a repaint while painting gets '

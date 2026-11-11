@@ -309,17 +309,19 @@ class StageBinding {
   /// The running paint step's repainted rects; null outside it.
   Set<Rect>? _repaintedInPass;
 
-  /// Notes that [element]'s own paint is about to run. Called by
-  /// [RenderElement.paintSubtree] before each element paints.
+  /// Notes that [element]'s paint is about to run. Called by
+  /// [RenderElement.paintSubtree] for itself and for each render child just
+  /// before that child's `paintSubtree` runs.
   ///
-  /// During this binding's paint step, a dirty [element] leaves the
-  /// dirty-paint set here — before it paints, so a repaint requested during
-  /// or after its paint stays queued — and its rect counts as repainted this
-  /// frame. Outside the paint step this does nothing.
+  /// During this binding's paint step, the first note of a dirty [element]
+  /// removes it from the dirty-paint set — before it paints, so a repaint
+  /// requested during or after its paint stays queued — and its rect counts
+  /// as repainted this frame. Later notes of the same element in the same
+  /// step do nothing. Outside the paint step this does nothing.
   void notePainting(RenderElement element) {
     final painted = _paintedInPass;
     if (painted == null || !identical(element.binding, this)) return;
-    painted.add(element);
+    if (!painted.add(element)) return;
     if (_needsPaint.remove(element)) _repaintedInPass!.add(element.rect);
   }
 
@@ -441,9 +443,9 @@ class StageBinding {
         if (painted.contains(element)) continue;
         if (!_needsPaint.remove(element)) continue;
         if (!element.mounted || !identical(element.binding, this)) continue;
-        element.paintSubtree(grid);
         painted.add(element);
         repainted.add(element.rect);
+        element.paintSubtree(grid);
       }
     } finally {
       _paintedInPass = null;
