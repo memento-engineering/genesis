@@ -78,10 +78,29 @@ void main() {
       await source.start();
       expect(fake.lastControl.stdinWrites, [
         'refresh-client -C 80x24',
-        'refresh-client -B dead:%*:#{pane_dead}',
+        "refresh-client -B 'dead:%*:#{pane_dead}'",
       ]);
       await source.close();
     });
+
+    test(
+      'a subscription with a space is written as one quoted argument',
+      () async {
+        final fake = FakeTmuxExecutor();
+        final source = ControlModeObservationSource(
+          executor: fake,
+          socket: const TmuxSocket.named('s'),
+          session: 'main',
+          subscriptions: ['dead:%* :#{pane_dead}'],
+        );
+        await source.start();
+        expect(fake.lastControl.stdinWrites, [
+          'refresh-client -C 80x24',
+          "refresh-client -B 'dead:%* :#{pane_dead}'",
+        ]);
+        await source.close();
+      },
+    );
   });
 
   group('subscriptions validation', () {
@@ -138,7 +157,7 @@ void main() {
       await source.start();
       expect(fake.lastControl.stdinWrites, [
         'refresh-client -C 80x24',
-        'refresh-client -B dead:%*:#{pane_dead}',
+        "refresh-client -B 'dead:%*:#{pane_dead}'",
       ]);
       await source.close();
     });

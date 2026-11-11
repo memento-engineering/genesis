@@ -100,7 +100,9 @@ class ControlModeObservationSource implements ObservationSource {
     // Size the control client so it receives output, then optionally subscribe.
     conn.stdin.add('refresh-client -C ${_width}x$_height');
     for (final spec in _subscriptions) {
-      conn.stdin.add('refresh-client -B $spec');
+      // Validated free of `'` and line breaks, so the quote cannot close
+      // early: one command, one `-B` argument.
+      conn.stdin.add("refresh-client -B '$spec'");
     }
 
     // The connection ending closes us; a %exit already arrived as an event.
