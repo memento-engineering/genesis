@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Breaking:** `ControlModeObservationSource` now throws an `ArgumentError`
+  at construction for a subscription containing a control character
+  (U+0000–U+001F, U+007F), `;` or `'`, and sends each accepted subscription
+  to tmux single-quoted, as one `refresh-client -B` argument. Migration: pass
+  each `refresh-client -B` spec as a single value without those characters;
+  a spec with spaces now needs no extra quoting.
+
 ## 0.1.0
 
 - Initial release: a zero-dependency, injection-safe tmux client. One-shot

@@ -27,7 +27,10 @@ class ControlModeObservationSource implements ObservationSource {
   /// Observes [session] on [socket] via [executor]. [width]/[height] size the
   /// control client (control clients are unsized otherwise, so `%output` would
   /// be empty). [subscriptions] are optional `refresh-client -B` argument
-  /// strings (tmux ≥ 3.2) for poll-free scalar watches.
+  /// strings (tmux ≥ 3.2) for poll-free scalar watches. An entry containing a
+  /// control character (U+0000–U+001F, U+007F), `;` or `'` is rejected with
+  /// an [ArgumentError], and each entry is sent to tmux as one single-quoted
+  /// argument.
   ControlModeObservationSource({
     required TmuxExecutor executor,
     required TmuxSocket socket,
@@ -40,7 +43,26 @@ class ControlModeObservationSource implements ObservationSource {
        _session = session,
        _width = width,
        _height = height,
-       _subscriptions = subscriptions;
+       _subscriptions = _checkSubscriptions(subscriptions);
+
+  /// Returns an unmodifiable copy of [subscriptions], throwing an
+  /// [ArgumentError] for the first entry holding a control character, DEL,
+  /// `;` or `'` — any of which could end the `refresh-client -B` frame early.
+  static List<String> _checkSubscriptions(List<String> subscriptions) {
+    for (final entry in subscriptions) {
+      for (final unit in entry.codeUnits) {
+        if (unit <= 0x1F || unit == 0x7F || unit == 0x3B || unit == 0x27) {
+          final hex = unit.toRadixString(16).toUpperCase().padLeft(4, '0');
+          throw ArgumentError.value(
+            entry,
+            'subscriptions',
+            'contains forbidden character U+$hex',
+          );
+        }
+      }
+    }
+    return List<String>.unmodifiable(subscriptions);
+  }
 
   final TmuxExecutor _executor;
   final TmuxSocket _socket;
@@ -78,7 +100,9 @@ class ControlModeObservationSource implements ObservationSource {
     // Size the control client so it receives output, then optionally subscribe.
     conn.stdin.add('refresh-client -C ${_width}x$_height');
     for (final spec in _subscriptions) {
-      conn.stdin.add('refresh-client -B $spec');
+      // Validated free of `'` and line breaks, so the quote cannot close
+      // early: one command, one `-B` argument.
+      conn.stdin.add("refresh-client -B '$spec'");
     }
 
     // The connection ending closes us; a %exit already arrived as an event.
