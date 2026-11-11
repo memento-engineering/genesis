@@ -18,7 +18,10 @@
   before the exit, then closes the event stream. Every repeated call —
   including the one the connection ending makes — shares one completion.
 - `ProcessTmuxExecutor` now delivers EOF to tmux when a control connection's
-  stdin is closed, so the control client exits instead of lingering.
+  stdin is closed, so the control client exits instead of lingering. Its
+  control connection delivers every line the child printed before `done`
+  completes, and a child that fails to start completes `done` rather than
+  leaving it pending.
 - `FakeControlConn` records stdin closes (`stdinCloses`, `stdinClosed`) and
   kills (`kills`), and can model a child that ignores stdin closing
   (`exitsOnStdinClose: false`, or `FakeTmuxExecutor`'s
