@@ -52,16 +52,19 @@ class TmuxResult {
 ///
 /// We only ever write `refresh-client` frames to [stdin]; [lines] carries raw
 /// control-mode stdout, one line per element (the `%begin`/`%output`/`%exit`
-/// framing the parser consumes). [done] completes when the connection ends
-/// (a `%exit` notification or the child process exiting).
+/// framing the parser consumes). [done] completes once the control-mode
+/// child process has exited (or failed to start); [kill] forces that exit.
+/// Closing [stdin] ends the child's input, which a tmux control client
+/// answers by exiting.
 @immutable
 class TmuxControlConn {
-  /// Wraps the [stdin] sink, [lines] stream, and [done] future of one
-  /// control-mode child.
+  /// Wraps the [stdin] sink, [lines] stream, [done] future, and [kill]
+  /// function of one control-mode child.
   const TmuxControlConn({
     required this.stdin,
     required this.lines,
     required this.done,
+    required this.kill,
   });
 
   /// Where `refresh-client` frames are written. We never send mutating
@@ -72,8 +75,13 @@ class TmuxControlConn {
   /// (latin1) so octal-escaped `%output` payloads round-trip exactly.
   final Stream<String> lines;
 
-  /// Completes when the connection ends (`%exit` or process exit).
+  /// Completes once the control-mode child process has exited, or failed to
+  /// start. A `%exit` notification arrives on [lines] before the child exits.
   final Future<void> done;
+
+  /// Forcibly terminates the control-mode child; [done] completes once it
+  /// has exited. Calling it after the child has exited is harmless.
+  final void Function() kill;
 }
 
 /// The one swap point between real tmux and a fake.

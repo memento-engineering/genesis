@@ -8,6 +8,24 @@
   to tmux single-quoted, as one `refresh-client -B` argument. Migration: pass
   each `refresh-client -B` spec as a single value without those characters;
   a spec with spaces now needs no extra quoting.
+- **Breaking:** `TmuxControlConn` has a new required `kill` member, so a
+  custom `TmuxExecutor` must supply a function that forcibly terminates its
+  control-mode child. Its `done` now completes once that child has exited
+  (or failed to start). Migration: pass a `kill` that ends the child.
+- `ControlModeObservationSource.close()` now owns the tmux child's exit: it
+  closes the child's stdin, waits for the child to exit, kills it when it has
+  not exited two seconds after stdin closed, delivers output that arrived
+  before the exit, then closes the event stream. Every repeated call —
+  including the one the connection ending makes — shares one completion.
+- `ProcessTmuxExecutor` now delivers EOF to tmux when a control connection's
+  stdin is closed, so the control client exits instead of lingering. Its
+  control connection delivers every line the child printed before `done`
+  completes, and a child that fails to start completes `done` rather than
+  leaving it pending.
+- `FakeControlConn` records stdin closes (`stdinCloses`, `stdinClosed`) and
+  kills (`kills`), and can model a child that ignores stdin closing
+  (`exitsOnStdinClose: false`, or `FakeTmuxExecutor`'s
+  `controlExitsOnStdinClose: false`).
 
 ## 0.1.0
 
