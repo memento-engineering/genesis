@@ -53,6 +53,10 @@ class _Probe {
 
   /// The mounted probe element.
   _ProbeTextElement? element;
+
+  /// The binding the probe last laid out under, kept after an unmount
+  /// detaches the element from it.
+  StageBinding? binding;
 }
 
 /// The real [Text] leaf, mounting a [_ProbeTextElement].
@@ -89,6 +93,7 @@ class _ProbeTextElement extends TextElement {
   @override
   void performLayout() {
     _probe.layouts++;
+    _probe.binding = binding;
     if (_probe.throwOnLayout) throw StateError('probe layout');
     super.performLayout();
   }
@@ -655,7 +660,12 @@ void main() {
         reason: 'the queued mount-time pass must not re-run the layout',
       );
       expect(errors, isEmpty, reason: 'no automatic retry threw again');
-      expect(probe.element!.binding!.frames, isEmpty);
+      expect(
+        probe.element!.mounted,
+        isFalse,
+        reason: 'the owner unwinds a root mount that threw',
+      );
+      expect(probe.binding!.frames, isEmpty);
     });
 
     test('a detached binding schedules nothing for a request', () async {
