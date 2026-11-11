@@ -114,6 +114,119 @@ class _HookSink implements Sink<List<int>> {
   void close() {}
 }
 
+/// The shared paint log of a set of [_CountingBox]es, plus their fault
+/// hooks. Test-only: the counting box is the shipped [Box] with a paint
+/// counter, not a new node vocabulary.
+class _PaintLog {
+  /// Every counting element's paint, in call order.
+  final List<RenderElement> painted = [];
+
+  /// When set, this element's paint throws.
+  RenderElement? thrower;
+
+  /// When set, this element requests its own repaint once, from inside its
+  /// next paint.
+  RenderElement? requester;
+}
+
+/// The real [Box], mounting a [_CountingBoxElement].
+class _CountingBox extends Box {
+  const _CountingBox(this.log, {required super.title, super.children});
+
+  final _PaintLog log;
+
+  @override
+  BoxElement createElement() => _CountingBoxElement(this);
+}
+
+/// The real [BoxElement], logging each paint to its [_PaintLog].
+class _CountingBoxElement extends BoxElement {
+  _CountingBoxElement(_CountingBox super.component);
+
+  _PaintLog get _log => (component as _CountingBox).log;
+
+  @override
+  void paint(CellGrid grid) {
+    _log.painted.add(this);
+    if (identical(_log.thrower, this)) throw StateError('box paint');
+    if (identical(_log.requester, this)) {
+      _log.requester = null;
+      markNeedsPaint();
+    }
+    super.paint(grid);
+  }
+}
+
+/// A [_CountingBox] whose element overrides `paintSubtree` to paint only
+/// itself, without calling `super` — a leaf's legitimate override.
+class _LeafOverrideBox extends _CountingBox {
+  const _LeafOverrideBox(super.log, {required super.title});
+
+  @override
+  BoxElement createElement() => _LeafOverrideElement(this);
+}
+
+/// A [_CountingBoxElement] whose `paintSubtree` is just its own `paint`.
+class _LeafOverrideElement extends _CountingBoxElement {
+  _LeafOverrideElement(super.component);
+
+  @override
+  void paintSubtree(CellGrid grid) => paint(grid);
+}
+
+/// A [_CountingBox] whose element overrides `paintSubtree` to paint itself
+/// and then each render child's subtree directly, without calling `super` —
+/// a container's legitimate override that reports nothing to the binding.
+class _ContainerOverrideBox extends _CountingBox {
+  const _ContainerOverrideBox(
+    super.log, {
+    required super.title,
+    super.children,
+  });
+
+  @override
+  BoxElement createElement() => _ContainerOverrideElement(this);
+}
+
+/// A [_CountingBoxElement] whose `paintSubtree` walks its children itself.
+class _ContainerOverrideElement extends _CountingBoxElement {
+  _ContainerOverrideElement(super.component);
+
+  @override
+  void paintSubtree(CellGrid grid) {
+    paint(grid);
+    for (final child in renderChildren) {
+      child.paintSubtree(grid);
+    }
+  }
+}
+
+/// A chain of [depth] nested [_CountingBox]es sharing [log].
+Component _countingChain(_PaintLog log, int depth) {
+  Component? inner;
+  for (var i = depth - 1; i >= 0; i--) {
+    inner = _CountingBox(
+      log,
+      title: 'c$i',
+      children: [if (inner != null) inner],
+    );
+  }
+  return inner!;
+}
+
+/// The chain under [stage], outermost first, following each element's sole
+/// render child down.
+List<RenderElement> _chainOf(StageElement stage) {
+  final chain = <RenderElement>[];
+  var children = stage.renderChildren;
+  while (children.isNotEmpty) {
+    final next = children.single;
+    chain.add(next);
+    children = next.renderChildren;
+  }
+  return chain;
+}
+
 void main() {
   group('Stage live loop', () {
     late LocalityFixture fx;
@@ -359,6 +472,35 @@ void main() {
         reason: 'FrameRecord.rebuilt must be the verbatim flush return',
       );
     });
+
+    test(
+      'a whole-tree repaint records every rect and emits no bytes',
+      () async {
+        final all = <RenderElement>[];
+        void collect(RenderElement element) {
+          all.add(element);
+          element.renderChildren.forEach(collect);
+        }
+
+        collect(stage);
+        expect(all.length, greaterThan(3));
+        final framesBefore = stage.frames.length;
+        final payloadsBefore = sink.payloads.length;
+
+        for (final element in all) {
+          element.markNeedsPaint();
+        }
+        await pumpEventQueue();
+
+        expect(stage.frames, hasLength(framesBefore + 1));
+        final f = stage.frames.last;
+        expect(f.repainted, {for (final e in all) e.rect});
+        expect(f.changes, isEmpty);
+        expect(f.bytes, isEmpty);
+        expect(sink.payloads, hasLength(payloadsBefore));
+        expect(stage.grid.frontToString().trimRight(), initialSnapshot);
+      },
+    );
   });
 
   group('Stage follow-up frames', () {
@@ -666,6 +808,321 @@ void main() {
         reason: 'the owner unwinds a root mount that threw',
       );
       expect(probe.binding!.frames, isEmpty);
+    });
+
+    test('a dirty element under a dirty render ancestor paints once per '
+        'frame', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _CountingBox(
+          log,
+          title: 'a',
+          children: [
+            _CountingBox(
+              log,
+              title: 'b',
+              children: [_CountingBox(log, title: 'c')],
+            ),
+          ],
+        ),
+        _CountingBox(log, title: 's'),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren[0];
+      final s = stage.renderChildren[1];
+      final b = a.renderChildren.single;
+      final c = b.renderChildren.single;
+      expect(stage.frames, hasLength(1));
+      final afterMount = log.painted.length;
+
+      // Frame one: the dirty ancestor is the direct parent.
+      var mark = afterMount;
+      c.markNeedsPaint();
+      b.markNeedsPaint();
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(2));
+      expect(log.painted.sublist(mark), [b, c]);
+      expect(stage.frames.last.repainted, {b.rect, c.rect});
+
+      // Frame two: the dirty ancestor is a grandparent; b between is clean.
+      mark = log.painted.length;
+      c.markNeedsPaint();
+      a.markNeedsPaint();
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(3));
+      expect(log.painted.sublist(mark), [a, b, c]);
+      expect(stage.frames.last.repainted, {a.rect, c.rect});
+
+      expect(
+        log.painted.skip(afterMount).where((e) => identical(e, s)),
+        isEmpty,
+        reason: 'the untouched sibling is never painted after mount',
+      );
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(3), reason: 'no further frame');
+    });
+
+    test('a 200-deep chain marked dirty paints each element once in one '
+        'frame', () async {
+      final log = _PaintLog();
+      final stage = mountStage([_countingChain(log, 200)]);
+      await pumpEventQueue();
+      final chain = _chainOf(stage);
+      expect(chain, hasLength(200));
+      final framesBefore = stage.frames.length;
+      final mark = log.painted.length;
+
+      for (final element in chain.reversed) {
+        element.markNeedsPaint();
+      }
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(framesBefore + 1));
+      final delta = log.painted.sublist(mark);
+      expect(delta, hasLength(200));
+      expect(Set<RenderElement>.identity()..addAll(delta), hasLength(200));
+      for (final element in chain) {
+        expect(delta.where((e) => identical(e, element)), hasLength(1));
+      }
+      expect(stage.frames.last.repainted, {for (final e in chain) e.rect});
+      await pumpEventQueue();
+      expect(
+        stage.frames,
+        hasLength(framesBefore + 1),
+        reason: 'covered elements buy no follow-up frame',
+      );
+    });
+
+    test('frame 0 paints each render element once, parents first', () {
+      final log = _PaintLog();
+      final stage = mountStage([_countingChain(log, 200)]);
+
+      expect(stage.frames, hasLength(1));
+      final chain = _chainOf(stage);
+      expect(chain, hasLength(200));
+      expect(log.painted, hasLength(200));
+      for (var i = 0; i < chain.length; i++) {
+        expect(
+          identical(log.painted[i], chain[i]),
+          isTrue,
+          reason: 'log index $i is the element at chain depth $i',
+        );
+      }
+    });
+
+    test('a dirty descendant of an ancestor whose paint threw stays '
+        'queued', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _CountingBox(
+          log,
+          title: 'a',
+          children: [_CountingBox(log, title: 'b')],
+        ),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren.single;
+      final b = a.renderChildren.single;
+      log.thrower = a;
+      final mark = log.painted.length;
+      final errors = <Object>[];
+      runZonedGuarded(() {
+        b.markNeedsPaint();
+        a.markNeedsPaint();
+      }, (error, _) => errors.add(error));
+
+      await pumpEventQueue();
+
+      expect(errors, hasLength(1));
+      expect(errors.single, isA<StateError>());
+      expect(stage.frames, hasLength(1), reason: 'no frame, no follow-up');
+      expect(log.painted.sublist(mark).where((e) => identical(e, b)), isEmpty);
+
+      // The thrower stays armed: a retry would throw outside the zone.
+      final retryMark = log.painted.length;
+      stage.markNeedsLayout();
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(2));
+      expect(stage.frames.last.repainted, {b.rect});
+      final delta = log.painted.sublist(retryMark);
+      expect(delta, hasLength(1));
+      expect(identical(delta.single, b), isTrue, reason: 'b painted once');
+      expect(errors, hasLength(1), reason: 'the thrower is not retried');
+    });
+
+    test('a descendant whose own paint threw inside an ancestor\'s paint is '
+        'not retried', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _CountingBox(
+          log,
+          title: 'a',
+          children: [
+            _CountingBox(
+              log,
+              title: 'b',
+              children: [_CountingBox(log, title: 'c')],
+            ),
+          ],
+        ),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren.single;
+      final b = a.renderChildren.single;
+      final c = b.renderChildren.single;
+      log.thrower = b;
+      final errors = <Object>[];
+      runZonedGuarded(() {
+        c.markNeedsPaint();
+        b.markNeedsPaint();
+        a.markNeedsPaint();
+      }, (error, _) => errors.add(error));
+
+      await pumpEventQueue();
+
+      expect(errors, hasLength(1));
+      expect(stage.frames, hasLength(1), reason: 'no frame, no follow-up');
+
+      // b stays armed: a retry would throw outside the zone.
+      final mark = log.painted.length;
+      stage.markNeedsLayout();
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(2));
+      expect(
+        stage.frames.last.repainted,
+        {c.rect},
+        reason: 'only the unreached descendant stayed queued',
+      );
+      expect(log.painted.sublist(mark), [c]);
+      expect(errors, hasLength(1), reason: 'the thrower is not retried');
+    });
+
+    test('a dirty leaf overriding paintSubtree without super paints once '
+        'under a dirty parent', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _CountingBox(
+          log,
+          title: 'a',
+          children: [_LeafOverrideBox(log, title: 'b')],
+        ),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren.single;
+      final b = a.renderChildren.single;
+      expect(b, isA<_LeafOverrideElement>());
+      final framesBefore = stage.frames.length;
+      final mark = log.painted.length;
+
+      b.markNeedsPaint();
+      a.markNeedsPaint();
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(framesBefore + 1));
+      expect(log.painted.sublist(mark), [a, b]);
+      expect(stage.frames.last.repainted, {a.rect, b.rect});
+      await pumpEventQueue();
+      expect(
+        stage.frames,
+        hasLength(framesBefore + 1),
+        reason: 'the covered leaf buys no follow-up frame',
+      );
+    });
+
+    test('a dirty leaf override under a dirty container override paints '
+        'once per frame', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _ContainerOverrideBox(
+          log,
+          title: 'a',
+          children: [_LeafOverrideBox(log, title: 'b')],
+        ),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren.single;
+      final b = a.renderChildren.single;
+      expect(a, isA<_ContainerOverrideElement>());
+      expect(b, isA<_LeafOverrideElement>());
+      final framesBefore = stage.frames.length;
+      final mark = log.painted.length;
+
+      b.markNeedsPaint();
+      a.markNeedsPaint();
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(framesBefore + 1));
+      expect(log.painted.sublist(mark), [a, b]);
+      expect(stage.frames.last.repainted, {a.rect, b.rect});
+      await pumpEventQueue();
+      expect(
+        stage.frames,
+        hasLength(framesBefore + 1),
+        reason: 'the covered leaf buys no follow-up frame',
+      );
+    });
+
+    test('a repaint requested inside a non-reporting override is served by '
+        'the follow-up frame, not painted twice', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _ContainerOverrideBox(
+          log,
+          title: 'a',
+          children: [_LeafOverrideBox(log, title: 'b')],
+        ),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren.single;
+      final b = a.renderChildren.single;
+      final framesBefore = stage.frames.length;
+      log.requester = b;
+      final mark = log.painted.length;
+
+      b.markNeedsPaint();
+      a.markNeedsPaint();
+      await pumpEventQueue();
+
+      expect(
+        stage.frames,
+        hasLength(framesBefore + 2),
+        reason: 'the frame + one follow-up',
+      );
+      expect(stage.frames[framesBefore].repainted, {a.rect});
+      expect(stage.frames[framesBefore + 1].repainted, {b.rect});
+      expect(log.painted.sublist(mark), [a, b, b]);
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(framesBefore + 2));
+    });
+
+    test('a covered element that requests a repaint while painting gets '
+        'one follow-up frame', () async {
+      final log = _PaintLog();
+      final stage = mountStage([
+        _CountingBox(
+          log,
+          title: 'a',
+          children: [_CountingBox(log, title: 'b')],
+        ),
+      ]);
+      await pumpEventQueue();
+      final a = stage.renderChildren.single;
+      final b = a.renderChildren.single;
+      log.requester = b;
+      final mark = log.painted.length;
+
+      b.markNeedsPaint();
+      a.markNeedsPaint();
+      await pumpEventQueue();
+
+      expect(stage.frames, hasLength(3), reason: 'the frame + one follow-up');
+      expect(stage.frames[1].repainted, {a.rect, b.rect});
+      expect(stage.frames[2].repainted, {b.rect});
+      expect(log.painted.sublist(mark), [a, b, b]);
+      await pumpEventQueue();
+      expect(stage.frames, hasLength(3), reason: 'no further frame');
     });
 
     test('a detached binding schedules nothing for a request', () async {
