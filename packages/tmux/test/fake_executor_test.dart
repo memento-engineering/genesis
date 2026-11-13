@@ -4,7 +4,10 @@ import 'package:test/test.dart';
 /// Whether [future] has completed after the pending microtasks have run.
 Future<bool> _completed(Future<void> future) async {
   var done = false;
-  future.then((_) => done = true).ignore();
+  () async {
+    await future;
+    done = true;
+  }().ignore();
   await Future<void>.delayed(Duration.zero);
   return done;
 }
