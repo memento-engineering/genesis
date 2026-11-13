@@ -275,11 +275,33 @@ class TmuxClient {
   /// interleave on the TTY. `Enter` is sent as a separate key and retried with
   /// backoff while the pane is in a mode.
   Future<void> sendKeys(String paneId, String text, {bool enter = true}) {
+    // Read the previous send and store this one before returning, so sends
+    // to the same pane run in call order.
     final prev = _sendChains[paneId] ?? Future<void>.value();
-    final run = prev.then((_) => _doSendKeys(paneId, text, enter: enter));
+    final run = _sendAfter(prev, paneId, text, enter: enter);
     // Keep the per-pane chain alive even if this send throws.
-    _sendChains[paneId] = run.then((_) {}, onError: (_) {});
+    _sendChains[paneId] = _settle(run);
     return run;
+  }
+
+  Future<void> _sendAfter(
+    Future<void> prev,
+    String paneId,
+    String text, {
+    required bool enter,
+  }) async {
+    await prev;
+    await _doSendKeys(paneId, text, enter: enter);
+  }
+
+  /// Completes when [send] does, successfully either way.
+  static Future<void> _settle(Future<void> send) async {
+    try {
+      await send;
+    } on Object {
+      // A failed send must not stop the pane's queue; its caller still gets
+      // the error through the future sendKeys returned.
+    }
   }
 
   Future<void> _doSendKeys(

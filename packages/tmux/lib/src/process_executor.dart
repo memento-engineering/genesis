@@ -48,7 +48,11 @@ class ProcessTmuxExecutor implements TmuxExecutor {
       } on TimeoutException {
         proc.kill(ProcessSignal.sigkill);
         await proc.exitCode; // reap
-        await Future.wait([outDone, errDone]).catchError((_) => <void>[]);
+        try {
+          await Future.wait([outDone, errDone]);
+        } on Object {
+          // The drain after a kill may fail; the timeout is what is reported.
+        }
         throw TmuxTimeoutException(
           argv: List<String>.of(argv),
           timeout: timeout,
@@ -158,9 +162,13 @@ class ProcessTmuxExecutor implements TmuxExecutor {
 
   /// Closes the child's real stdin so tmux sees EOF; a broken pipe after the
   /// child already exited is ignored.
-  static void _closeStdin(Process proc) {
+  static void _closeStdin(Process proc) => unawaited(_closeStdinQuietly(proc));
+
+  /// Closes [proc]'s stdin, swallowing a synchronous throw and an
+  /// asynchronous failure alike.
+  static Future<void> _closeStdinQuietly(Process proc) async {
     try {
-      unawaited(proc.stdin.close().then<void>((_) {}, onError: (_) {}));
+      await proc.stdin.close();
     } on Object {
       // The child is already gone.
     }
