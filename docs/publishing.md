@@ -68,7 +68,12 @@ the 1.0 boundary; this doc governs the releases in between.)
 
 1. **Tag the release commit** `<pub-name>-v<version>` (e.g.
    `genesis_tree-v0.1.5`) and push tags — tags exist from 2026-07-02 onward
-   and are what lets `melos version` take over bumping later.
+   and are what lets `melos version` take over bumping later. The publish
+   workflow's `guard` job runs `tool/publish_guard.sh` and refuses the tag
+   unless the pubspec at the tagged commit reads the tag's version, the
+   CHANGELOG has a heading for it, and pub.dev lists the declared version of
+   every sibling in `dependencies` — so a dependent's tag waits on its
+   dependency's release.
 2. Push `main`.
 3. Verify the version resolves via the API, and spot-check the rendered
    README on the package page (it can lag a few minutes).

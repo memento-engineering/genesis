@@ -1,0 +1,7 @@
+name: genesis_beta
+description: A publish guard test fixture.
+version: 0.3.0-dev.1
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0

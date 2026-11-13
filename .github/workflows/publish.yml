@@ -13,6 +13,10 @@ name: Publish to pub.dev
 # Push ONE tag per `git push` — GitHub fires no workflows for a push
 # containing more than three tags, and dependency ordering needs per-tag
 # pushes anyway.
+#
+# The `guard` job runs tool/publish_guard.sh at the tag and refuses a tag whose
+# pubspec version, CHANGELOG heading or published sibling versions do not
+# match it, so nothing uploads until all three hold.
 
 on:
   push:
@@ -33,8 +37,22 @@ jobs:
           echo "directory=$dir" >> "$GITHUB_OUTPUT"
           echo "Publishing package: $pkg from packages/$dir (tag $GITHUB_REF_NAME)"
 
-  publish:
+  guard:
     needs: parse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      # Values reach the script through env, never interpolated into its text,
+      # so a tag cannot inject shell.
+      - env:
+          TAG: ${{ github.ref_name }}
+          DIRECTORY: ${{ needs.parse.outputs.directory }}
+        run: bash tool/publish_guard.sh "$TAG" "packages/$DIRECTORY"
+
+  publish:
+    needs: [parse, guard]
     permissions:
       id-token: write # pub.dev OIDC trusted publishing
     uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1

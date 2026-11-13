@@ -37,6 +37,9 @@ jobs:
       - name: Format check
         run: dart format --output=none --set-exit-if-changed .
 
+      - name: Publish guard tests
+        run: bash tool/publish_guard_test.sh && bash tool/publish_workflow_test.sh
+
       - name: Test (all packages via melos)
         run: |
           dart pub global activate melos

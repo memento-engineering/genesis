@@ -1,0 +1,7 @@
+name: genesis_gamma
+description: A publish guard test fixture.
+version: 9.9.9
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0

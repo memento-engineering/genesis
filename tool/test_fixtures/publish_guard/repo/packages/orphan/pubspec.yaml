@@ -1,0 +1,10 @@
+name: genesis_orphan
+description: A publish guard test fixture.
+version: 1.0.0
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  genesis_ghost: ^0.1.0
