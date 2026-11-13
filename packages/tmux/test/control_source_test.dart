@@ -127,7 +127,10 @@ void main() {
       final closed = watchClosed(source);
 
       var closeDone = false;
-      final closing = source.close().then((_) => closeDone = true);
+      final closing = () async {
+        await source.close();
+        closeDone = true;
+      }();
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // Stdin is closed but the child has not exited: close() is still
@@ -169,7 +172,10 @@ void main() {
 
       final watch = Stopwatch()..start();
       var closeDone = false;
-      final closing = source.close().then((_) => closeDone = true);
+      final closing = () async {
+        await source.close();
+        closeDone = true;
+      }();
 
       await Future<void>.delayed(const Duration(milliseconds: 1500));
       expect(control.stdinCloses, 1);

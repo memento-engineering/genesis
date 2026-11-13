@@ -3,7 +3,8 @@
 Static analysis rules that keep `BuildContext` capabilities scoped safely and
 keep tree code declarative: a build describes children, effects live in
 leaves, and configuration is read from the tree rather than cached or
-constructed bare. This package is an analyzer extension; applications do not
+constructed bare. They also keep asynchronous code written with `async` and
+`await` rather than Future callback chains. This package is an analyzer extension; applications do not
 import it at runtime, and it deliberately has no dependency on `genesis_tree`
 or `genesis_foundation`. Rules match the resolved declaring-library URI of the
 types and annotations they inspect, so a same-named type or annotation from
@@ -28,9 +29,10 @@ plugins:
 
 Every rule is registered as a warning rule, so each is enabled without a
 `diagnostics` mapping. The six tree-shape rules, from `no_effects_in_build`
-on, report at warning severity, so `dart analyze` exits non-zero when one of
-them fires; the two context rules report at info. None of them reports in a
-package's `test/` directory.
+on, and `no_future_callback_chains` report at warning severity, so
+`dart analyze` exits non-zero when one of them fires; the two context rules
+report at info. The tree-shape and context rules stay silent in a package's
+`test/` directory; `no_future_callback_chains` reports there too.
 
 ## `no_stored_tree_context`
 
@@ -190,3 +192,34 @@ abstract class ProcessElement extends Element {
 
 Dispatch is resolved statically: a call through a supertype whose member is
 not annotated is not reported, even when an override is.
+
+## `no_future_callback_chains`
+
+Rejects a callback chained onto a future: a call to `then`, `catchError`,
+`whenComplete` or `onError` whose receiver's static type is a `Future`, a
+subtype of `Future`, a nullable `Future` reached through `?.`, a type
+variable bounded by a `Future`, or a `FutureOr` narrowed to a `Future` by an
+`is` check. A cascade (`future..then(...)`) counts, and each chained member
+is reported at its own name, so `load().then(use).catchError(report)` is
+reported twice.
+
+Static members such as `Future.wait`, constructors such as `Future.value`,
+and other members such as `timeout` and `ignore` are not reported. Neither is
+a `then` declared by a class that is not a `Future`, a call on a `dynamic`
+receiver, or a tear-off such as `future.then` that is not called.
+
+```dart
+// Rejected.
+void refresh() {
+  load().then(use).catchError(report);
+}
+
+// Accepted.
+Future<void> refresh() async {
+  try {
+    use(await load());
+  } on Object catch (e) {
+    report(e);
+  }
+}
+```

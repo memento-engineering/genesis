@@ -285,6 +285,23 @@ void main() {
           .toList();
       expect(literals, ['A', 'B']);
     });
+
+    test('a failed send neither blocks the next send to the pane nor loses its '
+        'error', () async {
+      final fake = FakeTmuxExecutor()
+        ..handler = (argv) =>
+            argv.last == 'A' ? FakeTmuxExecutor.fail('boom') : null;
+      final c = _client(fake);
+      final a = c.sendKeys('%1', 'A', enter: false);
+      final b = c.sendKeys('%1', 'B', enter: false);
+      await expectLater(a, throwsA(isA<TmuxException>()));
+      await b;
+      final literals = fake.calls
+          .where((c) => c.contains('-l'))
+          .map((c) => c.last)
+          .toList();
+      expect(literals, ['A', 'B']);
+    });
   });
 }
 

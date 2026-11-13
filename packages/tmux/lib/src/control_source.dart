@@ -111,7 +111,10 @@ class ControlModeObservationSource implements ObservationSource {
     }
 
     // The connection ending closes us; a %exit already arrived as an event.
-    unawaited(conn.done.then((_) => close()));
+    unawaited(() async {
+      await conn.done;
+      await close();
+    }());
   }
 
   void _emit(TmuxEvent e) {

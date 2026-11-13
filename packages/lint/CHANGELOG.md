@@ -1,3 +1,7 @@
+## Unreleased
+
+- Add `no_future_callback_chains`, which rejects `then`, `catchError`, `whenComplete` and `onError` called on a `Future` (including a subtype, a nullable `Future`, a type variable bounded by one and a `FutureOr` narrowed to one); await the future inside `try`/`catch` instead. It reports at warning severity and, unlike the other rules, also reports in a package's `test/` directory.
+
 ## 0.3.0-dev.1
 
 - Add six tree-shape rules that keep tree code declarative. They are enabled by default like the existing two and report at warning severity, so `dart analyze` fails on code that trips them:
