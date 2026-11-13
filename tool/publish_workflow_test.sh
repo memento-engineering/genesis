@@ -73,4 +73,19 @@ has_line "$ci_lines" '- name: Publish guard tests' ||
 has_line "$ci_lines" 'run: bash tool/publish_guard_test.sh && bash tool/publish_workflow_test.sh' ||
   fail 'ci.yml runs bash tool/publish_guard_test.sh and bash tool/publish_workflow_test.sh'
 
+publishing_doc="$repo_root/docs/publishing.md"
+grep -Fq -- 'tool/publish_guard.sh' "$publishing_doc" ||
+  fail 'docs/publishing.md names tool/publish_guard.sh'
+
+# The register entry recording the guard's rulings: its file, slug and
+# decision headings only.
+slug='a-release-tag-publishes-only-after-the-publish-guard-passes'
+entry="$repo_root/docs/decisions/2026-11-13-$slug.md"
+[ -f "$entry" ] || fail "the register carries $slug"
+grep -Fxq -- "  slug: $slug" "$entry" || fail "the register entry's slug is $slug"
+for rule in D1 D2 D3 D4; do
+  grep -q -- "^\*\*$rule\.\*\* " "$entry" ||
+    fail "the register entry has decision $rule"
+done
+
 echo 'publish_workflow_test: passed'
