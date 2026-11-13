@@ -1,0 +1,18 @@
+name: genesis_alpha
+description: A publish guard test fixture.
+version: 1.2.0
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  genesis_beta: ^0.3.0-dev.1
+  meta: ^1.15.0
+  # A comment line inside the block is not a key.
+  external_tool:
+    hosted: https://example.invalid
+    version: ^1.0.0
+
+dev_dependencies:
+  genesis_gamma: ^9.9.9
