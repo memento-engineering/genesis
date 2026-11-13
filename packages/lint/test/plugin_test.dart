@@ -6,7 +6,7 @@ import 'package:genesis_lint/main.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('entrypoint registers exactly the eight warnings', () {
+  test('entrypoint registers exactly the nine warnings', () {
     final registry = _RecordingPluginRegistry();
 
     expect(plugin, isA<LintExtension>());
@@ -27,26 +27,30 @@ void main() {
         'derive_dont_construct',
         'state_flag_threshold',
         'effects_only_in_leaves',
+        'no_future_callback_chains',
       ]),
     );
   });
 
-  test('the six tree-shape rules report at warning severity', () {
-    final registry = _RecordingPluginRegistry();
-    plugin.register(registry);
+  test(
+    'every rule after the two context rules reports at warning severity',
+    () {
+      final registry = _RecordingPluginRegistry();
+      plugin.register(registry);
 
-    final treeShapeRules = registry.warningRules.skip(2).toList();
-    expect(treeShapeRules, hasLength(6));
-    for (final rule in treeShapeRules) {
-      for (final code in rule.diagnosticCodes) {
-        expect(
-          code.severity,
-          DiagnosticSeverity.WARNING,
-          reason: '${code.lowerCaseName} must fail dart analyze',
-        );
+      final warningSeverityRules = registry.warningRules.skip(2).toList();
+      expect(warningSeverityRules, hasLength(7));
+      for (final rule in warningSeverityRules) {
+        for (final code in rule.diagnosticCodes) {
+          expect(
+            code.severity,
+            DiagnosticSeverity.WARNING,
+            reason: '${code.lowerCaseName} must fail dart analyze',
+          );
+        }
       }
-    }
-  });
+    },
+  );
 }
 
 final class _RecordingPluginRegistry implements PluginRegistry {
